@@ -90,6 +90,28 @@ export function getBriefDepartments(contributors: Contributor[]): Role[] {
   return DEPARTMENT_ORDER.filter((r) => set.has(r))
 }
 
+/**
+ * Pilih hero brief untuk magazine card di top Inbox.
+ * Prioritas: high+decision > decision > high > none.
+ * Hero tampil sebagai magazine card, sisanya sebagai standard cards.
+ * Returns null kalau tidak ada brief yang layak di-hero (mis. semua final).
+ */
+export function pickHeroBrief(briefs: Brief[]): Brief | null {
+  if (briefs.length === 0) return null
+  const scored = briefs.map((b) => ({
+    b,
+    score:
+      (b.priority === 'high' ? 100 : 0) +
+      (b.status === 'decision' ? 50 : b.status === 'doing' ? 20 : b.status === 'review' ? 10 : 0) +
+      b.contributors.length,
+  }))
+  scored.sort((a, b) => b.score - a.score)
+  const top = scored[0]
+  // Jangan hero kalau yang teratas adalah final brief (kurang menarik untuk ditampilkan besar)
+  if (top.b.status === 'final' && top.score < 30) return null
+  return top.b
+}
+
 export interface CSuiteInput {
   role: Contributor
   name: string

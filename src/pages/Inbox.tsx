@@ -6,12 +6,14 @@ import { TopBar } from '@/components/nav/TopBar'
 import { FilterChips, type FilterValue } from '@/components/nav/FilterChips'
 import { FAB } from '@/components/nav/FAB'
 import { BriefCard } from '@/components/brief/BriefCard'
+import { BriefCardHero } from '@/components/brief/BriefCardHero'
 import { BriefDetailSheet } from '@/components/brief/BriefDetailSheet'
 import { mockBriefs } from '@/data/mockBriefs'
 import {
   DEPARTMENT_ORDER,
   DEPARTMENT_LABEL,
   getBriefDepartments,
+  pickHeroBrief,
   type Brief,
   type Role,
 } from '@/lib/types'
@@ -41,6 +43,9 @@ export default function Inbox() {
     if (status !== 'all') list = list.filter((b) => b.status === status)
     return list
   }, [briefs, dept, status])
+
+  const hero = useMemo(() => pickHeroBrief(visible), [visible])
+  const rest = useMemo(() => (hero ? visible.filter((b) => b.id !== hero.id) : visible), [visible, hero])
 
   const statusCounts = useMemo<Record<FilterValue, number>>(() => {
     const base: Record<FilterValue, number> = { all: 0, decision: 0, doing: 0, review: 0, final: 0 }
@@ -134,28 +139,44 @@ export default function Inbox() {
 
       <FilterChips active={status} onChange={setStatus} counts={statusCounts} />
 
-      <main className="px-4 pt-3 space-y-2.5" aria-label="Daftar brief">
+      <main className="px-4 pt-3 space-y-3" aria-label="Daftar brief">
         {visible.length === 0 ? (
           <EmptyState />
         ) : (
-          <AnimatePresence mode="popLayout" initial={true}>
-            {visible.map((b, idx) => (
+          <>
+            {hero && (
               <motion.div
-                key={b.id}
+                key={hero.id}
                 layout
-                initial={{ opacity: 0, y: 8 }}
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{
-                  duration: 0.28,
-                  delay: Math.min(idx * 0.04, 0.24),
-                  ease: [0.32, 0.72, 0, 1],
-                }}
+                transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
               >
-                <BriefCard brief={b} coverImage={b.coverImage} onClick={() => navigate(`/brief/${b.id}`)} />
+                <BriefCardHero brief={hero} onClick={() => navigate(`/brief/${hero.id}`)} />
               </motion.div>
-            ))}
-          </AnimatePresence>
+            )}
+            {rest.length > 0 && hero && (
+              <p className="text-label-caps text-text-muted pt-2 pl-1">Brief lainnya</p>
+            )}
+            <AnimatePresence mode="popLayout" initial={true}>
+              {rest.map((b, idx) => (
+                <motion.div
+                  key={b.id}
+                  layout
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{
+                    duration: 0.28,
+                    delay: Math.min(idx * 0.04, 0.24),
+                    ease: [0.32, 0.72, 0, 1],
+                  }}
+                >
+                  <BriefCard brief={b} coverImage={b.coverImage} onClick={() => navigate(`/brief/${b.id}`)} />
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </>
         )}
       </main>
 
