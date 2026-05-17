@@ -1,12 +1,13 @@
 import { useId, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, MessageCircle } from 'lucide-react'
 import { CONTRIBUTOR_META, getContributorColorRole, type CSuiteInput, type Role } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 interface CSuiteCardProps {
   input: CSuiteInput
   defaultExpanded?: boolean
+  onAsk?: () => void
 }
 
 const roleBg: Record<Role, string> = {
@@ -23,7 +24,7 @@ const verdictStyle: Record<'A' | 'B' | 'C', string> = {
   C: 'bg-status-review-bg text-status-review',
 }
 
-export function CSuiteCard({ input, defaultExpanded = false }: CSuiteCardProps) {
+export function CSuiteCard({ input, defaultExpanded = false, onAsk }: CSuiteCardProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
   const contentId = useId()
 
@@ -145,8 +146,9 @@ export function CSuiteCard({ input, defaultExpanded = false }: CSuiteCardProps) 
           >
             <ul
               className={cn(
-                'pr-4 pb-4 space-y-2 text-sm leading-relaxed text-text-secondary',
+                'pr-4 space-y-2 text-sm leading-relaxed text-text-secondary',
                 isCeo ? 'pl-6' : 'pl-5',
+                onAsk ? 'pb-3' : 'pb-4',
               )}
             >
               {input.bullets.map((b, i) => (
@@ -158,6 +160,24 @@ export function CSuiteCard({ input, defaultExpanded = false }: CSuiteCardProps) 
                 </li>
               ))}
             </ul>
+            {onAsk && (
+              <div className={cn('pb-3', isCeo ? 'pl-6 pr-4' : 'pl-5 pr-4')}>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onAsk()
+                  }}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 text-meta font-medium text-accent-dark',
+                    'hover:text-text-primary transition-colors duration-fast',
+                  )}
+                >
+                  <MessageCircle aria-hidden="true" className="size-3.5" />
+                  Tanya {input.name.split(' ')[0]} lebih lanjut
+                </button>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

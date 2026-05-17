@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronDown, Inbox as InboxIcon, ArrowUpRight } from 'lucide-react'
+import { ChevronDown, Inbox as InboxIcon, ArrowUpRight, Plus } from 'lucide-react'
 import { TopBar } from '@/components/nav/TopBar'
 import { FilterChips, type FilterValue } from '@/components/nav/FilterChips'
-import { FAB } from '@/components/nav/FAB'
 import { BriefTile, type BriefTileSize } from '@/components/brief/BriefTile'
 import { StatsTile } from '@/components/brief/StatsTile'
 import { BriefDetailSheet } from '@/components/brief/BriefDetailSheet'
+import { ComposeSheet, simulateAiResponse } from '@/components/brief/ComposeSheet'
+import { DailyDigestCard } from '@/components/brief/DailyDigestCard'
 import { mockBriefs } from '@/data/mockBriefs'
 import {
   DEPARTMENT_ORDER,
@@ -15,6 +16,7 @@ import {
   getBriefDepartments,
   pickHeroBrief,
   type Brief,
+  type Comment,
   type Role,
 } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -46,6 +48,7 @@ export default function Inbox() {
   const [dept, setDept] = useState<DeptValue>('all')
   const [status, setStatus] = useState<FilterValue>('all')
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [composeOpen, setComposeOpen] = useState(false)
 
   const visible = useMemo(() => {
     let list = briefs
@@ -62,8 +65,13 @@ export default function Inbox() {
     return base
   }, [briefs, dept])
 
-  const hero = useMemo(() => pickHeroBrief(visible), [visible])
-  const rest = useMemo(() => (hero ? visible.filter((b) => b.id !== hero.id) : visible), [visible, hero])
+  const dailyDigest = useMemo(() => visible.find((b) => b.isDailyDigest) ?? null, [visible])
+  const heroPool = useMemo(() => visible.filter((b) => !b.isDailyDigest), [visible])
+  const hero = useMemo(() => pickHeroBrief(heroPool), [heroPool])
+  const rest = useMemo(
+    () => heroPool.filter((b) => !hero || b.id !== hero.id),
+    [heroPool, hero],
+  )
 
   const activeBriefs = useMemo(() => briefs.filter((b) => b.status !== 'final'), [briefs])
   const pendingCount = useMemo(() => briefs.filter((b) => b.status === 'decision').length, [briefs])
@@ -73,6 +81,24 @@ export default function Inbox() {
 
   const handleApprove = (id: string) => {
     setBriefs((prev) => prev.map((b) => (b.id === id ? { ...b, status: 'final' } : b)))
+  }
+
+  const handleAddComment = (briefId: string, comment: Comment) => {
+    setBriefs((prev) =>
+      prev.map((b) =>
+        b.id === briefId
+          ? { ...b, comments: [...(b.comments ?? []), comment], commentCount: (b.commentCount ?? 0) + 1 }
+          : b,
+      ),
+    )
+  }
+
+  const handleComposeSubmit = (newBrief: Brief) => {
+    setBriefs((prev) => [newBrief, ...prev])
+    // Simulate AI response after 2.5s
+    window.setTimeout(() => {
+      setBriefs((prev) => prev.map((b) => (b.id === newBrief.id ? simulateAiResponse(b) : b)))
+    }, 2500)
   }
 
   const deptLabel = dept === 'all' ? 'Semua department' : DEPARTMENT_LABEL[dept]
@@ -177,6 +203,20 @@ export default function Inbox() {
           <EmptyState />
         ) : (
           <div className="grid grid-cols-2 gap-2.5">
+            {/* Daily Digest pinned top */}
+            {dailyDigest && (
+              <motion.div
+                key={dailyDigest.id}
+                layout
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
+                className="col-span-2"
+              >
+                <DailyDigestCard brief={dailyDigest} onClick={() => navigate(`/brief/${dailyDigest.id}`)} />
+              </motion.div>
+            )}
+
             {/* Hero brief */}
             {hero && (
               <motion.div
@@ -283,7 +323,23 @@ export default function Inbox() {
         )}
       </main>
 
-      <FAB />
+      {/* Compose FAB — primary action */}
+      <button
+        type="button"
+        onClick={() => setComposeOpen(true)}
+        aria-label="Brief baru"
+        className={cn(
+          'fixed right-4 bottom-24 z-nav mb-safe-bottom',
+          'inline-flex items-center gap-2 pl-4 pr-5 h-14 rounded-full',
+          'bg-accent text-white shadow-[0_12px_32px_-8px_rgba(184,149,107,0.5),0_4px_12px_-2px_rgba(184,149,107,0.4)]',
+          'hover:bg-accent-dark active:scale-95',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
+          'transition-all duration-fast',
+        )}
+      >
+        <Plus className="size-5" />
+        <span className="text-sm font-semibold">Brief baru</span>
+      </button>
 
       <BriefDetailSheet
         brief={openBrief}
@@ -292,6 +348,13 @@ export default function Inbox() {
           if (!o) navigate('/')
         }}
         onApprove={handleApprove}
+        onAddComment={handleAddComment}
+      />
+
+      <ComposeSheet
+        open={composeOpen}
+        onOpenChange={setComposeOpen}
+        onSubmit={handleComposeSubmit}
       />
     </div>
   )

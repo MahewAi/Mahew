@@ -120,6 +120,13 @@ export interface CSuiteInput {
   bullets: string[]
 }
 
+export interface Comment {
+  id: string
+  author: Contributor | 'matthew'
+  text: string
+  timeAgo: string
+}
+
 export interface Brief {
   id: string
   status: Status
@@ -134,4 +141,8 @@ export interface Brief {
   timestamp: string
   csuiteInput: CSuiteInput[]
   coverImage?: string
+  comments?: Comment[]
+  isDailyDigest?: boolean
+  /** 'pending' = AI sedang generate response, 'completed' = penuh konten */
+  requestStatus?: 'pending' | 'completed'
 }

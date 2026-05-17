@@ -1,25 +1,40 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { Check, ChevronRight, Edit3, Sparkles } from 'lucide-react'
-import type { Brief } from '@/lib/types'
+import type { Brief, Comment, Contributor } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/shared/Toast'
 import { StatusPill, getCategoryVariant, getStatusLabel } from './StatusPill'
 import { CSuiteCard } from './CSuiteCard'
 import { GeneratedCover } from './GeneratedCover'
 import { VoteChart, hasVotes } from './VoteChart'
+import { CommentThread } from './CommentThread'
+import { AskRolePanel } from './AskRolePanel'
 
 interface BriefDetailSheetProps {
   brief: Brief | null
   open: boolean
   onOpenChange: (open: boolean) => void
   onApprove: (briefId: string) => void
+  onAddComment: (briefId: string, comment: Comment) => void
 }
 
-export function BriefDetailSheet({ brief, open, onOpenChange, onApprove }: BriefDetailSheetProps) {
+export function BriefDetailSheet({ brief, open, onOpenChange, onApprove, onAddComment }: BriefDetailSheetProps) {
   const toast = useToast()
   const reduceMotion = useReducedMotion()
+  const [askRole, setAskRole] = useState<Contributor | null>(null)
+
+  const handleAddComment = (text: string, author: Contributor | 'matthew') => {
+    if (!brief) return
+    const comment: Comment = {
+      id: `c-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+      author,
+      text,
+      timeAgo: 'Baru saja',
+    }
+    onAddComment(brief.id, comment)
+  }
 
   useEffect(() => {
     if (!open) return
@@ -147,16 +162,21 @@ export function BriefDetailSheet({ brief, open, onOpenChange, onApprove }: Brief
 
                   <div className="mt-6 px-5">
                     <p className="text-label-caps text-text-muted">Input dari tim</p>
-                    <div className="mt-3 space-y-2 pb-6">
+                    <div className="mt-3 space-y-2">
                       {brief.csuiteInput.map((input, idx) => (
                         <CSuiteCard
                           key={`${input.role}-${idx}`}
                           input={input}
                           defaultExpanded={input.role === 'ceo'}
+                          onAsk={() => setAskRole(input.role)}
                         />
                       ))}
                     </div>
                   </div>
+
+                  <CommentThread brief={brief} onAddComment={handleAddComment} />
+
+                  <div className="h-6" />
                 </div>
 
                 <div className="shrink-0 border-t border-white/40 bg-white/50 backdrop-blur-md px-5 py-3 pb-safe-bottom">
@@ -212,6 +232,15 @@ export function BriefDetailSheet({ brief, open, onOpenChange, onApprove }: Brief
           </Dialog.Portal>
         )}
       </AnimatePresence>
+
+      {brief && (
+        <AskRolePanel
+          role={askRole}
+          brief={brief}
+          open={askRole !== null}
+          onOpenChange={(o) => !o && setAskRole(null)}
+        />
+      )}
     </Dialog.Root>
   )
 }

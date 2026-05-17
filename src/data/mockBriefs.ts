@@ -10,6 +10,33 @@ import type { Brief } from '@/lib/types'
  */
 export const mockBriefs: Brief[] = [
   {
+    id: 'brief-daily-digest-20260517',
+    isDailyDigest: true,
+    status: 'decision',
+    priority: 'high',
+    title: 'Laporan Harian Atmaja · 17 Mei 2026',
+    description: 'Ringkasan kemarin, prioritas hari ini, dan dua brief menunggu keputusan Anda.',
+    summary:
+      '**Hari ini, 2 brief menunggu keputusan**: Lokasi Mother Store (B vs A) dan Struktur Harga Wave 1 (margin 38% vs 42%). Kemarin, tim Operations menutup audit SKU dengan 160 dari 240 lolos kurasi. Creative menyelesaikan revisi identitas visual, menunggu tinjauan akhir Anda.',
+    labels: ['Strategi'],
+    contributors: ['ceo'],
+    timeAgo: '7:00 pagi',
+    timestamp: '17 Mei, 07:00',
+    csuiteInput: [
+      {
+        role: 'ceo',
+        name: 'Atmaja',
+        subtitle: 'Ringkasan harian',
+        bullets: [
+          'Dua brief menunggu keputusan Anda hari ini, keduanya bertanda prioritas tinggi.',
+          'Kemarin: audit SKU selesai 160 dari 240 dikurasi, identitas visual wave kedua menunggu approval.',
+          'Tim sedang mengerjakan: loyalty program (draft Selasa), tinjauan vendor photography (final).',
+          'Rekomendasi prioritas: putuskan lokasi mother store hari ini, struktur harga bisa menunggu sampai besok kalau perlu input lebih.',
+        ],
+      },
+    ],
+  },
+  {
     id: 'brief-cbc37cc3',
     status: 'decision',
     priority: 'high',
@@ -19,9 +46,23 @@ export const mockBriefs: Brief[] = [
       'Pilih **Lokasi B** (strip retail). Risiko lebih rendah, ROI breakeven 14 bulan dibanding 24 bulan di Lokasi A.',
     labels: ['Strategi'],
     contributors: ['ceo', 'coo', 'cmo', 'cfo', 'cco'],
-    commentCount: 3,
+    commentCount: 2,
     timeAgo: '5 menit',
     timestamp: '15 Mei, 10:38',
+    comments: [
+      {
+        id: 'c-cbc-1',
+        author: 'matthew',
+        text: 'Atmaja, bisa jelaskan kenapa CMO yang berbeda? Apa yang dia lihat yang lain tidak?',
+        timeAgo: '3 menit',
+      },
+      {
+        id: 'c-cbc-2',
+        author: 'ceo',
+        text: 'CMO melihat dari sudut akuisisi: di Lokasi A, traffic alami menggantikan biaya akuisisi awal. Beliau benar untuk jangka pendek. Namun untuk premium curated yang kita bangun, kualitas akuisisi lebih penting dari volume. Strip retail menyaring pengunjung yang memang mencari Gerai.',
+        timeAgo: '2 menit',
+      },
+    ],
     csuiteInput: [
       {
         role: 'ceo',
