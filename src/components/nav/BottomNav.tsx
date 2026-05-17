@@ -11,7 +11,7 @@ type NavItem = {
 
 const items: NavItem[] = [
   { to: '/', icon: LayoutGrid, label: 'Board' },
-  { to: '/atmaja', icon: Sparkles, label: 'Atmaja', disabled: true },
+  { to: '/atmaja', icon: Sparkles, label: 'Atmaja' },
   { to: '/settings', icon: User, label: 'Profile' },
 ]
 
