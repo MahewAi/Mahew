@@ -9,6 +9,7 @@ import {
   type Contributor,
   type Role,
 } from '@/lib/types'
+import { generateMockReply, type ChatMessage } from '@/lib/mockReplies'
 import { cn } from '@/lib/utils'
 
 interface CommentThreadProps {
@@ -30,18 +31,15 @@ function pickReplier(brief: Brief): Contributor {
   return brief.contributors[0]
 }
 
-/** Generate mocked AI reply text based on brief context. */
-function generateReply(brief: Brief, replier: Contributor): string {
-  const name = CONTRIBUTOR_META[replier].name
-  const templates = [
-    `Catatan diterima. ${name} sedang menyusun jawaban yang lebih lengkap, akan masuk di sini sebentar lagi.`,
-    `Pertanyaan bagus. Konteks yang Anda sentuh memang relevan, ${name} akan tambah klarifikasi dalam beberapa menit.`,
-    `Terima kasih atas pertanyaannya. ${name} sedang cross-check dengan data sebelum jawab lebih detail.`,
-  ]
-  // Pick based on brief.id hash for consistency
-  let h = 0
-  for (let i = 0; i < brief.id.length; i++) h = ((h << 5) - h + brief.id.charCodeAt(i)) | 0
-  return templates[Math.abs(h) % templates.length]
+/** Generate mocked reply with brief context awareness + history. */
+function generateReply(brief: Brief, replier: Contributor, userMessage: string, history: ChatMessage[]): string {
+  const result = generateMockReply({
+    userMessage,
+    history,
+    brief,
+    speaker: replier,
+  })
+  return result.text
 }
 
 export function CommentThread({ brief, onAddComment }: CommentThreadProps) {
@@ -62,13 +60,23 @@ export function CommentThread({ brief, onAddComment }: CommentThreadProps) {
     if (!trimmed || sending) return
     setSending(true)
     const replier = pickReplier(brief)
+    // Snapshot history as ChatMessage[] (already conformant: { id, author, text })
+    const history: ChatMessage[] = comments.map((c) => ({
+      id: c.id,
+      author: c.author,
+      text: c.text,
+    }))
     onAddComment(trimmed, replier)
     setText('')
     // Simulate AI reply with delay
     setTimeout(() => {
-      onAddComment(generateReply(brief, replier), replier)
+      const replyText = generateReply(brief, replier, trimmed, [
+        ...history,
+        { id: `tmp-${Date.now()}`, author: 'matthew', text: trimmed },
+      ])
+      onAddComment(replyText, replier)
       setSending(false)
-    }, 1500)
+    }, 1100)
   }
 
   return (

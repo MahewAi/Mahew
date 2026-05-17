@@ -1,25 +1,45 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { Send, Sunrise, ArrowUpRight } from 'lucide-react'
+import { Send, Sunrise, ArrowUpRight, Trash2 } from 'lucide-react'
 import { mockBriefs } from '@/data/mockBriefs'
+import { generateMockReply, type ChatMessage } from '@/lib/mockReplies'
 import { cn } from '@/lib/utils'
 
-interface AtmajaMessage {
-  id: string
-  author: 'matthew' | 'atmaja'
-  text: string
+interface AtmajaMessage extends ChatMessage {
   timeAgo: string
 }
+
+const STORAGE_KEY = 'gerai:atmaja-thread'
 
 const initialThread: AtmajaMessage[] = [
   {
     id: 'a-init-1',
-    author: 'atmaja',
+    author: 'ceo',
     text: 'Selamat datang, Matthew. Saya pantau Gerai 1000 Pintu dan sintesa harian. Ada yang perlu kita bahas hari ini?',
     timeAgo: '7:00 pagi',
   },
 ]
+
+function loadThread(): AtmajaMessage[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return initialThread
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed) && parsed.length > 0) return parsed as AtmajaMessage[]
+  } catch {
+    // ignore
+  }
+  return initialThread
+}
+
+function saveThread(messages: AtmajaMessage[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-50)))
+  } catch {
+    // ignore (quota or disabled)
+  }
+}
 
 const quickPrompts = [
   'Apa prioritas terpenting minggu ini?',
@@ -31,10 +51,20 @@ const quickPrompts = [
 export default function Atmaja() {
   const navigate = useNavigate()
   const reduceMotion = useReducedMotion()
-  const [messages, setMessages] = useState<AtmajaMessage[]>(initialThread)
+  const [messages, setMessages] = useState<AtmajaMessage[]>(() => loadThread())
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
+
+  // Persist thread to localStorage
+  useEffect(() => {
+    saveThread(messages)
+  }, [messages])
+
+  const handleReset = () => {
+    setMessages(initialThread)
+    try { localStorage.removeItem(STORAGE_KEY) } catch { /* ignore */ }
+  }
 
   // Briefs yang melibatkan Atmaja (CEO contributor)
   const atmajaBriefs = useMemo(
@@ -60,19 +90,40 @@ export default function Atmaja() {
       text: msgText.trim(),
       timeAgo: 'Baru saja',
     }
+    const historySnapshot = messages
     setMessages((prev) => [...prev, userMsg])
     setText('')
     setSending(true)
     window.setTimeout(() => {
+      const result = generateMockReply({
+        userMessage: msgText.trim(),
+        history: historySnapshot,
+        speaker: 'atmaja',
+      })
+
+      if (result.resetThread) {
+        // Replace thread with reset acknowledgment as first message
+        setMessages([
+          {
+            id: `m-${Date.now() + 1}`,
+            author: 'ceo',
+            text: result.text,
+            timeAgo: 'Baru saja',
+          },
+        ])
+        setSending(false)
+        return
+      }
+
       const reply: AtmajaMessage = {
         id: `m-${Date.now() + 1}`,
-        author: 'atmaja',
-        text: generateAtmajaReply(msgText.trim()),
+        author: 'ceo',
+        text: result.text,
         timeAgo: 'Baru saja',
       }
       setMessages((prev) => [...prev, reply])
       setSending(false)
-    }, 1400)
+    }, 1100)
   }
 
   return (
@@ -87,7 +138,24 @@ export default function Atmaja() {
           }}
         />
         <div className="relative">
-          <p className="text-label-caps text-text-muted">CEO · AI Department</p>
+          <div className="flex items-center justify-between">
+            <p className="text-label-caps text-text-muted">CEO · AI Department</p>
+            {messages.length > 1 && (
+              <button
+                type="button"
+                onClick={handleReset}
+                aria-label="Reset percakapan"
+                className={cn(
+                  'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full',
+                  'glass-soft text-meta text-text-secondary hover:text-text-primary',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+                )}
+              >
+                <Trash2 aria-hidden="true" className="size-3" />
+                Reset
+              </button>
+            )}
+          </div>
           <div className="mt-4 flex items-center gap-4">
             <div className="relative shrink-0">
               <span
@@ -260,7 +328,7 @@ function MessageBubble({ message, reduceMotion }: { message: AtmajaMessage; redu
       initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.24, ease: [0.32, 0.72, 0, 1] }}
-      className={cn('flex gap-2.5', isMatthew && 'flex-row-reverse')}
+      className={cn('flex gap-2.5 items-end', isMatthew && 'flex-row-reverse')}
     >
       <span
         aria-hidden="true"
@@ -301,23 +369,3 @@ function MessageBubble({ message, reduceMotion }: { message: AtmajaMessage; redu
   )
 }
 
-function generateAtmajaReply(question: string): string {
-  const ql = question.toLowerCase()
-
-  if (ql.includes('prioritas') || ql.includes('terpenting') || ql.includes('penting')) {
-    return 'Prioritas tertinggi minggu ini: keputusan Lokasi Mother Store. Empat dari lima C-suite sudah condong ke B, tetapi penting Anda baca dissent CMO dulu sebelum putuskan. Kalau bisa diputuskan hari ini, kita bisa lock kontrak dan lanjut ke struktur harga.'
-  }
-  if (ql.includes('sintesa') || ql.includes('kondisi') || ql.includes('sekarang') || ql.includes('status')) {
-    return 'Kondisi Gerai sekarang: 2 brief menunggu keputusan Anda (Lokasi Mother Store, Struktur Harga). 2 brief sedang berjalan (Audit SKU, Loyalty Program). 1 brief menunggu tinjauan akhir (Identitas Visual). Runway dan timeline wave 1 masih sehat. Yang perlu Anda jaga: tempo keputusan jangan tertahan lebih dari 48 jam.'
-  }
-  if (ql.includes('tertunda') || ql.includes('paling lama') || ql.includes('blocked')) {
-    return 'Yang paling tertunda: keputusan Lokasi Mother Store, sudah lima hari menunggu. Setiap hari penundaan mengurangi opsi negosiasi dengan kedua pemilik lokasi. Saya sarankan Anda dedikasikan 20 menit hari ini untuk baca brief, lihat tabel komparasi, dan kirim sinyal.'
-  }
-  if (ql.includes('skenario') || ql.includes('terburuk') || ql.includes('worst') || ql.includes('risiko')) {
-    return 'Skenario yang harus Anda antisipasi: (1) Lokasi B underperform di bulan ke-6, kita perlu pivot pricing atau brand discovery; (2) Struktur 38% margin terbaca sebagai mass-premium kalau messaging tidak presisi; (3) Wave 2 timing tergeser kalau audit SKU melar. Tiga ini sudah saya susun playbook mitigasi terpisah, kabari kalau Anda mau lihat.'
-  }
-  if (ql.includes('halo') || ql.includes('hai') || ql.includes('hi') || ql.includes('selamat')) {
-    return 'Halo Matthew. Apa yang ingin Anda diskusikan? Saya siap memberi sintesa atau menggali lebih dalam ke salah satu brief yang ada.'
-  }
-  return 'Pertanyaan Anda layak didalami. Saya butuh sedikit konteks lebih: apakah ini terkait keputusan yang sedang berjalan, atau strategi jangka panjang? Atau ada brief spesifik yang ingin Anda bahas? Sebutkan agar saya bisa kasih jawaban yang tajam.'
-}

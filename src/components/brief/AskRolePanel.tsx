@@ -9,6 +9,7 @@ import {
   type Contributor,
   type Role,
 } from '@/lib/types'
+import { generateRoleReply, type ChatMessage } from '@/lib/mockReplies'
 import { cn } from '@/lib/utils'
 
 interface AskRolePanelProps {
@@ -60,20 +61,25 @@ export function AskRolePanel({ role, brief, open, onOpenChange }: AskRolePanelPr
   const isCfo = colorRole === 'cfo'
 
   const send = (msgText: string) => {
-    if (!msgText.trim() || sending) return
+    if (!msgText.trim() || sending || !role) return
     const userMsg: Message = { id: `m-${Date.now()}`, author: 'matthew', text: msgText.trim() }
+    const historySnapshot: ChatMessage[] = messages.map((m) => ({ id: m.id, author: m.author, text: m.text }))
     setMessages((prev) => [...prev, userMsg])
     setText('')
     setSending(true)
     setTimeout(() => {
+      const replyText = generateRoleReply(role, msgText.trim(), brief, [
+        ...historySnapshot,
+        { id: `tmp-${Date.now()}`, author: 'matthew', text: msgText.trim() },
+      ])
       const reply: Message = {
         id: `m-${Date.now() + 1}`,
         author: role,
-        text: generateMockedReply(brief, role, msgText.trim()),
+        text: replyText,
       }
       setMessages((prev) => [...prev, reply])
       setSending(false)
-    }, 1200)
+    }, 1100)
   }
 
   return (
@@ -253,19 +259,3 @@ function MessageBubble({ message, role }: { message: Message; role: Contributor 
   )
 }
 
-function generateMockedReply(brief: Brief, role: Contributor, question: string): string {
-  const name = CONTRIBUTOR_META[role].name
-  const ql = question.toLowerCase()
-
-  if (ql.includes('risiko') || ql.includes('risk')) {
-    return `Risiko utamanya tiga. Pertama, capex tinggi kalau pilih opsi yang lebih agresif. Kedua, market timing yang tidak presisi bisa menggeser ROI 6-8 bulan. Ketiga, eksekusi yang ber-overlap dengan wave berikutnya akan menambah load tim. Mitigasi: split eksekusi dan lock vendor kunci lebih awal.`
-  }
-  if (ql.includes('kondisi market') || ql.includes('berubah') || ql.includes('kompetitor')) {
-    return `Untuk kondisi market berubah, kita punya tiga skenario: optimis, baseline, pesimis. Saat ini baseline. Kalau bergeser ke pesimis (mis. inflasi naik tajam atau kompetitor masuk lebih cepat), strategi pivot adalah menahan wave 2 dan fokus konsolidasi customer base.`
-  }
-  if (ql.includes('posisi saya') || ql.includes('yang akan anda lakukan')) {
-    return `Kalau di posisi Anda, saya akan lanjut dengan opsi yang sudah direkomendasi mayoritas tim. Tapi tambah klausul review 6 minggu pertama dengan trigger spesifik: kalau metric X di bawah Y, kita pivot. Itu cara saya menghormati keputusan tim tapi tetap punya guardrail.`
-  }
-  void brief
-  return `Pertanyaan ini layak didalami. Dari konteks brief ini, ${name} melihat 2 aspek penting. Mau saya elaborate yang mana dulu — finansial atau operasional?`
-}

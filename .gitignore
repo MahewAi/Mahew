@@ -40,3 +40,8 @@ __pycache__/
 
 # Vercel CLI project link + token store
 .vercel
+
+# Stream 2 deploy staging + local security artifacts
+.stream2
+.security-reminder.ps1
+SECURITY_REMINDER_*.md
