@@ -1,13 +1,14 @@
 import { useEffect } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { Check, ChevronRight, Edit3 } from 'lucide-react'
+import { Check, ChevronRight, Edit3, Sparkles } from 'lucide-react'
 import type { Brief } from '@/lib/types'
 import { cn } from '@/lib/utils'
-import { Monogram } from '@/components/shared/Monogram'
 import { useToast } from '@/components/shared/Toast'
 import { StatusPill, getCategoryVariant, getStatusLabel } from './StatusPill'
 import { CSuiteCard } from './CSuiteCard'
+import { GeneratedCover } from './GeneratedCover'
+import { VoteChart, hasVotes } from './VoteChart'
 
 interface BriefDetailSheetProps {
   brief: Brief | null
@@ -79,28 +80,40 @@ export function BriefDetailSheet({ brief, open, onOpenChange, onApprove }: Brief
                 </div>
 
                 <div className="overflow-y-auto flex-1 overscroll-contain">
-                  <header className="px-5 pt-3 pb-2">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2">
-                        <Monogram size="sm" ariaLabel="Gerai 1000 Pintu" />
-                        <span className="text-label-caps text-text-muted">brief · {brief.id.slice(-8)}</span>
-                      </div>
-                      <span className="text-meta text-text-faint">{brief.timestamp}</span>
+                  {/* Cinematic cover hero */}
+                  <div className="relative">
+                    <GeneratedCover brief={brief} className="aspect-[21/9]" />
+                    <div
+                      aria-hidden="true"
+                      className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-b from-transparent to-bg-elevated pointer-events-none"
+                    />
+                  </div>
+
+                  <header className="px-5 -mt-2 relative">
+                    <div className="flex items-center gap-2 mb-3">
+                      {brief.priority === 'high' && (
+                        <span className="inline-flex items-center gap-1 text-label-caps text-accent-dark">
+                          <Sparkles aria-hidden="true" className="size-3" />
+                          Prioritas
+                        </span>
+                      )}
+                      {brief.priority === 'high' && (
+                        <span aria-hidden="true" className="text-text-faint">·</span>
+                      )}
+                      <span className="text-label-caps text-text-muted">
+                        {getStatusLabel(brief.status)}
+                      </span>
+                      <span aria-hidden="true" className="text-text-faint">·</span>
+                      <span className="text-label-caps text-text-faint">{brief.timestamp}</span>
                     </div>
 
                     <Dialog.Title asChild>
-                      <h2 className="mt-6 text-display text-text-primary">{brief.title}</h2>
+                      <h2 className="text-[36px] leading-[40px] font-bold tracking-[-0.028em] text-text-primary">
+                        {brief.title}
+                      </h2>
                     </Dialog.Title>
 
                     <div className="mt-4 flex items-center gap-1.5 flex-wrap">
-                      <StatusPill variant={brief.status} size="md">
-                        {getStatusLabel(brief.status)}
-                      </StatusPill>
-                      {brief.priority === 'high' && (
-                        <StatusPill variant="priority" size="md">
-                          Prioritas tinggi
-                        </StatusPill>
-                      )}
                       {brief.labels.map((label) => (
                         <StatusPill key={label} variant={getCategoryVariant(label)} size="md">
                           {label}
@@ -122,6 +135,15 @@ export function BriefDetailSheet({ brief, open, onOpenChange, onApprove }: Brief
                       dangerouslySetInnerHTML={{ __html: formatSummary(brief.summary) }}
                     />
                   </section>
+
+                  {hasVotes(brief) && (
+                    <section aria-label="Suara C-suite" className="mx-5 mt-6">
+                      <p className="text-label-caps text-text-muted mb-3">Suara C-suite</p>
+                      <div className="rounded-md bg-bg-elevated border border-border-soft p-4">
+                        <VoteChart brief={brief} size="lg" />
+                      </div>
+                    </section>
+                  )}
 
                   <div className="mt-6 px-5">
                     <p className="text-label-caps text-text-muted">Input dari tim</p>
