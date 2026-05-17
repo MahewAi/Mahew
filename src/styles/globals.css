@@ -1,0 +1,136 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-app: 0 0% 100%;
+    --bg-surface: 36 33% 97%;
+    --bg-elevated: 0 0% 100%;
+    --bg-soft: 30 30% 95%;
+
+    --text-primary: 30 20% 10%;       /* #1F1A14 — 17.8:1 on white */
+    --text-secondary: 30 15% 37%;     /* #6B6253 — 5.5:1 on white */
+    --text-muted: 30 12% 45%;         /* #807767 — 4.8:1 on white (AA body) */
+    --text-faint: 30 12% 62%;         /* #A89E8C — 3.1:1 large/decorative only */
+
+    /* Default accent = brass (theme-brass) */
+    --accent: 33 36% 57%;
+    --accent-dark: 32 34% 40%;
+    --accent-light: 36 50% 87%;
+    --accent-bg: 36 50% 91%;
+
+    --border-soft: 36 20% 92%;
+    --border-med: 36 14% 86%;
+    --border-strong: 30 11% 70%;
+
+    --decision: 14 50% 51%;
+    --decision-bg: 14 70% 95%;
+    --doing: 215 38% 40%;
+    --doing-bg: 215 50% 95%;
+    --review: 313 22% 43%;
+    --review-bg: 313 35% 93%;
+    --final: 145 28% 34%;
+    --final-bg: 145 30% 92%;
+
+    --role-ceo: 33 49% 42%;           /* #A07A38 brass */
+    --role-coo: 175 22% 42%;          /* #56877D teal-sage */
+    --role-cmo: 340 35% 52%;          /* #B95B7A rose */
+    --role-cfo: 46 65% 50%;           /* #D69922 gold */
+    --role-cco: 280 22% 48%;          /* #6F539A violet */
+
+    --shadow-soft: 0 1px 2px rgba(31, 26, 20, 0.04), 0 4px 14px rgba(31, 26, 20, 0.04);
+    --shadow-card: 0 1px 3px rgba(31, 26, 20, 0.06), 0 8px 20px rgba(31, 26, 20, 0.06);
+    --shadow-pop: 0 12px 32px rgba(31, 26, 20, 0.1), 0 4px 10px rgba(31, 26, 20, 0.05);
+
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+    --radius-pill: 100px;
+
+    /* shadcn aliases */
+    --background: var(--bg-app);
+    --foreground: var(--text-primary);
+    --card: var(--bg-elevated);
+    --card-foreground: var(--text-primary);
+    --popover: var(--bg-elevated);
+    --popover-foreground: var(--text-primary);
+    --primary: var(--accent);
+    --primary-foreground: 0 0% 100%;
+    --secondary: var(--bg-soft);
+    --secondary-foreground: var(--text-primary);
+    --muted: var(--bg-soft);
+    --muted-foreground: var(--text-muted);
+    --accent-foreground: var(--text-primary);
+    --destructive: var(--decision);
+    --destructive-foreground: 0 0% 100%;
+    --border: var(--border-med);
+    --input: var(--border-med);
+    --ring: var(--accent);
+    --radius: var(--radius-md);
+  }
+
+  /* Accent locked: brass #B8956B (default :root above) */
+
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: hsl(var(--bg-app));
+    color: hsl(var(--text-primary));
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+
+  /* Type scale (utility-app sans-serif system) */
+  .text-display {
+    font-size: 40px;
+    line-height: 44px;
+    font-weight: 700;
+    letter-spacing: -0.028em;
+  }
+  .text-hero {
+    font-size: 32px;
+    line-height: 36px;
+    font-weight: 700;
+    letter-spacing: -0.024em;
+  }
+  .text-page-title {
+    font-size: 22px;
+    line-height: 28px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .text-card-title {
+    font-size: 15px;
+    line-height: 20px;
+    font-weight: 600;
+  }
+  .text-card-title-lg {
+    font-size: 17px;
+    line-height: 22px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+  }
+  .text-meta {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 500;
+  }
+  .text-label-caps {
+    font-size: 10px;
+    line-height: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+}
