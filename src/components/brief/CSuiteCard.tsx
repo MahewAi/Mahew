@@ -30,34 +30,55 @@ export function CSuiteCard({ input, defaultExpanded = false }: CSuiteCardProps) 
   const colorRole = getContributorColorRole(input.role)
   const meta = CONTRIBUTOR_META[input.role]
   const isSpecialist = meta.parent !== undefined
+  const isCeo = input.role === 'ceo'
   const isCfo = colorRole === 'cfo'
   const isTwo = meta.initials.length > 1
   const parentName = meta.parent ? CONTRIBUTOR_META[meta.parent].name : null
 
   return (
-    <div className="relative rounded-[14px] glass-soft shadow-glass overflow-hidden">
+    <div
+      className={cn(
+        'relative rounded-[14px] shadow-glass overflow-hidden',
+        isCeo
+          ? 'glass-strong shadow-glass-hero ring-1 ring-accent-light/60'
+          : 'glass-soft',
+      )}
+    >
       {/* Role color accent stripe */}
       <span
         aria-hidden="true"
-        className={cn('absolute left-0 top-0 bottom-0 w-1', roleBg[colorRole])}
+        className={cn('absolute left-0 top-0 bottom-0', roleBg[colorRole], isCeo ? 'w-1.5' : 'w-1')}
       />
+
+      {/* CEO featured: corner kicker */}
+      {isCeo && (
+        <span
+          aria-hidden="true"
+          className="absolute right-3 top-2.5 text-[9px] font-semibold tracking-[0.22em] uppercase text-accent-dark"
+        >
+          Sintesis CEO
+        </span>
+      )}
+
       <button
         type="button"
         aria-expanded={expanded}
         aria-controls={contentId}
         onClick={() => setExpanded((v) => !v)}
         className={cn(
-          'w-full pl-5 pr-4 py-3.5 flex items-center gap-3',
+          'w-full pr-4 py-3.5 flex items-center gap-3',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 rounded-md',
+          isCeo ? 'pl-6 pt-7' : 'pl-5',
         )}
       >
         <span
           aria-hidden="true"
           className={cn(
-            'inline-flex items-center justify-center rounded-full font-semibold size-8 shrink-0',
+            'inline-flex items-center justify-center rounded-full font-semibold shrink-0',
             roleBg[colorRole],
             isCfo ? 'text-text-primary' : 'text-white',
-            isTwo ? 'text-[11px]' : 'text-sm',
+            isCeo ? 'size-11 text-base ring-2 ring-white/70 shadow-glow-accent' : 'size-8',
+            !isCeo && isTwo ? 'text-[11px]' : !isCeo ? 'text-sm' : '',
           )}
         >
           {meta.initials}
@@ -67,17 +88,25 @@ export function CSuiteCard({ input, defaultExpanded = false }: CSuiteCardProps) 
           <p
             className={cn(
               'leading-tight truncate',
-              isSpecialist
-                ? 'text-sm font-medium text-text-secondary'
-                : 'text-base font-medium text-text-primary',
+              isCeo
+                ? 'text-[18px] font-serif font-medium text-text-primary'
+                : isSpecialist
+                  ? 'text-sm font-medium text-text-secondary'
+                  : 'text-base font-medium text-text-primary',
             )}
+            style={isCeo ? { fontFamily: '"Cormorant Garamond", Georgia, serif' } : undefined}
           >
             {input.name}
           </p>
-          {isSpecialist && parentName && (
+          {isCeo && (
+            <p className="text-meta italic text-accent-dark mt-0.5">
+              {input.subtitle ?? 'Sintesis kepemimpinan'}
+            </p>
+          )}
+          {!isCeo && isSpecialist && parentName && (
             <p className="text-meta text-text-muted truncate">di bawah {parentName}</p>
           )}
-          {!isSpecialist && input.subtitle && (
+          {!isCeo && !isSpecialist && input.subtitle && (
             <p className="text-meta text-text-muted truncate">{input.subtitle}</p>
           )}
         </div>
@@ -114,7 +143,12 @@ export function CSuiteCard({ input, defaultExpanded = false }: CSuiteCardProps) 
             transition={{ duration: 0.36, ease: [0.32, 0.72, 0, 1] }}
             className="overflow-hidden"
           >
-            <ul className="pl-5 pr-4 pb-4 space-y-2 text-sm leading-relaxed text-text-secondary">
+            <ul
+              className={cn(
+                'pr-4 pb-4 space-y-2 text-sm leading-relaxed text-text-secondary',
+                isCeo ? 'pl-6' : 'pl-5',
+              )}
+            >
               {input.bullets.map((b, i) => (
                 <li key={i} className="flex gap-2">
                   <span aria-hidden="true" className="text-accent-dark shrink-0 select-none">

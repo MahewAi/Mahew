@@ -82,7 +82,7 @@ export function BriefDetailSheet({ brief, open, onOpenChange, onApprove }: Brief
                 <div className="overflow-y-auto flex-1 overscroll-contain">
                   {/* Cinematic cover hero */}
                   <div className="relative">
-                    <GeneratedCover brief={brief} className="aspect-[21/9]" />
+                    <GeneratedCover brief={brief} animated className="aspect-[21/9]" />
                     <div
                       aria-hidden="true"
                       className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-b from-transparent to-bg-elevated pointer-events-none"

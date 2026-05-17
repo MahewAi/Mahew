@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 interface GeneratedCoverProps {
   brief: Brief
   className?: string
+  animated?: boolean
 }
 
 type Pattern = 'mesh' | 'horizon' | 'beam' | 'dots' | 'spiral'
@@ -13,7 +14,7 @@ type Pattern = 'mesh' | 'horizon' | 'beam' | 'dots' | 'spiral'
  * 5 pattern distinct (mesh/horizon/beam/dots/spiral) berdasarkan brief.id hash
  * supaya tiap brief punya tampilan berbeda tanpa random per-render.
  */
-export function GeneratedCover({ brief, className }: GeneratedCoverProps) {
+export function GeneratedCover({ brief, className, animated = false }: GeneratedCoverProps) {
   if (brief.coverImage) {
     return (
       <div className={cn('relative w-full overflow-hidden bg-bg-soft', className)}>
@@ -29,9 +30,19 @@ export function GeneratedCover({ brief, className }: GeneratedCoverProps) {
   return (
     <div
       className={cn(
-        'relative w-full overflow-hidden bg-gradient-to-br from-accent-light via-accent to-accent-dark',
+        'relative w-full overflow-hidden',
+        animated ? 'cover-animated' : 'bg-gradient-to-br from-accent-light via-accent to-accent-dark',
         className,
       )}
+      style={
+        animated
+          ? {
+              background:
+                'radial-gradient(circle at 20% 30%, hsl(var(--accent-light)), transparent 50%), radial-gradient(circle at 80% 70%, hsl(var(--accent-dark)), transparent 50%), linear-gradient(135deg, hsl(var(--accent-light)), hsl(var(--accent)), hsl(var(--accent-dark)))',
+              backgroundSize: '180% 180%, 180% 180%, 100% 100%',
+            }
+          : undefined
+      }
       aria-hidden="true"
     >
       <PatternLayer pattern={pattern} seed={seed} />

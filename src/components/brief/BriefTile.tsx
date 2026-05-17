@@ -68,7 +68,7 @@ function HeroTile({ brief, onClick }: { brief: Brief; onClick: () => void }) {
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
       )}
     >
-      <GeneratedCover brief={brief} className="aspect-[16/9]" />
+      <GeneratedCover brief={brief} animated className="aspect-[16/9]" />
 
       <div className="p-4">
         <div className="flex items-center gap-2 mb-2.5">
