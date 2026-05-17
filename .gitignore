@@ -37,3 +37,6 @@ vite.config.js
 # Python cache from skill scripts
 __pycache__/
 *.pyc
+
+# Vercel CLI project link + token store
+.vercel
