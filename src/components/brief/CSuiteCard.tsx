@@ -35,14 +35,19 @@ export function CSuiteCard({ input, defaultExpanded = false }: CSuiteCardProps) 
   const parentName = meta.parent ? CONTRIBUTOR_META[meta.parent].name : null
 
   return (
-    <div className="rounded-[14px] glass-soft shadow-glass">
+    <div className="relative rounded-[14px] glass-soft shadow-glass overflow-hidden">
+      {/* Role color accent stripe */}
+      <span
+        aria-hidden="true"
+        className={cn('absolute left-0 top-0 bottom-0 w-1', roleBg[colorRole])}
+      />
       <button
         type="button"
         aria-expanded={expanded}
         aria-controls={contentId}
         onClick={() => setExpanded((v) => !v)}
         className={cn(
-          'w-full px-4 py-3 flex items-center gap-3',
+          'w-full pl-5 pr-4 py-3.5 flex items-center gap-3',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 rounded-md',
         )}
       >
@@ -109,7 +114,7 @@ export function CSuiteCard({ input, defaultExpanded = false }: CSuiteCardProps) 
             transition={{ duration: 0.36, ease: [0.32, 0.72, 0, 1] }}
             className="overflow-hidden"
           >
-            <ul className="px-4 pb-4 space-y-2 text-sm leading-relaxed text-text-secondary">
+            <ul className="pl-5 pr-4 pb-4 space-y-2 text-sm leading-relaxed text-text-secondary">
               {input.bullets.map((b, i) => (
                 <li key={i} className="flex gap-2">
                   <span aria-hidden="true" className="text-accent-dark shrink-0 select-none">

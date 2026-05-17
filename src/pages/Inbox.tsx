@@ -93,6 +93,18 @@ export default function Inbox() {
 
   return (
     <div className="min-h-screen pb-36">
+      {/* Department color tint overlay — atmospheric mood shift per dept filter */}
+      <div
+        aria-hidden="true"
+        className="fixed inset-0 pointer-events-none z-0 transition-opacity duration-700"
+        style={{
+          opacity: dept === 'all' ? 0 : 1,
+          background:
+            dept !== 'all'
+              ? `radial-gradient(circle at 75% 20%, hsl(var(--role-${dept}) / 0.38), transparent 50%), radial-gradient(circle at 20% 85%, hsl(var(--role-${dept}) / 0.28), transparent 55%)`
+              : 'none',
+        }}
+      />
       <TopBar activeCount={activeBriefs.length} pendingCount={pendingCount} />
 
       {/* Department dropdown */}
