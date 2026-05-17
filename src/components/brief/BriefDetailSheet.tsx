@@ -65,7 +65,7 @@ export function BriefDetailSheet({ brief, open, onOpenChange, onApprove }: Brief
                 className={cn(
                   'fixed left-0 right-0 bottom-0 z-sheet',
                   'mx-auto w-full md:max-w-xl',
-                  'bg-bg-elevated rounded-t-xl shadow-pop',
+                  'glass-strong rounded-t-[24px] shadow-glass-hero',
                   'flex flex-col',
                   'max-h-[88vh]',
                 )}
@@ -159,7 +159,7 @@ export function BriefDetailSheet({ brief, open, onOpenChange, onApprove }: Brief
                   </div>
                 </div>
 
-                <div className="shrink-0 border-t border-border-soft bg-bg-elevated px-5 py-3 pb-safe-bottom">
+                <div className="shrink-0 border-t border-white/40 bg-white/50 backdrop-blur-md px-5 py-3 pb-safe-bottom">
                   <button
                     type="button"
                     onClick={handleApprove}

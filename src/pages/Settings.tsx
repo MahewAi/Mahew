@@ -7,8 +7,8 @@ export default function Settings() {
   const navigate = useNavigate()
 
   return (
-    <div className="min-h-screen bg-bg-app pb-32">
-      <header className="px-4 pt-safe-top pt-4 pb-3 bg-bg-app">
+    <div className="min-h-screen pb-32">
+      <header className="px-4 pt-safe-top pt-4 pb-3">
         <button
           type="button"
           onClick={() => navigate('/')}
@@ -30,7 +30,7 @@ export default function Settings() {
           <h2 id="user-heading" className="text-label-caps text-text-muted px-1 mb-2">
             Pengguna
           </h2>
-          <div className="rounded-lg bg-bg-elevated border border-border-soft p-4 flex items-center gap-3">
+          <div className="rounded-[16px] glass-soft shadow-glass p-4 flex items-center gap-3">
             <Monogram size="md" />
             <div className="min-w-0">
               <p className="text-card-title-lg text-text-primary">Matthew</p>
@@ -43,7 +43,7 @@ export default function Settings() {
           <h2 id="brand-heading" className="text-label-caps text-text-muted px-1 mb-2">
             Tentang Brand
           </h2>
-          <div className="rounded-lg bg-bg-elevated border border-border-soft divide-y divide-border-soft">
+          <div className="rounded-[16px] glass-soft shadow-glass divide-y divide-white/30">
             <Row icon={Building2} label="Brand" value="Gerai 1000 Pintu" />
             <Row icon={Info} label="Positioning" value="Premium curated retail" />
             <Row icon={Globe2} label="Lokasi mother store" value="Balikpapan" />
@@ -54,7 +54,7 @@ export default function Settings() {
           <h2 id="app-heading" className="text-label-caps text-text-muted px-1 mb-2">
             Aplikasi
           </h2>
-          <div className="rounded-lg bg-bg-elevated border border-border-soft divide-y divide-border-soft">
+          <div className="rounded-[16px] glass-soft shadow-glass divide-y divide-white/30">
             <Row label="Versi" value="0.1.0 MVP" />
             <Row label="Build" value="Vite + React PWA" />
             <Row label="Bahasa" value="Indonesia" />
@@ -66,7 +66,7 @@ export default function Settings() {
           <h2 id="account-heading" className="text-label-caps text-text-muted px-1 mb-2">
             Akun
           </h2>
-          <div className="rounded-lg bg-bg-elevated border border-border-soft">
+          <div className="rounded-[16px] glass-soft shadow-glass">
             <button
               type="button"
               disabled

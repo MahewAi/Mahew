@@ -22,8 +22,7 @@ export function BottomNav() {
       className={cn(
         'fixed bottom-4 left-1/2 -translate-x-1/2 z-nav',
         'flex gap-1 p-1.5',
-        'bg-bg-elevated/85 backdrop-blur-md border border-border-soft',
-        'rounded-pill shadow-pop',
+        'glass-strong rounded-pill shadow-glass-hero',
         'mb-safe-bottom',
       )}
     >

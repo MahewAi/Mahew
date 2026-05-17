@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronDown, Inbox as InboxIcon } from 'lucide-react'
+import { ChevronDown, Inbox as InboxIcon, ArrowUpRight } from 'lucide-react'
 import { TopBar } from '@/components/nav/TopBar'
 import { FilterChips, type FilterValue } from '@/components/nav/FilterChips'
 import { FAB } from '@/components/nav/FAB'
-import { BriefCard } from '@/components/brief/BriefCard'
-import { BriefCardHero } from '@/components/brief/BriefCardHero'
+import { BriefTile, type BriefTileSize } from '@/components/brief/BriefTile'
+import { StatsTile } from '@/components/brief/StatsTile'
 import { BriefDetailSheet } from '@/components/brief/BriefDetailSheet'
 import { mockBriefs } from '@/data/mockBriefs'
 import {
@@ -29,6 +29,16 @@ const roleDot: Record<Role, string> = {
   cco: 'bg-role-cco',
 }
 
+/**
+ * Assign bento tile size berdasarkan priority + status.
+ * Hero sudah dipilih terpisah via pickHeroBrief.
+ */
+function getTileSize(brief: Brief): BriefTileSize {
+  if (brief.priority === 'high') return 'priority'
+  if (brief.status === 'final') return 'compact'
+  return 'compact'
+}
+
 export default function Inbox() {
   const navigate = useNavigate()
   const params = useParams<{ id?: string }>()
@@ -44,9 +54,6 @@ export default function Inbox() {
     return list
   }, [briefs, dept, status])
 
-  const hero = useMemo(() => pickHeroBrief(visible), [visible])
-  const rest = useMemo(() => (hero ? visible.filter((b) => b.id !== hero.id) : visible), [visible, hero])
-
   const statusCounts = useMemo<Record<FilterValue, number>>(() => {
     const base: Record<FilterValue, number> = { all: 0, decision: 0, doing: 0, review: 0, final: 0 }
     const scope = dept === 'all' ? briefs : briefs.filter((b) => getBriefDepartments(b.contributors).includes(dept))
@@ -54,6 +61,9 @@ export default function Inbox() {
     for (const b of scope) base[b.status] += 1
     return base
   }, [briefs, dept])
+
+  const hero = useMemo(() => pickHeroBrief(visible), [visible])
+  const rest = useMemo(() => (hero ? visible.filter((b) => b.id !== hero.id) : visible), [visible, hero])
 
   const activeBriefs = useMemo(() => briefs.filter((b) => b.status !== 'final'), [briefs])
   const pendingCount = useMemo(() => briefs.filter((b) => b.status === 'decision').length, [briefs])
@@ -67,20 +77,35 @@ export default function Inbox() {
 
   const deptLabel = dept === 'all' ? 'Semua department' : DEPARTMENT_LABEL[dept]
 
+  // Stats untuk tile angka huge
+  const verdictsStats = useMemo(() => {
+    if (!hero) return null
+    const counts: Record<string, number> = { A: 0, B: 0, C: 0 }
+    for (const i of hero.csuiteInput) {
+      if (i.verdict) counts[i.verdict.type] += 1
+    }
+    const total = counts.A + counts.B + counts.C
+    if (total === 0) return null
+    const sorted = Object.entries(counts).sort(([, a], [, b]) => b - a)
+    const [topType, topCount] = sorted[0]
+    return { type: topType, count: topCount, total }
+  }, [hero])
+
   return (
-    <div className="min-h-screen bg-bg-app pb-32">
+    <div className="min-h-screen pb-36">
       <TopBar activeCount={activeBriefs.length} pendingCount={pendingCount} />
 
-      <div className="px-4 pb-2 relative">
+      {/* Department dropdown */}
+      <div className="px-4 pt-2 pb-1 relative">
         <button
           type="button"
           onClick={() => setDropdownOpen((v) => !v)}
           aria-expanded={dropdownOpen}
           aria-haspopup="listbox"
           className={cn(
-            'inline-flex items-center gap-2 min-h-touch px-3 py-2 rounded-md',
-            'border border-border-med bg-bg-elevated text-sm font-medium text-text-primary',
-            'hover:bg-bg-soft',
+            'inline-flex items-center gap-2 min-h-touch px-3.5 py-2 rounded-full',
+            'glass-strong text-sm font-medium text-text-primary shadow-glass',
+            'hover:bg-white/80',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
           )}
         >
@@ -96,14 +121,10 @@ export default function Inbox() {
 
         {dropdownOpen && (
           <>
-            <div
-              aria-hidden="true"
-              className="fixed inset-0 z-10"
-              onClick={() => setDropdownOpen(false)}
-            />
+            <div aria-hidden="true" className="fixed inset-0 z-30" onClick={() => setDropdownOpen(false)} />
             <div
               role="listbox"
-              className="absolute left-4 right-4 top-[calc(100%-4px)] z-20 mt-1 rounded-md bg-bg-elevated border border-border-med shadow-pop py-1"
+              className="absolute left-4 right-4 top-[calc(100%-4px)] z-40 mt-1 rounded-[14px] glass-strong shadow-glass-hero py-1"
             >
               {[
                 { value: 'all' as DeptValue, label: 'Semua department' },
@@ -121,8 +142,8 @@ export default function Inbox() {
                     }}
                     className={cn(
                       'flex items-center gap-2 w-full px-3 py-2 text-left text-sm',
-                      'hover:bg-bg-soft',
-                      isActive ? 'text-text-primary font-medium bg-accent-bg/40' : 'text-text-secondary',
+                      'hover:bg-white/40',
+                      isActive ? 'text-text-primary font-medium bg-white/30' : 'text-text-secondary',
                     )}
                   >
                     {opt.value !== 'all' && (
@@ -139,11 +160,12 @@ export default function Inbox() {
 
       <FilterChips active={status} onChange={setStatus} counts={statusCounts} />
 
-      <main className="px-4 pt-3 space-y-3" aria-label="Daftar brief">
+      <main className="px-3" aria-label="Daftar brief">
         {visible.length === 0 ? (
           <EmptyState />
         ) : (
-          <>
+          <div className="grid grid-cols-2 gap-2.5">
+            {/* Hero brief */}
             {hero && (
               <motion.div
                 key={hero.id}
@@ -151,32 +173,101 @@ export default function Inbox() {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
+                className="col-span-2"
               >
-                <BriefCardHero brief={hero} onClick={() => navigate(`/brief/${hero.id}`)} />
+                <BriefTile brief={hero} size="hero" onClick={() => navigate(`/brief/${hero.id}`)} />
               </motion.div>
             )}
-            {rest.length > 0 && hero && (
-              <p className="text-label-caps text-text-muted pt-2 pl-1">Brief lainnya</p>
-            )}
-            <AnimatePresence mode="popLayout" initial={true}>
-              {rest.map((b, idx) => (
+
+            {/* Stats row — 2x 1x1 tiles */}
+            {hero && verdictsStats && (
+              <>
                 <motion.div
-                  key={b.id}
                   layout
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  transition={{
-                    duration: 0.28,
-                    delay: Math.min(idx * 0.04, 0.24),
-                    ease: [0.32, 0.72, 0, 1],
-                  }}
+                  transition={{ duration: 0.32, delay: 0.08, ease: [0.32, 0.72, 0, 1] }}
                 >
-                  <BriefCard brief={b} coverImage={b.coverImage} onClick={() => navigate(`/brief/${b.id}`)} />
+                  <StatsTile
+                    label="Verdict"
+                    value={verdictsStats.count}
+                    unit={`/ ${verdictsStats.total}`}
+                    caption={`setuju ${verdictsStats.type}`}
+                    tone="positive"
+                  />
                 </motion.div>
-              ))}
+                <motion.div
+                  layout
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.32, delay: 0.12, ease: [0.32, 0.72, 0, 1] }}
+                >
+                  <StatsTile
+                    label="Menunggu"
+                    value={pendingCount}
+                    unit="brief"
+                    caption="keputusan Anda"
+                    tone={pendingCount > 0 ? 'urgent' : 'default'}
+                  />
+                </motion.div>
+              </>
+            )}
+
+            {/* Rest of briefs */}
+            <AnimatePresence mode="popLayout" initial={true}>
+              {rest.map((b, idx) => {
+                const tileSize = getTileSize(b)
+                return (
+                  <motion.div
+                    key={b.id}
+                    layout
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{
+                      duration: 0.28,
+                      delay: Math.min(idx * 0.04, 0.24),
+                      ease: [0.32, 0.72, 0, 1],
+                    }}
+                    className={tileSize === 'priority' ? 'col-span-2' : 'col-span-1'}
+                  >
+                    <BriefTile brief={b} size={tileSize} onClick={() => navigate(`/brief/${b.id}`)} />
+                  </motion.div>
+                )
+              })}
             </AnimatePresence>
-          </>
+
+            {/* Dark CTA tile — Approve action shortcut for top decision */}
+            {hero && hero.status === 'decision' && (
+              <motion.div
+                layout
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.32, delay: 0.2, ease: [0.32, 0.72, 0, 1] }}
+                className="col-span-2"
+              >
+                <button
+                  type="button"
+                  onClick={() => navigate(`/brief/${hero.id}`)}
+                  className={cn(
+                    'group w-full rounded-[18px] bg-[#1F1A14] text-white p-4 text-left',
+                    'shadow-glass-hero',
+                    'flex items-center justify-between gap-3',
+                    'hover:bg-text-primary',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
+                  )}
+                >
+                  <div>
+                    <p className="text-label-caps text-white/60">Atmaja menunggu</p>
+                    <p className="mt-1 text-[15px] font-medium">Setujui rekomendasi Lokasi B</p>
+                  </div>
+                  <span className="inline-flex items-center justify-center size-11 rounded-full bg-accent text-white shadow-glow-accent">
+                    <ArrowUpRight className="size-5" />
+                  </span>
+                </button>
+              </motion.div>
+            )}
+          </div>
         )}
       </main>
 
@@ -197,7 +288,7 @@ export default function Inbox() {
 function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center text-center py-16 px-6">
-      <div className="size-14 rounded-full bg-bg-soft flex items-center justify-center mb-4">
+      <div className="size-14 rounded-full glass-soft flex items-center justify-center mb-4 shadow-glass">
         <InboxIcon aria-hidden="true" className="size-6 text-text-muted" />
       </div>
       <p className="text-card-title-lg text-text-primary">Tidak ada brief di sini</p>

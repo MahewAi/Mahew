@@ -35,7 +35,7 @@ export function CSuiteCard({ input, defaultExpanded = false }: CSuiteCardProps) 
   const parentName = meta.parent ? CONTRIBUTOR_META[meta.parent].name : null
 
   return (
-    <div className="rounded-md border border-border-soft bg-bg-elevated">
+    <div className="rounded-[14px] glass-soft shadow-glass">
       <button
         type="button"
         aria-expanded={expanded}

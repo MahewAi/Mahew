@@ -11,9 +11,23 @@ export default function App() {
 
   return (
     <ToastProvider>
-      <div className="min-h-screen bg-bg-app text-text-primary">
-        <Routes />
-        {!hideNav && <BottomNav />}
+      <div className="canvas-brass min-h-screen text-text-primary relative">
+        {/* Global grain texture overlay */}
+        <svg
+          aria-hidden="true"
+          className="fixed inset-0 size-full opacity-[0.07] mix-blend-multiply pointer-events-none z-0"
+        >
+          <filter id="app-grain">
+            <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch" />
+            <feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0" />
+          </filter>
+          <rect width="100%" height="100%" filter="url(#app-grain)" />
+        </svg>
+
+        <div className="relative z-10">
+          <Routes />
+          {!hideNav && <BottomNav />}
+        </div>
       </div>
       <Analytics />
       <SpeedInsights />
