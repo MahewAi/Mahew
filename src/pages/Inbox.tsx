@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, Inbox as InboxIcon } from 'lucide-react'
 import { TopBar } from '@/components/nav/TopBar'
 import { FilterChips, type FilterValue } from '@/components/nav/FilterChips'
 import { FAB } from '@/components/nav/FAB'
@@ -152,7 +152,7 @@ export default function Inbox() {
                   ease: [0.32, 0.72, 0, 1],
                 }}
               >
-                <BriefCard brief={b} onClick={() => navigate(`/brief/${b.id}`)} />
+                <BriefCard brief={b} coverImage={b.coverImage} onClick={() => navigate(`/brief/${b.id}`)} />
               </motion.div>
             ))}
           </AnimatePresence>
@@ -175,9 +175,15 @@ export default function Inbox() {
 
 function EmptyState() {
   return (
-    <div className="text-center py-12">
-      <p className="text-card-title-lg text-text-primary">Tidak ada brief di filter ini.</p>
-      <p className="mt-1 text-sm text-text-muted">Coba pilih filter lain di atas.</p>
+    <div className="flex flex-col items-center justify-center text-center py-16 px-6">
+      <div className="size-14 rounded-full bg-bg-soft flex items-center justify-center mb-4">
+        <InboxIcon aria-hidden="true" className="size-6 text-text-muted" />
+      </div>
+      <p className="text-card-title-lg text-text-primary">Tidak ada brief di sini</p>
+      <p className="mt-1.5 text-sm text-text-muted max-w-[260px] leading-relaxed">
+        Coba pilih department atau status lain. Brief baru akan masuk otomatis saat tim AI selesai
+        memprosesnya.
+      </p>
     </div>
   )
 }

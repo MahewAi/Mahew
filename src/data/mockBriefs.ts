@@ -221,6 +221,7 @@ export const mockBriefs: Brief[] = [
     description: 'Creative mengajukan revisi warna sekunder. Menunggu tinjauan akhir CEO.',
     summary:
       'Warna sekunder bergeser dari sage ke teal-sage demi diferensiasi dari kompetitor regional. Risiko brand recall rendah.',
+    coverImage: '/cover-branding.svg',
     labels: ['Branding'],
     contributors: ['cco', 'cmo', 'ceo'],
     commentCount: 1,

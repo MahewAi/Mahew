@@ -111,4 +111,5 @@ export interface Brief {
   timeAgo: string
   timestamp: string
   csuiteInput: CSuiteInput[]
+  coverImage?: string
 }

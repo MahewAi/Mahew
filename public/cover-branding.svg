@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 200" preserveAspectRatio="xMidYMid slice">
+  <rect x="0" y="0" width="200" height="200" fill="#3D6F58"/>
+  <rect x="200" y="0" width="200" height="200" fill="#56877D"/>
+  <rect x="400" y="0" width="200" height="200" fill="#B8956B"/>
+  <g font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="600" letter-spacing="2" fill="rgba(255,255,255,0.85)" text-anchor="middle">
+    <text x="100" y="186">SAGE</text>
+    <text x="300" y="186">TEAL-SAGE</text>
+    <text x="500" y="186">BRASS</text>
+  </g>
+  <g font-family="Inter, system-ui, sans-serif" font-size="42" font-weight="600" fill="rgba(255,255,255,0.18)" text-anchor="middle">
+    <text x="100" y="115">01</text>
+    <text x="300" y="115">02</text>
+    <text x="500" y="115">03</text>
+  </g>
+</svg>
