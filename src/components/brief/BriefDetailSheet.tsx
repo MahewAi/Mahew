@@ -8,9 +8,10 @@ import { useToast } from '@/components/shared/Toast'
 import { StatusPill, getCategoryVariant, getStatusLabel } from './StatusPill'
 import { CSuiteCard } from './CSuiteCard'
 import { GeneratedCover } from './GeneratedCover'
-import { VoteChart, hasVotes } from './VoteChart'
 import { CommentThread } from './CommentThread'
 import { AskRolePanel } from './AskRolePanel'
+import { BlockList } from '@/components/blocks/BlockRenderer'
+import { MarkdownBlock } from '@/components/blocks/MarkdownBlock'
 
 interface BriefDetailSheetProps {
   brief: Brief | null
@@ -137,42 +138,69 @@ export function BriefDetailSheet({ brief, open, onOpenChange, onApprove, onAddCo
                     </div>
                   </header>
 
+                  {/* TL;DR summary */}
                   <section
                     aria-label="Ringkasan"
-                    className="mx-5 mt-5 relative rounded-md bg-bg-soft p-4 pl-5 overflow-hidden"
+                    className="mx-5 mt-5 relative rounded-[16px] glass-soft shadow-glass p-4 pl-5 overflow-hidden"
                   >
                     <span
                       aria-hidden="true"
                       className="absolute left-0 top-0 bottom-0 w-1 bg-accent rounded-l-md"
                     />
-                    <p
-                      className="text-sm leading-relaxed text-text-primary"
-                      dangerouslySetInnerHTML={{ __html: formatSummary(brief.summary) }}
+                    <MarkdownBlock
+                      content={brief.summary}
+                      className="[&_p]:mb-0 [&_p]:text-sm [&_p]:text-text-primary"
                     />
                   </section>
 
-                  {hasVotes(brief) && (
-                    <section aria-label="Suara C-suite" className="mx-5 mt-6">
-                      <p className="text-label-caps text-text-muted mb-3">Suara C-suite</p>
-                      <div className="rounded-md bg-bg-elevated border border-border-soft p-4">
-                        <VoteChart brief={brief} size="lg" />
-                      </div>
-                    </section>
+                  {/* Rich content blocks — primary detail surface */}
+                  {brief.blocks && brief.blocks.length > 0 && (
+                    <div className="px-5 mt-2">
+                      <BlockList blocks={brief.blocks} />
+                    </div>
                   )}
 
-                  <div className="mt-6 px-5">
-                    <p className="text-label-caps text-text-muted">Input dari tim</p>
-                    <div className="mt-3 space-y-2">
-                      {brief.csuiteInput.map((input, idx) => (
-                        <CSuiteCard
-                          key={`${input.role}-${idx}`}
-                          input={input}
-                          defaultExpanded={input.role === 'ceo'}
-                          onAsk={() => setAskRole(input.role)}
-                        />
-                      ))}
+                  {/* Legacy C-suite accordion (Ask Role context) — kept untuk Tanya-feature
+                      Render hanya kalau tidak ada csuite-vote block (avoid duplikasi). */}
+                  {!brief.blocks?.some((b) => b.type === 'csuite-vote') && (
+                    <div className="mt-6 px-5">
+                      <p className="text-label-caps text-text-muted">Input dari tim</p>
+                      <div className="mt-3 space-y-2">
+                        {brief.csuiteInput.map((input, idx) => (
+                          <CSuiteCard
+                            key={`${input.role}-${idx}`}
+                            input={input}
+                            defaultExpanded={input.role === 'ceo'}
+                            onAsk={() => setAskRole(input.role)}
+                          />
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
+
+                  {/* When blocks include csuite-vote, still surface Ask-Role discreetly */}
+                  {brief.blocks?.some((b) => b.type === 'csuite-vote') && (
+                    <div className="mt-4 px-5">
+                      <p className="text-label-caps text-text-muted mb-2">Tanya langsung</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {brief.csuiteInput.map((input) => (
+                          <button
+                            key={input.role}
+                            type="button"
+                            onClick={() => setAskRole(input.role)}
+                            className={cn(
+                              'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full',
+                              'glass-soft hover:bg-white/60 text-xs font-medium text-text-primary',
+                              'transition-colors duration-fast',
+                            )}
+                          >
+                            <span className="text-meta text-text-muted">→</span>
+                            {input.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <CommentThread brief={brief} onAddComment={handleAddComment} />
 
@@ -245,14 +273,3 @@ export function BriefDetailSheet({ brief, open, onOpenChange, onApprove, onAddCo
   )
 }
 
-function formatSummary(text: string): string {
-  // Minimal markdown: **bold**. Escape HTML lalu replace.
-  const escaped = text.replace(/[&<>"']/g, (c) => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;',
-  }[c]!))
-  return escaped.replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold">$1</strong>')
-}

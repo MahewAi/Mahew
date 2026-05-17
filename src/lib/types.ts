@@ -127,19 +127,79 @@ export interface Comment {
   timeAgo: string
 }
 
+// ============================================================
+// Block-based rich content rendering (vision briefing)
+// ============================================================
+
+export type CalloutVariant = 'info' | 'warning' | 'success' | 'danger'
+export type ChartKind = 'bar' | 'line' | 'pie' | 'area'
+export type CellAlign = 'left' | 'center' | 'right'
+
+export interface ChartSeries {
+  key: string
+  label?: string
+  color?: string
+}
+
+export interface ChartData {
+  /** Each point is a record keyed by series.key + x-axis key (default 'label'). */
+  points: Array<Record<string, string | number>>
+  series: ChartSeries[]
+  /** Default 'label'. */
+  xKey?: string
+}
+
+export interface ChartOptions {
+  yLabel?: string
+  xLabel?: string
+  legend?: boolean
+  /** For pie: name field key (defaults to 'name'). */
+  nameKey?: string
+}
+
+export interface GridItem {
+  title: string
+  /** Markdown allowed. */
+  content: string
+  accent?: string
+}
+
+export interface CSuiteVote {
+  role: Role
+  /** 'A' | 'B' | 'C' or any short label. */
+  recommendation: string
+  /** Markdown allowed. */
+  reasoning: string
+}
+
+export type BriefBlock =
+  | { type: 'markdown'; content: string }
+  | { type: 'table'; headers: string[]; rows: string[][]; align?: CellAlign[]; caption?: string }
+  | { type: 'chart'; kind: ChartKind; data: ChartData; options?: ChartOptions; caption?: string }
+  | { type: 'mermaid'; code: string; caption?: string }
+  | { type: 'callout'; variant: CalloutVariant; title?: string; content: string }
+  | { type: 'grid'; columns: number; items: GridItem[] }
+  | { type: 'image'; src: string; alt: string; caption?: string }
+  | { type: 'code'; language: string; content: string }
+  | { type: 'csuite-vote'; votes: CSuiteVote[] }
+
 export interface Brief {
   id: string
   status: Status
   priority: 'high' | 'normal'
   title: string
   description: string
+  /** Single-line TL;DR used for card preview. Markdown bold supported. */
   summary: string
   labels: string[]
   contributors: Contributor[]
   commentCount?: number
   timeAgo: string
   timestamp: string
+  /** Legacy: stacked C-suite accordion. Used for inbox card vote derivation and Ask panel context. */
   csuiteInput: CSuiteInput[]
+  /** Rich content rendered in detail sheet via BlockRenderer. Order in array = order on screen. */
+  blocks?: BriefBlock[]
   coverImage?: string
   comments?: Comment[]
   isDailyDigest?: boolean

@@ -49,6 +49,130 @@ export const mockBriefs: Brief[] = [
     commentCount: 2,
     timeAgo: '5 menit',
     timestamp: '15 Mei, 10:38',
+    blocks: [
+      {
+        type: 'markdown',
+        content:
+          '## Konteks\n\nMatthew sedang evaluasi dua lokasi calon **Mother Store** di Balikpapan. Pilihan strategis ini akan mengunci posisi Gerai 1000 Pintu sebagai brand premium curated di wilayah ini selama minimal 18 bulan ke depan.\n\nKeputusan harus diambil sebelum **akhir Mei** karena kontrak sewa di kedua lokasi punya window approval terbatas.',
+      },
+      {
+        type: 'callout',
+        variant: 'warning',
+        title: 'Devil\'s Advocate: 3 risiko utama yang teridentifikasi',
+        content:
+          '- **Capex Lokasi A** memakan 38% runway, menyisakan ruang gerak sempit untuk wave 2.\n- **Brand discovery di Lokasi B** akan butuh effort 3-4× lipat di 6 bulan pertama.\n- **Lock-in 5 tahun** di kedua lokasi mempersulit pivot kalau market thesis salah.',
+      },
+      {
+        type: 'table',
+        caption: 'Perbandingan kriteria kunci Lokasi A vs Lokasi B',
+        headers: ['Kriteria', 'Lokasi A (Mall)', 'Lokasi B (Strip retail)'],
+        align: ['left', 'center', 'center'],
+        rows: [
+          ['Rent / bulan', 'Rp 45 juta', 'Rp 18 juta'],
+          ['Foot traffic harian', '8.000', '3.000'],
+          ['Brand fit', 'Medium', 'High'],
+          ['Capex fit-out', 'Rp 380 juta', 'Rp 220 juta'],
+          ['ROI breakeven', '24 bulan', '14 bulan'],
+          ['Lock-in kontrak', '5 tahun', '3 tahun + opsi 2'],
+        ],
+      },
+      {
+        type: 'chart',
+        kind: 'line',
+        caption: 'Proyeksi cash flow kumulatif 24 bulan (dalam juta Rp)',
+        data: {
+          xKey: 'bulan',
+          series: [
+            { key: 'A', label: 'Lokasi A', color: 'hsl(14, 50%, 51%)' },
+            { key: 'B', label: 'Lokasi B', color: 'hsl(145, 28%, 34%)' },
+          ],
+          points: [
+            { bulan: 'M1', A: -380, B: -220 },
+            { bulan: 'M3', A: -440, B: -240 },
+            { bulan: 'M6', A: -480, B: -180 },
+            { bulan: 'M9', A: -490, B: -90 },
+            { bulan: 'M12', A: -440, B: 20 },
+            { bulan: 'M14', A: -380, B: 80 },
+            { bulan: 'M18', A: -240, B: 220 },
+            { bulan: 'M24', A: 60, B: 480 },
+          ],
+        },
+        options: { legend: true },
+      },
+      {
+        type: 'csuite-vote',
+        votes: [
+          {
+            role: 'ceo',
+            recommendation: 'B',
+            reasoning:
+              '**Strip retail** selaras dengan positioning premium curated. Capex hemat memberi ruang gerak di wave 2.',
+          },
+          {
+            role: 'coo',
+            recommendation: 'B',
+            reasoning:
+              'Loading bay lebih mudah diakses. Supply chain ke 120m² floor plan sederhana.',
+          },
+          {
+            role: 'cmo',
+            recommendation: 'A',
+            reasoning:
+              '_Dissenting_: foot traffic Mall 3× lebih tinggi. Biaya akuisisi pelanggan di Strip akan jauh lebih besar di 6 bulan pertama.',
+          },
+          {
+            role: 'cfo',
+            recommendation: 'B',
+            reasoning:
+              'ROI breakeven 14 vs 24 bulan. Selisih capex Rp 280 juta dapat dialokasikan ke inventory wave 2.',
+          },
+          {
+            role: 'cco',
+            recommendation: 'B',
+            reasoning:
+              'Fasad Lokasi B memberi ruang nafas yang intim untuk identitas visual. Sejalan dengan estetika **quiet luxury**.',
+          },
+        ],
+      },
+      {
+        type: 'mermaid',
+        caption: 'Pre-mortem: bila Lokasi B gagal di bulan ke-6, akar masalahnya mungkin di mana?',
+        code: `flowchart TD
+    A[Lokasi B gagal di M6] --> B{Penyebab utama?}
+    B -->|Traffic discovery rendah| C[Brand awareness lemah]
+    B -->|Conversion rate rendah| D[Pricing tidak match audience]
+    B -->|Repeat rate rendah| E[Pengalaman tidak memorable]
+    C --> F[Investasi awareness lebih agresif]
+    D --> G[Restrukturisasi tier pricing]
+    E --> H[Audit pengalaman in-store]
+    F --> I[Cek ulang strategi M6 - M12]
+    G --> I
+    H --> I`,
+      },
+      {
+        type: 'grid',
+        columns: 2,
+        items: [
+          {
+            title: 'Risiko di-mitigasi',
+            content:
+              'Klausul tinjau ulang di **bulan ke-6** dengan trigger metric pasti. Bila Lokasi B underperform di kriteria yang sudah disepakati, opsi exit tersedia tanpa penalti besar.',
+            accent: 'hsl(145, 28%, 34%)',
+          },
+          {
+            title: 'Modal yang dihemat',
+            content:
+              '**Rp 280 juta** selisih capex bisa langsung dialokasikan ke inventory wave 2 dan budget brand discovery di 6 bulan pertama.',
+            accent: 'hsl(33, 36%, 57%)',
+          },
+        ],
+      },
+      {
+        type: 'markdown',
+        content:
+          '## Rekomendasi akhir\n\nLanjutkan dengan **Lokasi B** dengan tiga klausul wajib:\n\n1. Trigger metric review di bulan ke-6 (rev/m², repeat rate, NPS).\n2. Budget brand discovery minimal Rp 120 juta untuk 6 bulan pertama.\n3. Opsi exit jelas di kontrak (sudah dinegosiasi, menunggu sign Anda).',
+      },
+    ],
     comments: [
       {
         id: 'c-cbc-1',
@@ -125,6 +249,58 @@ export const mockBriefs: Brief[] = [
     commentCount: 5,
     timeAgo: '32 menit',
     timestamp: '15 Mei, 10:11',
+    blocks: [
+      {
+        type: 'markdown',
+        content:
+          '## Pertanyaan\n\nMana struktur margin yang dipakai di **wave 1**: 42% dengan volume konservatif, atau 38% dengan volume target lebih tinggi?\n\nKonteks: kompetitor terdekat di Balikpapan berada di rentang 30–36%. Riset segmen target menunjukkan elastisitas harga relatif stabil di range 38–45%.',
+      },
+      {
+        type: 'chart',
+        kind: 'bar',
+        caption: 'Proyeksi revenue dan gross profit per skenario (Rp juta, 6 bulan)',
+        data: {
+          series: [
+            { key: 'revenue', label: 'Revenue', color: 'hsl(33, 36%, 57%)' },
+            { key: 'profit', label: 'Gross profit', color: 'hsl(145, 28%, 34%)' },
+          ],
+          points: [
+            { label: '42% margin', revenue: 840, profit: 353 },
+            { label: '38% margin', revenue: 1180, profit: 449 },
+          ],
+        },
+        options: { legend: true },
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        title: 'Insight dari Market Researcher',
+        content:
+          'Survey tiga bulan terakhir di 220 responden segmen target menunjukkan: **kurasi** lebih dihargai dibanding diskon. Premium curated dengan harga aksesibel = sweet spot.',
+      },
+      {
+        type: 'csuite-vote',
+        votes: [
+          {
+            role: 'ceo',
+            recommendation: 'B',
+            reasoning:
+              'Premium curated bukan berarti harga tertinggi. Volume di wave 1 membangun basis, margin naik di wave 2.',
+          },
+          {
+            role: 'cfo',
+            recommendation: 'B',
+            reasoning: 'Volume target 1.400 unit/bulan tercapai. Skenario A elastisitasnya belum tervalidasi.',
+          },
+          {
+            role: 'cmo',
+            recommendation: 'A',
+            reasoning:
+              '_Dissenting_: harga tinggi memperkuat sinyal premium di benak pelanggan baru. 38% berisiko terbaca sebagai mass-premium.',
+          },
+        ],
+      },
+    ],
     csuiteInput: [
       {
         role: 'ceo',
@@ -263,6 +439,47 @@ export const mockBriefs: Brief[] = [
     summary:
       'Warna sekunder bergeser dari sage ke teal-sage demi diferensiasi dari kompetitor regional. Risiko brand recall rendah.',
     coverImage: '/cover-branding.svg',
+    blocks: [
+      {
+        type: 'markdown',
+        content:
+          '## Usulan revisi\n\nCreative mengajukan pergeseran warna sekunder dari **sage** ke **teal-sage** untuk wave kedua. Tujuan: diferensiasi visual dari dua kompetitor regional yang juga pakai sage.',
+      },
+      {
+        type: 'image',
+        src: '/cover-branding.svg',
+        alt: 'Tiga swatch palette: sage lama, teal-sage usulan baru, brass aksen',
+        caption: 'Tiga swatch perbandingan. Tengah adalah usulan baru.',
+      },
+      {
+        type: 'grid',
+        columns: 3,
+        items: [
+          {
+            title: 'Sage (lama)',
+            content: '`#3D6F58` — Forest natural. Konflik visual dengan dua kompetitor.',
+            accent: '#3D6F58',
+          },
+          {
+            title: 'Teal-sage (usulan)',
+            content: '`#56877D` — Sedikit lebih dingin. Distinct dalam radius 200 km.',
+            accent: '#56877D',
+          },
+          {
+            title: 'Brass (aksen)',
+            content: '`#B8956B` — Tidak berubah. Tetap identitas brand utama.',
+            accent: '#B8956B',
+          },
+        ],
+      },
+      {
+        type: 'callout',
+        variant: 'success',
+        title: 'Hasil pengujian',
+        content:
+          'Pengujian pada 12 sample material (kain, kertas, signage, layar) menunjukkan keterbacaan tetap kuat. Tidak ada konflik dengan kompetitor terdekat dalam radius 200 km.',
+      },
+    ],
     labels: ['Branding'],
     contributors: ['cco', 'cmo', 'ceo'],
     commentCount: 1,
