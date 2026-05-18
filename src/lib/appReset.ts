@@ -10,7 +10,7 @@
  */
 
 // Bump ini setiap kali butuh force-reset state user.
-export const APP_VERSION = '2026-05-18-fresh-start'
+export const APP_VERSION = '2026-05-18-fresh-start-v2'
 
 const VERSION_KEY = 'gerai:app-version'
 
