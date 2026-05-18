@@ -1,29 +1,65 @@
 import { useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronDown, Inbox as InboxIcon, ArrowUpRight, Plus } from 'lucide-react'
-import { TopBar } from '@/components/nav/TopBar'
-import { FilterChips, type FilterValue } from '@/components/nav/FilterChips'
-import { BriefTile, type BriefTileSize } from '@/components/brief/BriefTile'
-import { StatsTile } from '@/components/brief/StatsTile'
+import { motion } from 'framer-motion'
+import {
+  Bell,
+  CheckCircle2,
+  ChevronRight,
+  CircleDashed,
+  FileText,
+  ListChecks,
+  MessageSquareText,
+  Plus,
+  Settings,
+  Timer,
+} from 'lucide-react'
 import { BriefDetailSheet } from '@/components/brief/BriefDetailSheet'
 import { ComposeSheet, simulateAiResponse } from '@/components/brief/ComposeSheet'
-import { DailyDigestCard } from '@/components/brief/DailyDigestCard'
 import { mockBriefs } from '@/data/mockBriefs'
 import {
+  CONTRIBUTOR_META,
+  DEPARTMENT_LABEL_SHORT,
   DEPARTMENT_ORDER,
-  DEPARTMENT_LABEL,
   getBriefDepartments,
-  pickHeroBrief,
   type Brief,
   type Comment,
   type Role,
 } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
-type DeptValue = 'all' | Role
+type SectorValue = 'all' | Role
+type SectionTone = 'decision' | 'doing' | 'review' | 'final' | 'neutral'
 
-const roleDot: Record<Role, string> = {
+const sectorMeta: Record<Role, { title: string; subtitle: string; specialists: string[] }> = {
+  ceo: {
+    title: 'Atmaja',
+    subtitle: 'CEO synthesis',
+    specialists: ['Orkestrasi', 'Push-back', 'Decision brief'],
+  },
+  coo: {
+    title: 'COO',
+    subtitle: 'Operations',
+    specialists: ['HR & Systems', 'Production', 'Curator'],
+  },
+  cmo: {
+    title: 'CMO',
+    subtitle: 'Market & Brand',
+    specialists: ['Brand', 'Market', 'Sales', 'Innovation'],
+  },
+  cfo: {
+    title: 'CFO',
+    subtitle: 'Finance',
+    specialists: ['Business Design', 'Financial Analyst'],
+  },
+  cco: {
+    title: 'CCO',
+    subtitle: 'Creative',
+    specialists: ['Document', 'Editorial', 'Web Research'],
+  },
+}
+
+const roleAccent: Record<Role, string> = {
   ceo: 'bg-role-ceo',
   coo: 'bg-role-coo',
   cmo: 'bg-role-cmo',
@@ -31,346 +67,414 @@ const roleDot: Record<Role, string> = {
   cco: 'bg-role-cco',
 }
 
-/**
- * Assign bento tile size berdasarkan priority + status.
- * Hero sudah dipilih terpisah via pickHeroBrief.
- */
-function getTileSize(brief: Brief): BriefTileSize {
-  if (brief.priority === 'high') return 'priority'
-  if (brief.status === 'final') return 'compact'
-  return 'compact'
+function isInSector(brief: Brief, sector: SectorValue) {
+  if (sector === 'all') return true
+  return getBriefDepartments(brief.contributors).includes(sector)
+}
+
+function getLeadRole(brief: Brief): Role {
+  return getBriefDepartments(brief.contributors)[0] ?? 'ceo'
+}
+
+function getPrimaryOwner(brief: Brief) {
+  const contributor = brief.contributors[0] ?? 'ceo'
+  return CONTRIBUTOR_META[contributor]?.name ?? 'Atmaja'
 }
 
 export default function Inbox() {
   const navigate = useNavigate()
   const params = useParams<{ id?: string }>()
   const [briefs, setBriefs] = useState<Brief[]>(mockBriefs)
-  const [dept, setDept] = useState<DeptValue>('all')
-  const [status, setStatus] = useState<FilterValue>('all')
-  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [sector, setSector] = useState<SectorValue>('all')
   const [composeOpen, setComposeOpen] = useState(false)
 
-  const visible = useMemo(() => {
-    let list = briefs
-    if (dept !== 'all') list = list.filter((b) => getBriefDepartments(b.contributors).includes(dept))
-    if (status !== 'all') list = list.filter((b) => b.status === status)
-    return list
-  }, [briefs, dept, status])
+  const scopedBriefs = useMemo(() => briefs.filter((brief) => isInSector(brief, sector)), [briefs, sector])
 
-  const statusCounts = useMemo<Record<FilterValue, number>>(() => {
-    const base: Record<FilterValue, number> = { all: 0, decision: 0, doing: 0, review: 0, final: 0 }
-    const scope = dept === 'all' ? briefs : briefs.filter((b) => getBriefDepartments(b.contributors).includes(dept))
-    base.all = scope.length
-    for (const b of scope) base[b.status] += 1
-    return base
-  }, [briefs, dept])
-
-  const dailyDigest = useMemo(() => visible.find((b) => b.isDailyDigest) ?? null, [visible])
-  const heroPool = useMemo(() => visible.filter((b) => !b.isDailyDigest), [visible])
-  const hero = useMemo(() => pickHeroBrief(heroPool), [heroPool])
-  const rest = useMemo(
-    () => heroPool.filter((b) => !hero || b.id !== hero.id),
-    [heroPool, hero],
+  const confirmationBriefs = useMemo(
+    () => scopedBriefs.filter((brief) => brief.status === 'decision'),
+    [scopedBriefs],
+  )
+  const runningBriefs = useMemo(
+    () => scopedBriefs.filter((brief) => brief.status === 'doing' || brief.status === 'review'),
+    [scopedBriefs],
+  )
+  const pendingInputBriefs = useMemo(
+    () => scopedBriefs.filter((brief) => brief.requestStatus === 'pending'),
+    [scopedBriefs],
+  )
+  const recentOutputBriefs = useMemo(
+    () => scopedBriefs.filter((brief) => brief.status === 'final' || brief.requestStatus === 'completed'),
+    [scopedBriefs],
   )
 
-  const activeBriefs = useMemo(() => briefs.filter((b) => b.status !== 'final'), [briefs])
-  const pendingCount = useMemo(() => briefs.filter((b) => b.status === 'decision').length, [briefs])
-
-  const openBrief = params.id ? briefs.find((b) => b.id === params.id) ?? null : null
-  const sheetOpen = openBrief !== null
+  const attentionCount = confirmationBriefs.length + scopedBriefs.filter((brief) => brief.status === 'review').length
+  const blockerCount = 0
+  const activeCount = briefs.filter((brief) => brief.status !== 'final').length
+  const openBrief = params.id ? briefs.find((brief) => brief.id === params.id) ?? null : null
 
   const handleApprove = (id: string) => {
-    setBriefs((prev) => prev.map((b) => (b.id === id ? { ...b, status: 'final' } : b)))
+    setBriefs((prev) => prev.map((brief) => (brief.id === id ? { ...brief, status: 'final' } : brief)))
   }
 
   const handleAddComment = (briefId: string, comment: Comment) => {
     setBriefs((prev) =>
-      prev.map((b) =>
-        b.id === briefId
-          ? { ...b, comments: [...(b.comments ?? []), comment], commentCount: (b.commentCount ?? 0) + 1 }
-          : b,
+      prev.map((brief) =>
+        brief.id === briefId
+          ? {
+              ...brief,
+              comments: [...(brief.comments ?? []), comment],
+              commentCount: (brief.commentCount ?? 0) + 1,
+            }
+          : brief,
       ),
     )
   }
 
   const handleComposeSubmit = (newBrief: Brief) => {
     setBriefs((prev) => [newBrief, ...prev])
-    // Simulate AI response after 2.5s
     window.setTimeout(() => {
-      setBriefs((prev) => prev.map((b) => (b.id === newBrief.id ? simulateAiResponse(b) : b)))
+      setBriefs((prev) => prev.map((brief) => (brief.id === newBrief.id ? simulateAiResponse(brief) : brief)))
     }, 2500)
   }
 
-  const deptLabel = dept === 'all' ? 'Semua department' : DEPARTMENT_LABEL[dept]
-
-  // Stats untuk tile angka huge
-  const verdictsStats = useMemo(() => {
-    if (!hero) return null
-    const counts: Record<string, number> = { A: 0, B: 0, C: 0 }
-    for (const i of hero.csuiteInput) {
-      if (i.verdict) counts[i.verdict.type] += 1
-    }
-    const total = counts.A + counts.B + counts.C
-    if (total === 0) return null
-    const sorted = Object.entries(counts).sort(([, a], [, b]) => b - a)
-    const [topType, topCount] = sorted[0]
-    return { type: topType, count: topCount, total }
-  }, [hero])
-
   return (
-    <div className="min-h-screen pb-36">
-      {/* Department color tint overlay — atmospheric mood shift per dept filter */}
-      <div
-        aria-hidden="true"
-        className="fixed inset-0 pointer-events-none z-0 transition-opacity duration-700"
-        style={{
-          opacity: dept === 'all' ? 0 : 1,
-          background:
-            dept !== 'all'
-              ? `radial-gradient(circle at 75% 20%, hsl(var(--role-${dept}) / 0.38), transparent 50%), radial-gradient(circle at 20% 85%, hsl(var(--role-${dept}) / 0.28), transparent 55%)`
-              : 'none',
-        }}
-      />
-      <TopBar activeCount={activeBriefs.length} pendingCount={pendingCount} />
+    <div className="min-h-screen bg-bg-app pb-36">
+      <main className="mx-auto flex min-h-screen w-full max-w-xl flex-col px-4 pt-safe-top">
+        <DashboardHeader activeCount={activeCount} confirmationCount={confirmationBriefs.length} />
 
-      {/* Department dropdown */}
-      <div className="px-4 pt-2 pb-1 relative">
-        <button
-          type="button"
-          onClick={() => setDropdownOpen((v) => !v)}
-          aria-expanded={dropdownOpen}
-          aria-haspopup="listbox"
-          className={cn(
-            'inline-flex items-center gap-2 min-h-touch px-3.5 py-2 rounded-full',
-            'glass-strong text-sm font-medium text-text-primary shadow-glass',
-            'hover:bg-white/80',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
-          )}
+        <motion.section
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
+          className="mt-4 rounded-lg border border-border-med bg-bg-surface px-4 py-4 shadow-soft"
+          aria-label="Ringkasan Atmaja"
         >
-          {dept !== 'all' && (
-            <span aria-hidden="true" className={cn('size-2 rounded-full', roleDot[dept])} />
-          )}
-          {deptLabel}
-          <ChevronDown
-            aria-hidden="true"
-            className={cn('size-4 text-text-muted transition-transform', dropdownOpen && 'rotate-180')}
-          />
-        </button>
-
-        {dropdownOpen && (
-          <>
-            <div aria-hidden="true" className="fixed inset-0 z-30" onClick={() => setDropdownOpen(false)} />
-            <div
-              role="listbox"
-              className="absolute left-4 right-4 top-[calc(100%-4px)] z-40 mt-1 rounded-[14px] glass-strong shadow-glass-hero py-1"
-            >
-              {[
-                { value: 'all' as DeptValue, label: 'Semua department' },
-                ...DEPARTMENT_ORDER.map((r) => ({ value: r as DeptValue, label: DEPARTMENT_LABEL[r] })),
-              ].map((opt) => {
-                const isActive = opt.value === dept
-                return (
-                  <button
-                    key={opt.value}
-                    role="option"
-                    aria-selected={isActive}
-                    onClick={() => {
-                      setDept(opt.value)
-                      setDropdownOpen(false)
-                    }}
-                    className={cn(
-                      'flex items-center gap-2 w-full px-3 py-2 text-left text-sm',
-                      'hover:bg-white/40',
-                      isActive ? 'text-text-primary font-medium bg-white/30' : 'text-text-secondary',
-                    )}
-                  >
-                    {opt.value !== 'all' && (
-                      <span aria-hidden="true" className={cn('size-2 rounded-full', roleDot[opt.value as Role])} />
-                    )}
-                    {opt.label}
-                  </button>
-                )
-              })}
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-label-caps text-accent-dark">Ringkasan Atmaja</p>
+              <h1 className="mt-2 text-[25px] font-extrabold leading-[1.05] tracking-[0] text-text-primary">
+                Dashboard kerja
+              </h1>
+              <p className="mt-2 max-w-[280px] text-sm leading-5 text-text-secondary">
+                Workspace bersih. Business knowledge tetap aktif. Mulai dari brief pertama saat siap.
+              </p>
             </div>
-          </>
-        )}
-      </div>
-
-      <FilterChips active={status} onChange={setStatus} counts={statusCounts} />
-
-      <main className="px-3" aria-label="Daftar brief">
-        {visible.length === 0 ? (
-          <EmptyState />
-        ) : (
-          <div className="grid grid-cols-2 gap-2.5">
-            {/* Daily Digest pinned top */}
-            {dailyDigest && (
-              <motion.div
-                key={dailyDigest.id}
-                layout
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
-                className="col-span-2"
-              >
-                <DailyDigestCard brief={dailyDigest} onClick={() => navigate(`/brief/${dailyDigest.id}`)} />
-              </motion.div>
-            )}
-
-            {/* Hero brief */}
-            {hero && (
-              <motion.div
-                key={hero.id}
-                layout
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
-                className="col-span-2"
-              >
-                <BriefTile brief={hero} size="hero" onClick={() => navigate(`/brief/${hero.id}`)} />
-              </motion.div>
-            )}
-
-            {/* Stats row — 2x 1x1 tiles */}
-            {hero && verdictsStats && (
-              <>
-                <motion.div
-                  layout
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.32, delay: 0.08, ease: [0.32, 0.72, 0, 1] }}
-                >
-                  <StatsTile
-                    label="Verdict"
-                    value={verdictsStats.count}
-                    unit={`/ ${verdictsStats.total}`}
-                    caption={`setuju ${verdictsStats.type}`}
-                    tone="positive"
-                  />
-                </motion.div>
-                <motion.div
-                  layout
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.32, delay: 0.12, ease: [0.32, 0.72, 0, 1] }}
-                >
-                  <StatsTile
-                    label="Menunggu"
-                    value={pendingCount}
-                    unit="brief"
-                    caption="keputusan Anda"
-                    tone={pendingCount > 0 ? 'urgent' : 'default'}
-                  />
-                </motion.div>
-              </>
-            )}
-
-            {/* Rest of briefs */}
-            <AnimatePresence mode="popLayout" initial={true}>
-              {rest.map((b, idx) => {
-                const tileSize = getTileSize(b)
-                return (
-                  <motion.div
-                    key={b.id}
-                    layout
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -4 }}
-                    transition={{
-                      duration: 0.28,
-                      delay: Math.min(idx * 0.04, 0.24),
-                      ease: [0.32, 0.72, 0, 1],
-                    }}
-                    className={tileSize === 'priority' ? 'col-span-2' : 'col-span-1'}
-                  >
-                    <BriefTile brief={b} size={tileSize} onClick={() => navigate(`/brief/${b.id}`)} />
-                  </motion.div>
-                )
-              })}
-            </AnimatePresence>
-
-            {/* Dark CTA tile — Approve action shortcut for top decision */}
-            {hero && hero.status === 'decision' && (
-              <motion.div
-                layout
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.32, delay: 0.2, ease: [0.32, 0.72, 0, 1] }}
-                className="col-span-2"
-              >
-                <button
-                  type="button"
-                  onClick={() => navigate(`/brief/${hero.id}`)}
-                  className={cn(
-                    'group w-full rounded-[18px] bg-[#1F1A14] text-white p-4 text-left',
-                    'shadow-glass-hero',
-                    'flex items-center justify-between gap-3',
-                    'hover:bg-text-primary',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
-                  )}
-                >
-                  <div>
-                    <p className="text-label-caps text-white/60">Atmaja menunggu</p>
-                    <p className="mt-1 text-[15px] font-medium">Setujui rekomendasi Lokasi B</p>
-                  </div>
-                  <span className="inline-flex items-center justify-center size-11 rounded-full bg-accent text-white shadow-glow-accent">
-                    <ArrowUpRight className="size-5" />
-                  </span>
-                </button>
-              </motion.div>
-            )}
+            <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-md bg-text-primary text-white shadow-card">
+              <MessageSquareText className="size-5" />
+            </span>
           </div>
-        )}
-      </main>
 
-      {/* Compose FAB — primary action */}
-      <button
-        type="button"
-        onClick={() => setComposeOpen(true)}
-        aria-label="Brief baru"
-        className={cn(
-          'fixed right-4 bottom-24 z-nav mb-safe-bottom',
-          'inline-flex items-center gap-2 pl-4 pr-5 h-14 rounded-full',
-          'bg-accent text-white shadow-[0_12px_32px_-8px_rgba(184,149,107,0.5),0_4px_12px_-2px_rgba(184,149,107,0.4)]',
-          'hover:bg-accent-dark active:scale-95',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
-          'transition-all duration-fast',
-        )}
-      >
-        <Plus className="size-5" />
-        <span className="text-sm font-semibold">Brief baru</span>
-      </button>
+          <div className="mt-4 grid grid-cols-4 divide-x divide-border-med rounded-md border border-border-med bg-white">
+            <MetricTile value={attentionCount} label="perlu perhatian" />
+            <MetricTile value={confirmationBriefs.length} label="konfirmasi" tone="decision" />
+            <MetricTile value={runningBriefs.length} label="berjalan" tone="doing" />
+            <MetricTile value={blockerCount} label="hambatan" />
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setComposeOpen(true)}
+              className="inline-flex min-h-touch items-center justify-center gap-2 rounded-md bg-text-primary px-3 text-sm font-bold text-white shadow-card transition-transform duration-fast active:scale-[0.98]"
+            >
+              <Plus className="size-4" />
+              Buat brief
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/atmaja')}
+              className="inline-flex min-h-touch items-center justify-center gap-2 rounded-md border border-border-med bg-white px-3 text-sm font-bold text-text-primary transition-transform duration-fast active:scale-[0.98]"
+            >
+              <MessageSquareText className="size-4" />
+              Tanya Atmaja
+            </button>
+          </div>
+        </motion.section>
+
+        <SectorTabs active={sector} onChange={setSector} />
+
+        <div className="mt-4 space-y-3">
+          <TaskSection
+            title="Perlu Konfirmasi"
+            count={confirmationBriefs.length}
+            icon={CheckCircle2}
+            tone="decision"
+            emptyTitle="Tidak ada konfirmasi"
+            emptyBody="Kalau ada brief yang butuh keputusan Matthew, ia akan muncul di sini."
+          >
+            {confirmationBriefs.slice(0, 4).map((brief) => (
+              <TaskRow key={brief.id} brief={brief} tone="decision" onClick={() => navigate(`/brief/${brief.id}`)} />
+            ))}
+          </TaskSection>
+
+          <TaskSection
+            title="Sedang Berjalan"
+            count={runningBriefs.length}
+            icon={Timer}
+            tone="doing"
+            emptyTitle="Belum ada pekerjaan berjalan"
+            emptyBody="Brief baru yang sedang dianalisis oleh agent akan masuk ke area ini."
+          >
+            {runningBriefs.slice(0, 4).map((brief) => (
+              <TaskRow key={brief.id} brief={brief} tone={brief.status === 'review' ? 'review' : 'doing'} onClick={() => navigate(`/brief/${brief.id}`)} />
+            ))}
+          </TaskSection>
+
+          <TaskSection
+            title="Todo / Pending Input"
+            count={pendingInputBriefs.length}
+            icon={ListChecks}
+            tone="neutral"
+            emptyTitle="Belum ada input yang diminta"
+            emptyBody="Jika agent butuh angka, dokumen, atau pilihan dari Anda, itemnya akan muncul di sini."
+          >
+            {pendingInputBriefs.slice(0, 3).map((brief) => (
+              <TaskRow key={brief.id} brief={brief} tone="neutral" onClick={() => navigate(`/brief/${brief.id}`)} />
+            ))}
+          </TaskSection>
+
+          <TaskSection
+            title="Output Terbaru"
+            count={recentOutputBriefs.length}
+            icon={FileText}
+            tone="final"
+            emptyTitle="Belum ada output"
+            emptyBody="Memo, report, table, atau brief selesai akan tersimpan di sini."
+          >
+            {recentOutputBriefs.slice(0, 3).map((brief) => (
+              <TaskRow key={brief.id} brief={brief} tone="final" onClick={() => navigate(`/brief/${brief.id}`)} />
+            ))}
+          </TaskSection>
+        </div>
+      </main>
 
       <BriefDetailSheet
         brief={openBrief}
-        open={sheetOpen}
-        onOpenChange={(o) => {
-          if (!o) navigate('/')
+        open={openBrief !== null}
+        onOpenChange={(open) => {
+          if (!open) navigate('/')
         }}
         onApprove={handleApprove}
         onAddComment={handleAddComment}
       />
 
-      <ComposeSheet
-        open={composeOpen}
-        onOpenChange={setComposeOpen}
-        onSubmit={handleComposeSubmit}
-      />
+      <ComposeSheet open={composeOpen} onOpenChange={setComposeOpen} onSubmit={handleComposeSubmit} />
     </div>
   )
 }
 
-function EmptyState() {
+function DashboardHeader({ activeCount, confirmationCount }: { activeCount: number; confirmationCount: number }) {
   return (
-    <div className="flex flex-col items-center justify-center text-center py-16 px-6">
-      <div className="size-14 rounded-full glass-soft flex items-center justify-center mb-4 shadow-glass">
-        <InboxIcon aria-hidden="true" className="size-6 text-text-muted" />
+    <header className="sticky top-0 z-20 -mx-4 bg-bg-app/92 px-4 pb-3 pt-5 backdrop-blur-xl">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[18px] font-extrabold leading-none tracking-[0.02em] text-text-primary">
+            GERAI 1000 PINTU
+          </p>
+          <p className="mt-1 text-xs font-semibold text-text-muted">Hari ini / Dashboard kerja</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label={`${confirmationCount} konfirmasi menunggu`}
+            className="relative inline-flex size-10 items-center justify-center rounded-md border border-border-med bg-white text-text-primary"
+          >
+            <Bell className="size-4" />
+            {confirmationCount > 0 && (
+              <span className="absolute right-2 top-2 size-2 rounded-full bg-status-decision shadow-[0_0_8px_rgba(194,85,65,0.55)]" />
+            )}
+          </button>
+          <button
+            type="button"
+            aria-label="Pengaturan"
+            className="inline-flex size-10 items-center justify-center rounded-md border border-border-med bg-white text-text-primary"
+          >
+            <Settings className="size-4" />
+          </button>
+        </div>
       </div>
-      <p className="text-card-title-lg text-text-primary">Tidak ada brief di sini</p>
-      <p className="mt-1.5 text-sm text-text-muted max-w-[260px] leading-relaxed">
-        Coba pilih department atau status lain. Brief baru akan masuk otomatis saat tim selesai
-        memprosesnya.
-      </p>
+      <div className="mt-3 flex items-center gap-2 text-[11px] font-semibold text-text-muted">
+        <span>{activeCount} brief aktif</span>
+        <span className="h-1 w-1 rounded-full bg-border-strong" />
+        <span>{confirmationCount} butuh konfirmasi</span>
+      </div>
+    </header>
+  )
+}
+
+function MetricTile({ value, label, tone = 'neutral' }: { value: number; label: string; tone?: SectionTone }) {
+  const toneClass =
+    tone === 'decision'
+      ? 'text-status-decision'
+      : tone === 'doing'
+        ? 'text-status-doing'
+        : 'text-text-primary'
+
+  return (
+    <div className="min-h-[76px] px-2 py-3 text-center">
+      <p className={cn('text-[24px] font-extrabold leading-none tracking-[0]', toneClass)}>{value}</p>
+      <p className="mx-auto mt-2 max-w-[64px] text-[10px] font-semibold leading-[1.15] text-text-muted">{label}</p>
     </div>
   )
+}
+
+function SectorTabs({ active, onChange }: { active: SectorValue; onChange: (sector: SectorValue) => void }) {
+  const items: Array<{ value: SectorValue; label: string }> = [
+    { value: 'all', label: 'Semua' },
+    ...DEPARTMENT_ORDER.map((role) => ({ value: role, label: DEPARTMENT_LABEL_SHORT[role] })),
+  ]
+
+  return (
+    <section className="mt-4" aria-label="Sektor">
+      <div className="flex items-center justify-between">
+        <p className="text-label-caps text-text-muted">Sektor</p>
+        <p className="text-[11px] font-semibold text-text-faint">Atmaja + C-level</p>
+      </div>
+      <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {items.map((item) => {
+          const isActive = item.value === active
+          const role = item.value === 'all' ? null : item.value
+
+          return (
+            <button
+              key={item.value}
+              type="button"
+              onClick={() => onChange(item.value)}
+              className={cn(
+                'min-h-touch shrink-0 rounded-md border px-3 py-2 text-left transition-colors duration-fast',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
+                isActive
+                  ? 'border-text-primary bg-text-primary text-white'
+                  : 'border-border-med bg-white text-text-secondary',
+              )}
+            >
+              <span className="flex items-center gap-2">
+                {role && <span className={cn('size-2 rounded-full', roleAccent[role])} />}
+                <span className="text-xs font-extrabold tracking-[0.04em]">{item.label}</span>
+              </span>
+              {role && (
+                <span className={cn('mt-1 block text-[10px] font-semibold', isActive ? 'text-white/62' : 'text-text-faint')}>
+                  {sectorMeta[role].subtitle}
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
+function TaskSection({
+  title,
+  count,
+  icon: Icon,
+  tone,
+  emptyTitle,
+  emptyBody,
+  children,
+}: {
+  title: string
+  count: number
+  icon: typeof CheckCircle2
+  tone: SectionTone
+  emptyTitle: string
+  emptyBody: string
+  children: ReactNode
+}) {
+  return (
+    <section className="rounded-lg border border-border-med bg-white" aria-label={title}>
+      <div className="flex min-h-[56px] items-center justify-between gap-3 border-b border-border-soft px-3.5">
+        <div className="flex items-center gap-2.5">
+          <span className={cn('inline-flex size-8 items-center justify-center rounded-md', getToneBg(tone), getToneText(tone))}>
+            <Icon className="size-4" />
+          </span>
+          <h2 className="text-[13px] font-extrabold uppercase tracking-[0.04em] text-text-primary">{title}</h2>
+        </div>
+        <span className={cn('rounded-full px-2 py-1 text-[11px] font-extrabold', getToneBg(tone), getToneText(tone))}>
+          {count}
+        </span>
+      </div>
+
+      <div className="divide-y divide-border-soft">
+        {count > 0 ? (
+          children
+        ) : (
+          <div className="px-3.5 py-4">
+            <div className="flex gap-3">
+              <span className="mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-bg-surface text-text-muted">
+                <CircleDashed className="size-4" />
+              </span>
+              <div>
+                <p className="text-sm font-bold text-text-primary">{emptyTitle}</p>
+                <p className="mt-1 text-xs leading-5 text-text-muted">{emptyBody}</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+
+function TaskRow({ brief, tone, onClick }: { brief: Brief; tone: SectionTone; onClick: () => void }) {
+  const leadRole = getLeadRole(brief)
+  const progress = brief.requestStatus === 'pending' ? 35 : brief.status === 'review' ? 82 : brief.status === 'final' ? 100 : 58
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group flex w-full items-center gap-3 px-3.5 py-3 text-left transition-colors duration-fast hover:bg-bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
+    >
+      <span className={cn('h-10 w-1 shrink-0 rounded-full', getToneBar(tone))} />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.04em]', getToneBg(tone), getToneText(tone))}>
+            {brief.status}
+          </span>
+          <span className="text-[10px] font-bold uppercase tracking-[0.04em] text-text-faint">
+            {DEPARTMENT_LABEL_SHORT[leadRole]}
+          </span>
+        </div>
+        <p className="mt-1 truncate text-sm font-bold text-text-primary">{brief.title}</p>
+        <div className="mt-2 flex items-center gap-2">
+          <span className={cn('size-1.5 rounded-full', roleAccent[leadRole])} />
+          <span className="truncate text-[11px] font-semibold text-text-muted">{getPrimaryOwner(brief)}</span>
+          <span className="h-1 w-1 rounded-full bg-border-strong" />
+          <span className="text-[11px] font-semibold text-text-faint">{brief.timeAgo}</span>
+        </div>
+        {(brief.status === 'doing' || brief.status === 'review' || brief.requestStatus === 'pending') && (
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-bg-soft">
+            <span className={cn('block h-full rounded-full', getToneBar(tone))} style={{ width: `${progress}%` }} />
+          </div>
+        )}
+      </div>
+      <ChevronRight className="size-4 shrink-0 text-text-faint transition-transform duration-fast group-hover:translate-x-0.5" />
+    </button>
+  )
+}
+
+function getToneBg(tone: SectionTone) {
+  if (tone === 'decision') return 'bg-status-decision-bg'
+  if (tone === 'doing') return 'bg-status-doing-bg'
+  if (tone === 'review') return 'bg-status-review-bg'
+  if (tone === 'final') return 'bg-status-final-bg'
+  return 'bg-bg-surface'
+}
+
+function getToneText(tone: SectionTone) {
+  if (tone === 'decision') return 'text-status-decision'
+  if (tone === 'doing') return 'text-status-doing'
+  if (tone === 'review') return 'text-status-review'
+  if (tone === 'final') return 'text-status-final'
+  return 'text-text-secondary'
+}
+
+function getToneBar(tone: SectionTone) {
+  if (tone === 'decision') return 'bg-status-decision'
+  if (tone === 'doing') return 'bg-status-doing'
+  if (tone === 'review') return 'bg-status-review'
+  if (tone === 'final') return 'bg-status-final'
+  return 'bg-accent'
 }

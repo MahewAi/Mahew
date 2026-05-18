@@ -20,7 +20,7 @@ export type Status = 'decision' | 'doing' | 'review' | 'final'
 export type Verdict = { type: 'A' | 'B' | 'C'; text: string }
 
 /**
- * Single source of truth untuk semua contributor di AI Department.
+ * Single source of truth untuk semua contributor internal.
  * Avatar color = parent (C-suite warna) untuk specialist; identik untuk C-suite.
  * Initial: 1 huruf untuk C-suite, 2 huruf untuk specialist (auto-disambiguate).
  */
