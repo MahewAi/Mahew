@@ -45,3 +45,9 @@ __pycache__/
 .stream2
 .security-reminder.ps1
 SECURITY_REMINDER_*.md
+
+# Atmaja data download (review only — don't commit business knowledge to public repo)
+.atmaja-data
+
+# Local Codex/Codex skills cache
+.agents
