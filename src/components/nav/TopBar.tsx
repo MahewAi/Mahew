@@ -42,9 +42,7 @@ export function TopBar({ activeCount, pendingCount, onNotifClick }: TopBarProps)
         </button>
       </div>
 
-      <h1 className="text-display text-text-primary title-chroma">AI Department</h1>
-
-      <div className="mt-2 flex items-center gap-3 text-meta text-text-secondary">
+      <div className="mt-1 flex items-center gap-3 text-meta text-text-secondary">
         {activeCount > 0 && (
           <span className="inline-flex items-center gap-1.5">
             <span
