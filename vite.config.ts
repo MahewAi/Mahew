@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'prompt',
+      registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'icon.svg'],
       manifest: {
         name: 'Gerai 1000 Pintu',
@@ -23,8 +23,8 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // Skip waiting + claim clients pada update — lebih cepat propagate ke open tabs
-        skipWaiting: false, // we control via update prompt button
+        // Update PWA langsung aktif setelah service worker baru terunduh.
+        skipWaiting: true,
         clientsClaim: true,
       },
       devOptions: {

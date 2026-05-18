@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils'
  */
 export function PwaUpdatePrompt() {
   const registrationRef = useRef<ServiceWorkerRegistration | null>(null)
+  const hasReloadedRef = useRef(false)
 
   const {
     needRefresh: [needRefresh, setNeedRefresh],
@@ -59,9 +60,16 @@ export function PwaUpdatePrompt() {
     // Saat window dapat focus (desktop tab switch)
     const onFocus = () => checkForUpdate()
 
+    const onControllerChange = () => {
+      if (hasReloadedRef.current) return
+      hasReloadedRef.current = true
+      window.location.reload()
+    }
+
     document.addEventListener('visibilitychange', onVisibilityChange)
     window.addEventListener('online', onOnline)
     window.addEventListener('focus', onFocus)
+    navigator.serviceWorker?.addEventListener('controllerchange', onControllerChange)
 
     // Initial check kalau registration sudah ready
     if (registrationRef.current) checkForUpdate()
@@ -70,6 +78,7 @@ export function PwaUpdatePrompt() {
       document.removeEventListener('visibilitychange', onVisibilityChange)
       window.removeEventListener('online', onOnline)
       window.removeEventListener('focus', onFocus)
+      navigator.serviceWorker?.removeEventListener('controllerchange', onControllerChange)
     }
   }, [])
 
