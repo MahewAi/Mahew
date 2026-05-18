@@ -368,7 +368,7 @@ function EmptyState() {
       </div>
       <p className="text-card-title-lg text-text-primary">Tidak ada brief di sini</p>
       <p className="mt-1.5 text-sm text-text-muted max-w-[260px] leading-relaxed">
-        Coba pilih department atau status lain. Brief baru akan masuk otomatis saat tim AI selesai
+        Coba pilih department atau status lain. Brief baru akan masuk otomatis saat tim selesai
         memprosesnya.
       </p>
     </div>

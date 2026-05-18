@@ -237,7 +237,7 @@ const PATTERNS: Array<{
     match: (q) => /tim|team|c.?suite|c level|atmaja|coo|cmo|cfo|cco/.test(q),
     intent: 'team',
     variants: () => [
-      `Tim AI Department: saya (CEO), 4 C-suite (Operations, Marketing, Finance, Creative), plus 11 specialist tersebar di bawah masing-masing C-suite. Mau saya breakdown structure lebih detail, atau zoom ke individu/team tertentu?`,
+      `Tim Anda terdiri dari: saya (CEO), 4 C-suite (Operations, Marketing, Finance, Creative), plus 11 specialist tersebar di bawah masing-masing C-suite. Mau saya breakdown structure lebih detail, atau zoom ke individu/team tertentu?`,
       `Tim Anda lengkap: 17 agent ter-orkestrasi. Saya sebagai sintesa kepemimpinan, C-suite sebagai voice domain, specialist sebagai depth. Yang ingin Anda tahu spesifiknya?`,
     ],
   },

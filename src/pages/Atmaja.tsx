@@ -139,7 +139,7 @@ export default function Atmaja() {
         />
         <div className="relative">
           <div className="flex items-center justify-between">
-            <p className="text-label-caps text-text-muted">CEO · AI Department</p>
+            <p className="text-label-caps text-text-muted">CEO · Sintesis kepemimpinan</p>
             {messages.length > 1 && (
               <button
                 type="button"
