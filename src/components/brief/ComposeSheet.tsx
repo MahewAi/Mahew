@@ -8,7 +8,7 @@ import {
   DEPARTMENT_LABEL,
   getContributorColorRole,
   type Brief,
-  type Contributor,
+  type BriefBlock,
   type Role,
 } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -275,27 +275,156 @@ export function ComposeSheet({ open, onOpenChange, onSubmit }: ComposeSheetProps
 /** Helper: simulate AI completion of a pending brief (mock). Returns updated brief. */
 export function simulateAiResponse(brief: Brief): Brief {
   // For MVP — just fill csuiteInput with mock content
-  const targetRole = brief.contributors[0] as Contributor
+  const targetRole = getContributorColorRole(brief.contributors[0] ?? 'ceo')
   const targetName = CONTRIBUTOR_META[targetRole].name
+  const blocks = buildVisualBlocks(brief, targetRole, targetName)
 
   return {
     ...brief,
     status: 'review',
     requestStatus: 'completed',
-    summary: `${targetName} telah menyelesaikan analisis. Lihat input di bawah untuk detail rekomendasi.`,
+    summary: `${targetName} telah menyelesaikan analisis awal dalam format visual. Lihat tabel, chart, diagram, dan rekomendasi C-suite di bawah.`,
     timeAgo: 'Baru saja',
+    blocks,
     csuiteInput: [
       {
         role: targetRole,
         name: targetName,
         subtitle: `Analisis ${targetName}`,
         bullets: [
-          'Konteks pertanyaan sudah dipetakan terhadap data historis dan tren terkini.',
-          'Tiga opsi utama teridentifikasi, dengan rekomendasi mengarah ke opsi B karena ROI vs risk yang terbaik.',
-          'Perlu validasi tambahan dari Anda terkait timeline dan budget. Detail di bullet selanjutnya.',
-          'Lanjutan: butuh data Q1-Q2 untuk projeksi yang lebih akurat. Permintaan ke tim sudah dikirim.',
+          'Konteks pertanyaan sudah dipetakan terhadap tujuan, data, opsi, dan risiko.',
+          'Output utama tersedia dalam format visual agar mudah dibaca dan dibandingkan.',
+          'Perlu validasi tambahan dari Matthew untuk angka, deadline, atau prioritas final.',
         ],
       },
     ],
   }
+}
+
+function buildVisualBlocks(brief: Brief, targetRole: Role, targetName: string): BriefBlock[] {
+  return [
+    {
+      type: 'callout',
+      variant: 'info',
+      title: 'Status analisis',
+      content: `Brief **${brief.title}** sudah dipetakan sebagai bahan keputusan awal. Output ini sengaja dibuat visual agar bisa dibaca cepat oleh Matthew dan C-level.`,
+    },
+    {
+      type: 'markdown',
+      content: `## Sintesa awal\n\n${targetName} melihat brief ini sebagai pekerjaan yang perlu dipecah menjadi **tujuan**, **data yang dibutuhkan**, **opsi**, dan **risiko keputusan**. Bagian di bawah memberi bentuk kerja yang bisa langsung ditindaklanjuti.`,
+    },
+    {
+      type: 'table',
+      headers: ['Area', 'Yang Dicek', 'Output'],
+      rows: [
+        ['Konteks', 'Tujuan, batasan, stakeholder', 'Decision frame'],
+        ['Data', 'Angka, dokumen, asumsi, source', 'Input checklist'],
+        ['Opsi', '2-3 pilihan tindakan', 'Comparison matrix'],
+        ['Risiko', 'Konsekuensi dan mitigation', 'Risk note'],
+      ],
+      caption: 'Struktur dasar yang dipakai agent sebelum membuat rekomendasi final.',
+    },
+    {
+      type: 'chart',
+      kind: 'bar',
+      caption: 'Skor awal prioritas kerja. Angka ini dummy visual untuk preview cara app menampilkan data.',
+      data: {
+        points: [
+          { label: 'Impact', score: 82 },
+          { label: 'Urgency', score: 68 },
+          { label: 'Confidence', score: 56 },
+          { label: 'Effort', score: 42 },
+        ],
+        series: [{ key: 'score', label: 'Score', color: 'hsl(33, 36%, 57%)' }],
+      },
+    },
+    {
+      type: 'mermaid',
+      caption: 'Alur kerja brief dari input sampai keputusan.',
+      code: `flowchart TD
+  A[Input Matthew] --> B[Atmaja framing]
+  B --> C[${targetName} analysis]
+  C --> D{Need more data?}
+  D -->|Yes| E[Pending input]
+  D -->|No| F[Recommendation]
+  F --> G[Matthew confirmation]`,
+    },
+    {
+      type: 'grid',
+      columns: 2,
+      items: [
+        { title: 'Decision', content: 'Apa yang perlu diputuskan, bukan sekadar dibahas.', accent: '#C25541' },
+        { title: 'Data', content: 'Angka, source, gambar, atau dokumen yang perlu dilampirkan.', accent: '#3F5F8C' },
+        { title: 'Risk', content: 'Trade-off yang harus dilihat sebelum eksekusi.', accent: '#85547A' },
+        { title: 'Action', content: 'Langkah berikutnya setelah Matthew memberi sinyal.', accent: '#3D6F58' },
+      ],
+    },
+    {
+      type: 'image',
+      src: buildPreviewImage(brief.title, targetName),
+      alt: `Visual map untuk ${brief.title}`,
+      caption: 'Contoh image block: bisa diganti dengan foto produk, layout toko, reference visual, atau mockup.',
+    },
+    {
+      type: 'csuite-vote',
+      votes: [
+        {
+          role: 'ceo',
+          recommendation: 'A',
+          reasoning: `Atmaja melihat output ${targetName} cukup jelas untuk masuk ke framing detail dan validasi Matthew.`,
+        },
+        {
+          role: 'coo',
+          recommendation: targetRole === 'coo' ? 'A' : 'Review',
+          reasoning: 'Cek implikasi operasional: owner, timeline, SOP, dan dependency vendor/internal.',
+        },
+        {
+          role: 'cmo',
+          recommendation: targetRole === 'cmo' ? 'A' : 'Review',
+          reasoning: 'Pastikan keputusan tidak mengaburkan positioning, channel, dan customer narrative.',
+        },
+        {
+          role: 'cfo',
+          recommendation: targetRole === 'cfo' ? 'A' : 'Review',
+          reasoning: 'Butuh angka baseline: cost, upside, downside, dan runway impact.',
+        },
+        {
+          role: 'cco',
+          recommendation: targetRole === 'cco' ? 'A' : 'Review',
+          reasoning: 'Output final perlu dikunci dalam memo agar bisa dibaca ulang dan tidak hilang di chat.',
+        },
+      ],
+    },
+  ]
+}
+
+function buildPreviewImage(title: string, owner: string): string {
+  const svg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
+  <rect width="1200" height="720" fill="#FAF8F4"/>
+  <rect x="72" y="72" width="1056" height="576" rx="28" fill="#FFFFFF" stroke="#E8DED0"/>
+  <text x="112" y="142" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#8A6B43">VISUAL BRIEF MAP</text>
+  <text x="112" y="204" font-family="Inter, Arial, sans-serif" font-size="44" font-weight="800" fill="#1F1A14">${escapeSvg(title).slice(0, 42)}</text>
+  <text x="112" y="252" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="600" fill="#6B6253">${escapeSvg(owner)} output surface</text>
+  <g transform="translate(112 330)">
+    <rect width="210" height="150" rx="18" fill="#F4EBDC"/>
+    <rect x="270" width="210" height="150" rx="18" fill="#EDF3F6"/>
+    <rect x="540" width="210" height="150" rx="18" fill="#F7EDF2"/>
+    <rect x="810" width="210" height="150" rx="18" fill="#EEF5EF"/>
+    <text x="34" y="84" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="800" fill="#8A6B43">TABLE</text>
+    <text x="304" y="84" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="800" fill="#3F5F8C">CHART</text>
+    <text x="574" y="84" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="800" fill="#85547A">FLOW</text>
+    <text x="844" y="84" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="800" fill="#3D6F58">VOTE</text>
+  </g>
+</svg>`
+
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+}
+
+function escapeSvg(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
 }

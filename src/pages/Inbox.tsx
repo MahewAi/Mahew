@@ -4,19 +4,24 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   Bell,
+  BarChart3,
   CheckCircle2,
   ChevronRight,
   CircleDashed,
   FileText,
+  GitBranch,
+  Image as ImageIcon,
   ListChecks,
   MessageSquareText,
   Plus,
   Settings,
+  Table2,
   Timer,
 } from 'lucide-react'
 import { BriefDetailSheet } from '@/components/brief/BriefDetailSheet'
 import { ComposeSheet, simulateAiResponse } from '@/components/brief/ComposeSheet'
 import { mockBriefs } from '@/data/mockBriefs'
+import { cLevelPlans, type CLevelPlan } from '@/data/cLevelPlans'
 import {
   CONTRIBUTOR_META,
   DEPARTMENT_LABEL_SHORT,
@@ -106,6 +111,10 @@ export default function Inbox() {
     () => scopedBriefs.filter((brief) => brief.status === 'final' || brief.requestStatus === 'completed'),
     [scopedBriefs],
   )
+  const visiblePlans = useMemo(() => {
+    if (sector === 'all' || sector === 'ceo') return cLevelPlans
+    return cLevelPlans.filter((plan) => plan.role === sector)
+  }, [sector])
 
   const attentionCount = confirmationBriefs.length + scopedBriefs.filter((brief) => brief.status === 'review').length
   const blockerCount = 0
@@ -193,6 +202,10 @@ export default function Inbox() {
 
         <SectorTabs active={sector} onChange={setSector} />
 
+        <CLevelPlanSection plans={visiblePlans} />
+
+        <VisualSurfaceSection />
+
         <div className="mt-4 space-y-3">
           <TaskSection
             title="Perlu Konfirmasi"
@@ -260,6 +273,121 @@ export default function Inbox() {
 
       <ComposeSheet open={composeOpen} onOpenChange={setComposeOpen} onSubmit={handleComposeSubmit} />
     </div>
+  )
+}
+
+function CLevelPlanSection({ plans }: { plans: CLevelPlan[] }) {
+  return (
+    <section className="mt-4" aria-label="Rancangan C-Level">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-label-caps text-text-muted">Rancangan C-Level</p>
+          <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">Apa yang sedang mereka susun</h2>
+        </div>
+        <span className="rounded-full bg-bg-surface px-2.5 py-1 text-[11px] font-extrabold text-text-secondary">
+          {plans.length}
+        </span>
+      </div>
+
+      <div className="mt-3 grid gap-2.5">
+        {plans.map((plan) => (
+          <CLevelPlanCard key={plan.role} plan={plan} />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function CLevelPlanCard({ plan }: { plan: CLevelPlan }) {
+  return (
+    <article className="rounded-lg border border-border-med bg-white p-3.5 shadow-soft">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className={cn('size-2 rounded-full', roleAccent[plan.role])} />
+            <p className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-text-muted">
+              {DEPARTMENT_LABEL_SHORT[plan.role]} / {sectorMeta[plan.role].subtitle}
+            </p>
+          </div>
+          <h3 className="mt-1 text-[15px] font-extrabold leading-5 text-text-primary">{plan.title}</h3>
+          <p className="mt-1 text-xs leading-5 text-text-secondary">{plan.mandate}</p>
+        </div>
+        <span className={cn('shrink-0 rounded-full px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.04em]', getPlanStatusClass(plan.status))}>
+          {getPlanStatusLabel(plan.status)}
+        </span>
+      </div>
+
+      <div className="mt-3 grid gap-2">
+        <PlanList label="Dirancang" items={plan.designing} />
+        <PlanList label="Butuh dari Matthew" items={plan.needsFromMatthew} muted />
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {plan.outputFormats.map((format) => (
+          <span
+            key={format}
+            className="rounded-full border border-border-soft bg-bg-surface px-2.5 py-1 text-[10px] font-bold text-text-secondary"
+          >
+            {format}
+          </span>
+        ))}
+      </div>
+    </article>
+  )
+}
+
+function PlanList({ label, items, muted = false }: { label: string; items: string[]; muted?: boolean }) {
+  return (
+    <div>
+      <p className="text-[10px] font-extrabold uppercase tracking-[0.08em] text-text-faint">{label}</p>
+      <ul className="mt-1 space-y-1">
+        {items.slice(0, 4).map((item) => (
+          <li key={item} className="flex gap-2 text-xs leading-5">
+            <span className={cn('mt-2 size-1 shrink-0 rounded-full', muted ? 'bg-border-strong' : 'bg-accent')} />
+            <span className={muted ? 'text-text-muted' : 'text-text-primary'}>{item}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function VisualSurfaceSection() {
+  const visualItems = [
+    { icon: Table2, label: 'Table', text: 'comparison, supplier, pricing' },
+    { icon: BarChart3, label: 'Chart', text: 'ROI, forecast, trend' },
+    { icon: GitBranch, label: 'Diagram', text: 'flow, mermaid, process' },
+    { icon: ImageIcon, label: 'Image', text: 'visual map, reference, mockup' },
+  ]
+
+  return (
+    <section className="mt-4 rounded-lg border border-border-med bg-bg-surface p-3.5" aria-label="Format visual output">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-label-caps text-accent-dark">Visual output</p>
+          <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">App siap render data kaya</h2>
+          <p className="mt-1 text-xs leading-5 text-text-secondary">
+            Brief detail bisa berisi grafik, tabel, gambar, diagram, callout, dan grid C-suite.
+          </p>
+        </div>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        {visualItems.map((item) => {
+          const Icon = item.icon
+          return (
+            <div key={item.label} className="rounded-md border border-border-soft bg-white px-3 py-2.5">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex size-7 items-center justify-center rounded-md bg-accent-bg text-accent-dark">
+                  <Icon className="size-3.5" />
+                </span>
+                <p className="text-xs font-extrabold text-text-primary">{item.label}</p>
+              </div>
+              <p className="mt-1 text-[10px] font-semibold leading-4 text-text-muted">{item.text}</p>
+            </div>
+          )
+        })}
+      </div>
+    </section>
   )
 }
 
@@ -477,4 +605,16 @@ function getToneBar(tone: SectionTone) {
   if (tone === 'review') return 'bg-status-review'
   if (tone === 'final') return 'bg-status-final'
   return 'bg-accent'
+}
+
+function getPlanStatusLabel(status: CLevelPlan['status']) {
+  if (status === 'ready') return 'ready'
+  if (status === 'draft') return 'draft'
+  return 'need input'
+}
+
+function getPlanStatusClass(status: CLevelPlan['status']) {
+  if (status === 'ready') return 'bg-status-final-bg text-status-final'
+  if (status === 'draft') return 'bg-status-review-bg text-status-review'
+  return 'bg-status-decision-bg text-status-decision'
 }
