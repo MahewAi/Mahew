@@ -7,12 +7,12 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: ['favicon.ico', 'icon.svg'],
       manifest: {
         name: 'Gerai 1000 Pintu',
         short_name: 'Gerai',
-        description: 'AI Department untuk Gerai 1000 Pintu',
+        description: 'Brief inbox untuk Gerai 1000 Pintu',
         theme_color: '#B8956B',
         background_color: '#FFFFFF',
         display: 'standalone',
@@ -21,6 +21,14 @@ export default defineConfig({
         icons: [
           { src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' },
         ],
+      },
+      workbox: {
+        // Skip waiting + claim clients pada update — lebih cepat propagate ke open tabs
+        skipWaiting: false, // we control via update prompt button
+        clientsClaim: true,
+      },
+      devOptions: {
+        enabled: false,
       },
     }),
   ],

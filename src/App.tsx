@@ -3,6 +3,7 @@ import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/react'
 import { ToastProvider } from '@/components/shared/Toast'
 import { BottomNav } from '@/components/nav/BottomNav'
+import { PwaUpdatePrompt } from '@/components/shared/PwaUpdatePrompt'
 import Routes from './routes'
 
 export default function App() {
@@ -29,6 +30,7 @@ export default function App() {
           {!hideNav && <BottomNav />}
         </div>
       </div>
+      <PwaUpdatePrompt />
       <Analytics />
       <SpeedInsights />
     </ToastProvider>
