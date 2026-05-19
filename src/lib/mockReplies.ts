@@ -149,6 +149,14 @@ const PATTERNS: Array<{
     ],
   },
   {
+    match: (q) => /arsitektur|architecture|denah|peta kerja|work map|workflow|blueprint|rancangan/.test(q),
+    intent: 'work_architecture',
+    variants: () => [
+      `Saya akan pakai format itu sebagai default untuk brief strategis: gambaran arsitektur dulu, baru detail.\n\nDenah kerja C-level:\n| Zona | Owner | Yang dirancang | Output |\n|---|---|---|---|\n| Sintesa | Atmaja | Prioritas, trade-off, gate keputusan | Master plan |\n| Operasi | COO | SOP, vendor, staffing, fulfillment | Ops roadmap |\n| Market | CMO | Segment, positioning, channel, funnel | Growth roadmap |\n| Capital | CFO | ROI, margin, runway, budget | Scenario table |\n| Narrative | CCO | Memo, source log, visual brief | Document pack |\n\nKalau Anda kirim topik, saya pecah jadi peta kerja seperti ini sebelum masuk analisis panjang.`,
+      `Baik. Mulai sekarang cara baca utama saya: input Matthew -> framing Atmaja -> lane COO/CMO/CFO/CCO -> specialist packet -> confirmation gate.\n\nYang akan saya tampilkan untuk rencana besar:\n- Architecture map: bentuk sistem dan alurnya.\n- Denah kerja: siapa merancang apa.\n- Dependency map: apa yang saling menunggu.\n- Gate keputusan: apa yang perlu Anda pilih sekarang.\n\nKirim satu topik, nanti saya bentuk sebagai blueprint kerja.`,
+    ],
+  },
+  {
     match: (q) => /bisnis|business|usaha|operasi|operations|jualan/.test(q),
     intent: 'business',
     variants: () => [
