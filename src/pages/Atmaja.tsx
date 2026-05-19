@@ -56,17 +56,19 @@ export default function Atmaja() {
   const [sending, setSending] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
 
-  // Persist thread to localStorage
   useEffect(() => {
     saveThread(messages)
   }, [messages])
 
   const handleReset = () => {
     setMessages(initialThread)
-    try { localStorage.removeItem(STORAGE_KEY) } catch { /* ignore */ }
+    try {
+      localStorage.removeItem(STORAGE_KEY)
+    } catch {
+      // ignore
+    }
   }
 
-  // Briefs yang melibatkan Atmaja (CEO contributor)
   const atmajaBriefs = useMemo(
     () =>
       loadStoredBriefs()
@@ -102,7 +104,6 @@ export default function Atmaja() {
       })
 
       if (result.resetThread) {
-        // Replace thread with reset acknowledgment as first message
         setMessages([
           {
             id: `m-${Date.now() + 1}`,
@@ -127,18 +128,18 @@ export default function Atmaja() {
   }
 
   return (
-    <div className="min-h-screen pb-32">
-      {/* Hero header — Atmaja signature */}
-      <header className="px-4 pt-safe-top pt-6 pb-4 relative overflow-hidden">
+    <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 pb-32 pt-safe-top sm:px-6 lg:px-8">
+      <header className="relative overflow-hidden pb-5 pt-6">
         <div
           aria-hidden="true"
-          className="absolute -top-20 right-0 size-72 rounded-full opacity-50 pointer-events-none"
+          className="pointer-events-none absolute -right-16 -top-24 size-72 rounded-full opacity-40"
           style={{
             background: 'radial-gradient(circle at center, hsl(var(--role-ceo) / 0.6), transparent 65%)',
           }}
         />
+
         <div className="relative">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3">
             <p className="text-label-caps text-text-muted">CEO · Sintesis kepemimpinan</p>
             {messages.length > 1 && (
               <button
@@ -146,7 +147,7 @@ export default function Atmaja() {
                 onClick={handleReset}
                 aria-label="Reset percakapan"
                 className={cn(
-                  'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full',
+                  'inline-flex items-center gap-1 rounded-full px-2.5 py-1.5',
                   'glass-soft text-meta text-text-secondary hover:text-text-primary',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
                 )}
@@ -156,12 +157,13 @@ export default function Atmaja() {
               </button>
             )}
           </div>
-          <div className="mt-4 flex items-center gap-4">
+
+          <div className="mt-5 flex items-center gap-4">
             <div className="relative shrink-0">
               <span
                 className={cn(
-                  'inline-flex items-center justify-center rounded-2xl size-16 bg-role-ceo text-white shadow-glass-hero ring-2 ring-white/70',
-                  'font-serif font-semibold text-3xl',
+                  'inline-flex size-[72px] items-center justify-center rounded-[22px] bg-role-ceo text-white shadow-glass-hero ring-2 ring-white/70',
+                  'font-serif text-3xl font-semibold',
                 )}
                 style={{ fontFamily: '"Cormorant Garamond", Georgia, serif' }}
               >
@@ -169,90 +171,94 @@ export default function Atmaja() {
               </span>
               <span
                 aria-hidden="true"
-                className="absolute -bottom-1 -right-1 size-4 rounded-full bg-status-final ring-2 ring-bg-app shadow-[0_0_8px_rgba(61,111,88,0.6)]"
+                className="absolute -bottom-1 -right-1 size-4 rounded-full bg-status-final shadow-[0_0_8px_rgba(61,111,88,0.6)] ring-2 ring-bg-app"
               />
             </div>
             <div className="min-w-0 flex-1">
-              <h1
-                className="text-display text-text-primary title-chroma"
-                style={{ fontFamily: '"Cormorant Garamond", Georgia, serif' }}
-              >
+              <h1 className="text-[40px] font-black leading-[42px] tracking-[-0.03em] text-text-primary sm:text-[48px] sm:leading-[50px]">
                 Atmaja
               </h1>
-              <p className="mt-1 text-meta text-text-secondary">Sintesis kepemimpinan · Aktif sekarang</p>
+              <p className="mt-1 text-sm font-semibold text-text-secondary">Sintesis kepemimpinan · Aktif sekarang</p>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Recent synthesis from Atmaja */}
-      <section className="px-4 mt-2" aria-label="Sintesis Atmaja terkini">
-        <div className="flex items-center justify-between mb-2.5">
-          <p className="text-label-caps text-text-muted">Sintesis terkini</p>
-          <button
-            type="button"
-            onClick={() => navigate('/')}
-            className="text-meta font-medium text-accent-dark hover:text-text-primary inline-flex items-center gap-1"
-          >
-            Semua brief <ArrowUpRight className="size-3" />
-          </button>
-        </div>
-        <div className="grid grid-cols-2 gap-2.5">
-          {atmajaBriefs.map((b) => {
-            const isDigest = b.isDailyDigest
-            return (
-              <motion.button
-                key={b.id}
-                type="button"
-                onClick={() => navigate(`/brief/${b.id}`)}
-                whileTap={{ scale: 0.97 }}
-                whileHover={{ y: -1 }}
-                transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
-                className={cn(
-                  'col-span-1 text-left rounded-[16px] p-3.5 shadow-glass min-h-[120px] flex flex-col',
-                  isDigest ? 'glass-strong ring-1 ring-accent-light/60' : 'glass-soft',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
-                )}
-              >
-                {isDigest && (
-                  <span className="inline-flex items-center gap-1.5 text-label-caps text-accent-dark mb-1.5">
-                    <Sunrise aria-hidden="true" className="size-3" />
-                    Laporan harian
-                  </span>
-                )}
-                <h3 className="text-[13px] leading-[17px] font-semibold text-text-primary line-clamp-3">
-                  {b.title}
-                </h3>
-                <p className="mt-auto pt-2 text-[10px] text-text-muted">{b.timeAgo}</p>
-              </motion.button>
-            )
-          })}
-        </div>
-      </section>
+      {atmajaBriefs.length > 0 && (
+        <section className="mt-1" aria-label="Sintesis Atmaja terkini">
+          <div className="mb-2.5 flex items-center justify-between">
+            <p className="text-label-caps text-text-muted">Sintesis terkini</p>
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="inline-flex items-center gap-1 text-meta font-bold text-accent-dark hover:text-text-primary"
+            >
+              Semua brief <ArrowUpRight className="size-3" />
+            </button>
+          </div>
 
-      {/* Persistent conversation */}
-      <section className="mt-6 px-4" aria-label="Percakapan dengan Atmaja">
-        <p className="text-label-caps text-text-muted mb-3">Pesan langsung</p>
+          <div className="grid gap-2.5 sm:grid-cols-2">
+            {atmajaBriefs.map((b) => {
+              const isDigest = b.isDailyDigest
+              return (
+                <motion.button
+                  key={b.id}
+                  type="button"
+                  onClick={() => navigate(`/brief/${b.id}`)}
+                  whileTap={{ scale: 0.98 }}
+                  whileHover={{ y: -1 }}
+                  transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
+                  className={cn(
+                    'min-h-[104px] rounded-lg p-3.5 text-left shadow-card',
+                    isDigest ? 'bg-white/78 ring-1 ring-accent-light/70' : 'bg-white/58',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
+                  )}
+                >
+                  {isDigest && (
+                    <span className="mb-1.5 inline-flex items-center gap-1.5 text-label-caps text-accent-dark">
+                      <Sunrise aria-hidden="true" className="size-3" />
+                      Laporan harian
+                    </span>
+                  )}
+                  <h3 className="line-clamp-3 text-[13px] font-bold leading-[17px] text-text-primary">
+                    {b.title}
+                  </h3>
+                  <p className="mt-2 text-[10px] text-text-muted">{b.timeAgo}</p>
+                </motion.button>
+              )
+            })}
+          </div>
+        </section>
+      )}
+
+      <section className="mt-5" aria-label="Percakapan dengan Atmaja">
+        <div className="mb-3 flex items-end justify-between gap-3">
+          <div>
+            <p className="text-label-caps text-text-muted">Pesan langsung</p>
+            <p className="mt-1 text-xs font-semibold text-text-secondary">Ruang bicara Matthew dan Atmaja.</p>
+          </div>
+        </div>
 
         <div
           ref={listRef}
-          className="space-y-2.5 mb-3 max-h-[420px] overflow-y-auto rounded-[16px] glass-soft shadow-glass p-3"
+          className="mb-4 max-h-[calc(100vh-360px)] space-y-4 overflow-y-auto px-1 pb-2 pt-1 sm:max-h-[520px]"
         >
           <AnimatePresence initial={false}>
             {messages.map((m) => (
               <MessageBubble key={m.id} message={m} reduceMotion={!!reduceMotion} />
             ))}
           </AnimatePresence>
+
           {sending && (
-            <div className="flex items-center gap-2 text-meta text-text-muted pl-12">
+            <div className="flex items-center gap-2 pl-12 text-meta text-text-muted">
               <span className="inline-flex gap-1">
-                <span className="size-1.5 rounded-full bg-text-muted animate-pulse" />
+                <span className="size-1.5 animate-pulse rounded-full bg-text-muted" />
                 <span
-                  className="size-1.5 rounded-full bg-text-muted animate-pulse"
+                  className="size-1.5 animate-pulse rounded-full bg-text-muted"
                   style={{ animationDelay: '0.15s' }}
                 />
                 <span
-                  className="size-1.5 rounded-full bg-text-muted animate-pulse"
+                  className="size-1.5 animate-pulse rounded-full bg-text-muted"
                   style={{ animationDelay: '0.3s' }}
                 />
               </span>
@@ -263,16 +269,17 @@ export default function Atmaja() {
 
         {messages.length <= 1 && (
           <div className="mb-3">
-            <p className="text-meta text-text-muted mb-2 px-1">Pertanyaan cepat:</p>
-            <div className="flex flex-wrap gap-1.5">
+            <p className="mb-2 px-1 text-meta font-bold text-text-muted">Pertanyaan cepat:</p>
+            <div className="flex flex-wrap gap-2">
               {quickPrompts.map((p) => (
                 <button
                   key={p}
                   type="button"
                   onClick={() => send(p)}
                   className={cn(
-                    'rounded-full glass-soft px-3 py-1.5 text-xs font-medium text-text-primary',
-                    'hover:bg-white/60 transition-colors duration-fast text-left',
+                    'rounded-pill bg-white/58 px-3.5 py-2 text-left text-xs font-bold text-text-primary shadow-soft',
+                    'transition-colors duration-fast hover:bg-white/78',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
                   )}
                 >
                   {p}
@@ -282,7 +289,7 @@ export default function Atmaja() {
           </div>
         )}
 
-        <div className="glass-strong rounded-[14px] shadow-glass p-2 flex items-end gap-2">
+        <div className="sticky bottom-24 z-20 flex items-end gap-2 rounded-[22px] border border-white/75 bg-white/76 p-2 shadow-pop backdrop-blur-xl">
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -295,10 +302,10 @@ export default function Atmaja() {
             placeholder="Tanya Atmaja... (Cmd+Enter kirim)"
             rows={1}
             className={cn(
-              'flex-1 px-2 py-2 bg-transparent text-sm text-text-primary placeholder:text-text-faint',
-              'focus:outline-none resize-none leading-relaxed max-h-32',
+              'max-h-32 flex-1 resize-none bg-transparent px-3 py-2.5 text-base leading-relaxed text-text-primary placeholder:text-text-faint',
+              'focus:outline-none',
             )}
-            style={{ minHeight: '36px' }}
+            style={{ minHeight: '44px' }}
           />
           <button
             type="button"
@@ -306,7 +313,7 @@ export default function Atmaja() {
             disabled={!text.trim() || sending}
             aria-label="Kirim ke Atmaja"
             className={cn(
-              'shrink-0 size-9 rounded-full inline-flex items-center justify-center transition-colors duration-fast',
+              'inline-flex size-11 shrink-0 items-center justify-center rounded-full transition-colors duration-fast',
               text.trim() && !sending
                 ? 'bg-accent text-white shadow-glow-accent hover:bg-accent-dark'
                 : 'bg-bg-soft text-text-faint cursor-not-allowed',
@@ -316,7 +323,7 @@ export default function Atmaja() {
           </button>
         </div>
       </section>
-    </div>
+    </main>
   )
 }
 
@@ -328,24 +335,25 @@ function MessageBubble({ message, reduceMotion }: { message: AtmajaMessage; redu
       initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.24, ease: [0.32, 0.72, 0, 1] }}
-      className={cn('flex gap-2.5 items-end', isMatthew && 'flex-row-reverse')}
+      className={cn('flex items-end gap-2.5', isMatthew && 'flex-row-reverse')}
     >
       <span
         aria-hidden="true"
         className={cn(
-          'inline-flex items-center justify-center rounded-full font-semibold shrink-0 size-8',
+          'inline-flex size-8 shrink-0 items-center justify-center rounded-full font-semibold shadow-soft',
           isMatthew
-            ? 'bg-gradient-to-br from-accent to-accent-dark text-white text-sm'
-            : 'bg-role-ceo text-white font-serif text-base',
+            ? 'bg-gradient-to-br from-accent to-accent-dark text-sm text-white'
+            : 'bg-role-ceo font-serif text-base text-white',
         )}
         style={!isMatthew ? { fontFamily: '"Cormorant Garamond", Georgia, serif' } : undefined}
       >
         {isMatthew ? 'M' : 'A'}
       </span>
-      <div className={cn('max-w-[78%] min-w-0', isMatthew ? 'items-end' : 'items-start')}>
+
+      <div className={cn('min-w-0 max-w-[min(86%,760px)]', isMatthew ? 'items-end' : 'items-start')}>
         {!isMatthew && (
           <p
-            className="text-meta italic font-serif text-accent-dark mb-1 px-2"
+            className="mb-1 px-1 text-meta font-bold text-accent-dark"
             style={{ fontFamily: '"Cormorant Garamond", Georgia, serif' }}
           >
             Atmaja
@@ -353,15 +361,15 @@ function MessageBubble({ message, reduceMotion }: { message: AtmajaMessage; redu
         )}
         <div
           className={cn(
-            'rounded-[14px] px-3.5 py-2.5 text-sm leading-relaxed',
+            'px-4 py-3 text-[15px] leading-relaxed shadow-card',
             isMatthew
-              ? 'bg-accent text-white shadow-glass'
-              : 'bg-bg-elevated/80 text-text-primary shadow-glass border border-white/40',
+              ? 'rounded-[18px] rounded-br-md bg-accent text-white'
+              : 'rounded-[18px] rounded-bl-md bg-white/82 text-text-primary',
           )}
         >
           {message.text}
         </div>
-        <p className={cn('text-[10px] text-text-faint mt-1 px-2', isMatthew && 'text-right')}>
+        <p className={cn('mt-1 px-1 text-[10px] text-text-faint', isMatthew && 'text-right')}>
           {message.timeAgo}
         </p>
       </div>
