@@ -364,6 +364,10 @@ function LiveDepartmentMap() {
   type MapNode = {
     id: string
     label: string
+    owner: string
+    status: string
+    activity: string
+    output: string
     x: number
     y: number
     w: number
@@ -371,30 +375,32 @@ function LiveDepartmentMap() {
     tone?: 'primary' | 'accent'
   }
   const mapNodes: MapNode[] = [
-    { id: 'main', label: 'Dashboard Utama', x: 118, y: 18, w: 128, h: 36, tone: 'primary' },
-    { id: 'pending', label: 'Pending', x: 24, y: 88, w: 84, h: 34 },
-    { id: 'running', label: 'Running', x: 138, y: 88, w: 84, h: 34 },
-    { id: 'confirm', label: 'Need Confirmation', x: 256, y: 88, w: 138, h: 34 },
-    { id: 'alerts', label: 'Research Alerts', x: 434, y: 88, w: 118, h: 34 },
-    { id: 'radar', label: 'Tavily Research Radar', x: 420, y: 158, w: 150, h: 34, tone: 'accent' },
-    { id: 'competitor', label: 'Competitor Table', x: 170, y: 232, w: 128, h: 34 },
-    { id: 'market', label: 'Market Signal Map', x: 330, y: 232, w: 140, h: 34 },
-    { id: 'source', label: 'Source Evidence', x: 500, y: 232, w: 128, h: 34 },
-    { id: 'workspace', label: 'C-Level Workspaces', x: 804, y: 88, w: 150, h: 34, tone: 'primary' },
-    { id: 'ceo', label: 'CEO / Atmaja', x: 646, y: 158, w: 108, h: 34 },
-    { id: 'coo', label: 'COO', x: 782, y: 158, w: 72, h: 34 },
-    { id: 'cmo', label: 'CMO', x: 882, y: 158, w: 72, h: 34 },
-    { id: 'cfo', label: 'CFO', x: 982, y: 158, w: 72, h: 34 },
-    { id: 'cco', label: 'CCO', x: 1082, y: 158, w: 72, h: 34 },
-    { id: 'brief', label: 'Brief Detail', x: 774, y: 230, w: 120, h: 34, tone: 'accent' },
-    { id: 'markdown', label: 'Markdown', x: 508, y: 310, w: 92, h: 34 },
-    { id: 'table', label: 'Table', x: 644, y: 310, w: 72, h: 34 },
-    { id: 'chart', label: 'Chart', x: 780, y: 310, w: 72, h: 34 },
-    { id: 'mermaid', label: 'Mermaid Diagram', x: 910, y: 310, w: 132, h: 34 },
-    { id: 'decision', label: 'Decision Buttons', x: 1100, y: 310, w: 140, h: 34 },
+    { id: 'main', label: 'Dashboard Utama', owner: 'Atmaja', status: 'Command intake', activity: 'Menggabungkan pending, running, confirmation, riset, dan workspace menjadi satu peta prioritas.', output: 'Antrian kerja harian dan arah distribusi ke agent.', x: 118, y: 18, w: 136, h: 40, tone: 'primary' },
+    { id: 'pending', label: 'Pending', owner: 'Atmaja', status: 'Menunggu input', activity: 'Menyimpan brief yang belum cukup jelas atau belum punya owner eksekusi.', output: 'Daftar brief yang perlu dipertegas.', x: 24, y: 92, w: 92, h: 38 },
+    { id: 'running', label: 'Running', owner: 'Agent runtime', status: 'Sedang jalan', activity: 'Menampilkan pekerjaan yang sedang diproses C-level atau specialist.', output: 'Progress kerja dan blocker awal.', x: 138, y: 92, w: 92, h: 38 },
+    { id: 'confirm', label: 'Need Confirmation', owner: 'Matthew', status: 'Butuh keputusan', activity: 'Menahan keputusan yang berisiko, mahal, atau mengubah arah strategi.', output: 'Approval, revisi, atau prioritas baru.', x: 256, y: 92, w: 148, h: 38 },
+    { id: 'alerts', label: 'Research Alerts', owner: 'Market Researcher', status: 'Radar sinyal', activity: 'Menangkap sinyal market, kompetitor, trend, dan perubahan yang perlu dicek.', output: 'Trigger riset untuk Tavily radar.', x: 438, y: 92, w: 124, h: 38 },
+    { id: 'radar', label: 'Tavily Research Radar', owner: 'Web Researcher', status: 'Source gathering', activity: 'Mencari bukti web, memisahkan fakta dari inferensi, dan mencatat keterbatasan data.', output: 'Evidence yang bisa dipakai C-level.', x: 420, y: 162, w: 160, h: 38, tone: 'accent' },
+    { id: 'competitor', label: 'Competitor Table', owner: 'Market Researcher', status: 'Landscape', activity: 'Merapikan nama kompetitor, positioning, pricing signal, channel, dan kelemahan.', output: 'Tabel kompetitor siap dibaca.', x: 170, y: 238, w: 136, h: 38 },
+    { id: 'market', label: 'Market Signal Map', owner: 'CMO', status: 'Signal mapping', activity: 'Menghubungkan trend, customer segment, demand, dan peluang produk.', output: 'Peta peluang market.', x: 334, y: 238, w: 148, h: 38 },
+    { id: 'source', label: 'Source Evidence', owner: 'CCO', status: 'Evidence check', activity: 'Menyimpan link, kutipan pendek, timestamp, dan confidence dari source.', output: 'Evidence block untuk brief detail.', x: 508, y: 238, w: 136, h: 38 },
+    { id: 'workspace', label: 'C-Level Workspaces', owner: 'Atmaja', status: 'Delegation hub', activity: 'Membagi mandat ke COO, CMO, CFO, dan CCO sesuai domain keputusan.', output: 'Pekerjaan C-level yang terstruktur.', x: 804, y: 92, w: 160, h: 38, tone: 'primary' },
+    { id: 'ceo', label: 'CEO / Atmaja', owner: 'Atmaja', status: 'Synthesis', activity: 'Menyatukan trade-off C-level, memberi push-back, lalu menyusun decision brief.', output: 'Synthesis dan rekomendasi keputusan.', x: 646, y: 162, w: 118, h: 38 },
+    { id: 'coo', label: 'COO', owner: 'COO', status: 'Ops planning', activity: 'Merancang sistem kerja, staffing, vendor, supply chain, fulfillment, dan SOP.', output: 'Timeline operasi dan blocker.', x: 786, y: 162, w: 76, h: 38 },
+    { id: 'cmo', label: 'CMO', owner: 'CMO', status: 'Market planning', activity: 'Merancang positioning, market thesis, channel, conversion, dan innovation scan.', output: 'Market map dan growth plan.', x: 888, y: 162, w: 76, h: 38 },
+    { id: 'cfo', label: 'CFO', owner: 'CFO', status: 'Financial frame', activity: 'Menghitung model bisnis, ROI, pricing, budget, dan batas aman eksekusi.', output: 'Financial decision frame.', x: 990, y: 162, w: 76, h: 38 },
+    { id: 'cco', label: 'CCO', owner: 'CCO', status: 'Narrative system', activity: 'Menjaga dokumen, source, brand voice, copy, dan format komunikasi.', output: 'Narrative dan document pack.', x: 1092, y: 162, w: 76, h: 38 },
+    { id: 'brief', label: 'Brief Detail', owner: 'Atmaja', status: 'Compilation', activity: 'Menggabungkan output C-level dan riset menjadi satu rich brief.', output: 'Brief final sebelum approval.', x: 774, y: 234, w: 128, h: 38, tone: 'accent' },
+    { id: 'markdown', label: 'Markdown', owner: 'CCO', status: 'Text render', activity: 'Menyusun narasi, memo, recommendation, dan reasoning dalam format terbaca.', output: 'Section naratif.', x: 508, y: 316, w: 98, h: 38 },
+    { id: 'table', label: 'Table', owner: 'Analyst agents', status: 'Structured data', activity: 'Merapikan perbandingan, scoring, budget, vendor, dan source list.', output: 'Tabel data.', x: 646, y: 316, w: 76, h: 38 },
+    { id: 'chart', label: 'Chart', owner: 'CFO / CMO', status: 'Visual metric', activity: 'Menampilkan ROI, funnel, market signal, forecast, atau score breakdown.', output: 'Grafik keputusan.', x: 782, y: 316, w: 76, h: 38 },
+    { id: 'mermaid', label: 'Mermaid Diagram', owner: 'Atmaja', status: 'Architecture visual', activity: 'Merender flow, dependency, stakeholder map, dan proses kerja.', output: 'Diagram arsitektural.', x: 914, y: 316, w: 138, h: 38 },
+    { id: 'decision', label: 'Decision Buttons', owner: 'Matthew', status: 'Approval gate', activity: 'Mengubah brief menjadi aksi: approve, revise, delegate, atau hold.', output: 'Keputusan masuk memory dan queue.', x: 1102, y: 316, w: 146, h: 38 },
   ]
+  const [selectedNodeId, setSelectedNodeId] = useState('ceo')
 
   const nodeById = new Map(mapNodes.map((node) => [node.id, node]))
+  const selectedNode = nodeById.get(selectedNodeId) ?? mapNodes[0]
   const center = (id: string) => {
     const node = nodeById.get(id)!
     return { x: node.x + node.w / 2, y: node.y + node.h / 2 }
@@ -408,69 +414,111 @@ function LiveDepartmentMap() {
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-[#2b2926] bg-[#171716] shadow-card [scrollbar-color:#6d6256_#171716]">
-      <div className="relative h-[380px] w-[1280px] overflow-hidden bg-[#171716]">
-        <div className="absolute left-4 top-3 z-10 flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-white/45">
-          <span className="inline-flex size-2 rounded-full bg-status-final" />
-          Architecture Flow
-        </div>
-        <div className="absolute right-4 top-3 z-10 flex gap-2">
-          <span className="rounded-sm border border-white/10 px-2 py-1 text-[10px] font-bold text-white/45">AI Dept</span>
-          <span className="rounded-sm border border-white/10 px-2 py-1 text-[10px] font-bold text-white/45">Output Map</span>
-        </div>
-
-        <svg className="absolute inset-0 size-full" viewBox="0 0 1280 380" aria-hidden="true">
-          <defs>
-            <marker id="department-arrow" markerHeight="6" markerWidth="6" orient="auto" refX="5" refY="3">
-              <path d="M0,0 L6,3 L0,6 Z" fill="#7e7972" />
-            </marker>
-          </defs>
-          <g fill="none" stroke="#6f6a63" strokeLinecap="round" strokeWidth="1.2" opacity="0.82" markerEnd="url(#department-arrow)">
-            <path d={path('main', 'pending', 6)} />
-            <path d={path('main', 'running', 8)} />
-            <path d={path('main', 'confirm', 8)} />
-            <path d={path('main', 'alerts', 8)} />
-            <path d={path('alerts', 'radar', 4)} />
-            <path d={path('radar', 'competitor', 10)} />
-            <path d={path('radar', 'market', 8)} />
-            <path d={path('radar', 'source', 8)} />
-            <path d="M 246 36 C 520 48, 730 40, 879 88" />
-            <path d={path('workspace', 'ceo', 10)} />
-            <path d={path('workspace', 'coo', 10)} />
-            <path d={path('workspace', 'cmo', 10)} />
-            <path d={path('workspace', 'cfo', 10)} />
-            <path d={path('workspace', 'cco', 10)} />
-            <path d={path('ceo', 'brief', 6)} />
-            <path d={path('coo', 'brief', 8)} />
-            <path d={path('cmo', 'brief', 8)} />
-            <path d={path('cfo', 'brief', 8)} />
-            <path d={path('cco', 'brief', 8)} />
-            <path d={path('source', 'brief', 16)} />
-            <path d={path('brief', 'markdown', 10)} />
-            <path d={path('brief', 'table', 8)} />
-            <path d={path('brief', 'chart', 8)} />
-            <path d={path('brief', 'mermaid', 8)} />
-            <path d={path('brief', 'decision', 8)} />
-          </g>
-        </svg>
-
-        {mapNodes.map((node) => (
-          <div
-            key={node.id}
-            className={cn(
-              'absolute z-20 flex items-center justify-center border px-2 text-center text-[10px] font-extrabold leading-3 text-white shadow-[0_8px_22px_rgba(0,0,0,0.24)]',
-              node.tone === 'primary'
-                ? 'border-white/14 bg-[#3a3836]'
-                : node.tone === 'accent'
-                  ? 'border-[#a38a6b]/35 bg-[#3f3b35]'
-                  : 'border-white/10 bg-[#302f2e]',
-            )}
-            style={{ left: node.x, top: node.y, width: node.w, height: node.h }}
-          >
-            {node.label}
+    <div className="rounded-lg border border-[#2b2926] bg-[#151412] p-2 shadow-card">
+      <div className="overflow-x-auto rounded-md border border-white/8 bg-[#171614] [scrollbar-color:#6d6256_#171716]">
+        <div
+          className="relative h-[396px] w-[1280px] overflow-hidden"
+          style={{
+            backgroundImage:
+              'linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px)',
+            backgroundSize: '32px 32px',
+          }}
+        >
+          <div className="absolute left-4 top-3 z-10 flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-white/48">
+            <span className="inline-flex size-2 rounded-full bg-status-final shadow-[0_0_16px_rgba(61,111,88,0.9)]" />
+            Architecture Flow
           </div>
-        ))}
+          <div className="absolute right-4 top-3 z-10 flex gap-2">
+            <span className="rounded-sm border border-white/10 bg-white/[0.03] px-2 py-1 text-[10px] font-bold text-white/48">AI Dept</span>
+            <span className="rounded-sm border border-white/10 bg-white/[0.03] px-2 py-1 text-[10px] font-bold text-white/48">Output Map</span>
+          </div>
+
+          <svg className="absolute inset-0 size-full" viewBox="0 0 1280 396" aria-hidden="true">
+            <defs>
+              <marker id="department-arrow" markerHeight="6" markerWidth="6" orient="auto" refX="5" refY="3">
+                <path d="M0,0 L6,3 L0,6 Z" fill="#8b8278" />
+              </marker>
+            </defs>
+            <g fill="none" stroke="#7d766d" strokeLinecap="round" strokeWidth="1.15" opacity="0.78" markerEnd="url(#department-arrow)">
+              <path d={path('main', 'pending', 6)} />
+              <path d={path('main', 'running', 8)} />
+              <path d={path('main', 'confirm', 8)} />
+              <path d={path('main', 'alerts', 8)} />
+              <path d={path('alerts', 'radar', 4)} />
+              <path d={path('radar', 'competitor', 10)} />
+              <path d={path('radar', 'market', 8)} />
+              <path d={path('radar', 'source', 8)} />
+              <path d="M 254 38 C 530 50, 732 42, 884 92" />
+              <path d={path('workspace', 'ceo', 10)} />
+              <path d={path('workspace', 'coo', 10)} />
+              <path d={path('workspace', 'cmo', 10)} />
+              <path d={path('workspace', 'cfo', 10)} />
+              <path d={path('workspace', 'cco', 10)} />
+              <path d={path('ceo', 'brief', 6)} />
+              <path d={path('coo', 'brief', 8)} />
+              <path d={path('cmo', 'brief', 8)} />
+              <path d={path('cfo', 'brief', 8)} />
+              <path d={path('cco', 'brief', 8)} />
+              <path d={path('source', 'brief', 16)} />
+              <path d={path('brief', 'markdown', 10)} />
+              <path d={path('brief', 'table', 8)} />
+              <path d={path('brief', 'chart', 8)} />
+              <path d={path('brief', 'mermaid', 8)} />
+              <path d={path('brief', 'decision', 8)} />
+            </g>
+          </svg>
+
+          {mapNodes.map((node) => {
+            const isSelected = node.id === selectedNode.id
+
+            return (
+              <button
+                key={node.id}
+                type="button"
+                onClick={() => setSelectedNodeId(node.id)}
+                className={cn(
+                  'absolute z-20 flex items-center justify-center rounded-md border px-2 text-center text-[10px] font-extrabold leading-3 shadow-[0_8px_22px_rgba(0,0,0,0.24)] transition duration-fast',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B8956B] focus-visible:ring-offset-2 focus-visible:ring-offset-[#171614]',
+                  isSelected
+                    ? 'border-[#B8956B] bg-[#4b4136] text-white shadow-[0_0_0_1px_rgba(184,149,107,0.35),0_16px_36px_rgba(0,0,0,0.34)]'
+                    : node.tone === 'primary'
+                      ? 'border-white/16 bg-[#393735] text-white/90 hover:border-[#B8956B]/55 hover:bg-[#413b34]'
+                      : node.tone === 'accent'
+                        ? 'border-[#a38a6b]/38 bg-[#3e3932] text-white/90 hover:border-[#B8956B]/65 hover:bg-[#463d34]'
+                        : 'border-white/10 bg-[#2d2c2b] text-white/82 hover:border-white/22 hover:bg-[#363330]',
+                )}
+                style={{ left: node.x, top: node.y, width: node.w, height: node.h }}
+              >
+                <span>{node.label}</span>
+                {isSelected && <span className="absolute -right-1 -top-1 size-2.5 rounded-full border border-[#171614] bg-[#B8956B]" />}
+              </button>
+            )
+          })}
+        </div>
       </div>
+
+      <motion.div
+        key={selectedNode.id}
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.18 }}
+        className="mt-2 rounded-md border border-white/10 bg-[#211f1d] p-3 text-white shadow-soft"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-[#B8956B]">{selectedNode.owner}</p>
+            <h2 className="mt-1 text-[16px] font-extrabold leading-5">{selectedNode.label}</h2>
+          </div>
+          <span className="shrink-0 rounded-full border border-[#B8956B]/25 bg-[#B8956B]/12 px-2.5 py-1 text-[10px] font-extrabold text-[#e6caa6]">
+            {selectedNode.status}
+          </span>
+        </div>
+        <p className="mt-2 text-xs font-semibold leading-5 text-white/72">{selectedNode.activity}</p>
+        <div className="mt-2 rounded-md border border-white/8 bg-white/[0.04] px-3 py-2">
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.08em] text-white/42">Output</p>
+          <p className="mt-1 text-[11px] font-bold leading-4 text-white/76">{selectedNode.output}</p>
+        </div>
+      </motion.div>
     </div>
   )
 }
