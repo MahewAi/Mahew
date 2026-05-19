@@ -427,42 +427,109 @@ function OperationalStrengthSection() {
   const averageScore = Math.round(
     departmentStrengthAreas.reduce((total, area) => total + area.score, 0) / departmentStrengthAreas.length,
   )
+  const averageTarget = Math.round(
+    departmentStrengthAreas.reduce((total, area) => total + area.target, 0) / departmentStrengthAreas.length,
+  )
+  const averageNorthStar = Math.round(
+    departmentStrengthAreas.reduce((total, area) => total + area.northStar, 0) / departmentStrengthAreas.length,
+  )
   const belowTarget = departmentStrengthAreas.filter((area) => area.score < area.target).length
+  const beyondBaseline = departmentStrengthAreas.filter((area) => area.score >= 100).length
 
   return (
     <section className="mt-4 rounded-lg border border-border-med bg-white p-3.5 shadow-soft" aria-label="Penguatan sistem">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-label-caps text-accent-dark">Penguatan sistem</p>
-          <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">8 area operasional</h2>
+          <p className="text-label-caps text-accent-dark">Maturity upgrade</p>
+          <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">8 area dinaikkan menuju 110%</h2>
           <p className="mt-1 max-w-[300px] text-xs leading-5 text-text-secondary">
-            Skor ini jadi peta kerja supaya app, agent, memory, workflow, dan security naik bareng.
+            Persen ini membaca kesiapan sistem: struktur, data, workflow, runtime, security, dan kemampuan jalan mandiri.
           </p>
         </div>
         <div className="shrink-0 rounded-md border border-border-med bg-bg-surface px-3 py-2 text-right">
           <p className="text-[22px] font-extrabold leading-none text-text-primary">{averageScore}%</p>
-          <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.06em] text-text-muted">baseline</p>
+          <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.06em] text-text-muted">current</p>
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <MaturityMetric label="current" value={`${averageScore}%`} tone="final" />
+        <MaturityMetric label="target" value={`${averageTarget}%`} tone="doing" />
+        <MaturityMetric label="beyond" value={`${averageNorthStar}%`} tone="review" />
+      </div>
+
+      <MaturityBarChart areas={departmentStrengthAreas} />
+
+      <div className="mt-3 grid gap-2">
         {departmentStrengthAreas.map((area) => (
           <StrengthAreaCard key={area.id} area={area} />
         ))}
       </div>
 
       <div className="mt-3 rounded-md border border-status-decision/20 bg-status-decision-bg px-3 py-2.5">
-        <p className="text-xs font-extrabold text-status-decision">{belowTarget} area belum mencapai target</p>
+        <p className="text-xs font-extrabold text-status-decision">{belowTarget} area belum mencapai target 110%</p>
         <p className="mt-1 text-[11px] leading-4 text-text-secondary">
-          Prioritas berikutnya: webhook live, job polling, runtime health, audit memory, dan security hardening.
+          {beyondBaseline} area sudah melewati baseline 100%. Prioritas berikutnya: live job polling, recurring Tavily radar, memory sync, audit trail, dan autonomous approval routing.
         </p>
       </div>
     </section>
   )
 }
 
+function MaturityMetric({ label, value, tone }: { label: string; value: string; tone: SectionTone }) {
+  return (
+    <div className={cn('rounded-md border px-2.5 py-2', getToneBg(tone), tone === 'final' ? 'border-status-final/20' : 'border-border-soft')}>
+      <p className={cn('text-[18px] font-extrabold leading-none', getToneText(tone))}>{value}</p>
+      <p className="mt-1 text-[9px] font-extrabold uppercase tracking-[0.06em] text-text-muted">{label}</p>
+    </div>
+  )
+}
+
+function MaturityBarChart({ areas }: { areas: DepartmentStrengthArea[] }) {
+  return (
+    <div className="mt-3 rounded-md border border-border-soft bg-bg-surface px-3 py-3" aria-label="Maturity chart">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-text-faint">Breakdown chart</p>
+          <p className="mt-1 text-xs font-bold text-text-primary">Current vs 110 target vs 120 beyond</p>
+        </div>
+        <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-extrabold text-text-muted">
+          {areas.length} area
+        </span>
+      </div>
+      <div className="mt-3 space-y-2.5">
+        {areas.map((area) => {
+          const currentWidth = Math.min(100, Math.round((area.score / area.northStar) * 100))
+          const targetLeft = Math.min(100, Math.round((area.target / area.northStar) * 100))
+
+          return (
+            <div key={area.id}>
+              <div className="flex items-center justify-between gap-2">
+                <p className="truncate text-[11px] font-extrabold text-text-primary">{area.title}</p>
+                <p className="shrink-0 text-[11px] font-extrabold text-text-secondary">{area.score}%</p>
+              </div>
+              <div className="relative mt-1 h-2.5 overflow-hidden rounded-full bg-white">
+                <span
+                  className={cn('absolute inset-y-0 left-0 rounded-full', getStrengthBarClass(area.status))}
+                  style={{ width: `${currentWidth}%` }}
+                />
+                <span
+                  className="absolute inset-y-[-2px] w-0.5 rounded-full bg-text-primary/65"
+                  style={{ left: `${targetLeft}%` }}
+                />
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function StrengthAreaCard({ area }: { area: DepartmentStrengthArea }) {
   const Icon = strengthIconMap[area.id]
+  const currentWidth = Math.min(100, Math.round((area.score / area.northStar) * 100))
+  const targetLeft = Math.min(100, Math.round((area.target / area.northStar) * 100))
 
   return (
     <article className="rounded-md border border-border-soft bg-bg-surface px-3 py-3">
@@ -472,15 +539,54 @@ function StrengthAreaCard({ area }: { area: DepartmentStrengthArea }) {
         </span>
         <div className="min-w-0 flex-1 text-right">
           <p className="text-[20px] font-extrabold leading-none text-text-primary">{area.score}%</p>
-          <p className="mt-1 text-[10px] font-bold text-text-faint">target {area.target}%</p>
+          <p className="mt-1 text-[10px] font-bold text-text-faint">target {area.target}% / beyond {area.northStar}%</p>
         </div>
       </div>
       <h3 className="mt-2 text-[12px] font-extrabold leading-4 text-text-primary">{area.title}</h3>
-      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white">
-        <span className={cn('block h-full rounded-full', getStrengthBarClass(area.status))} style={{ width: `${area.score}%` }} />
+      <div className="relative mt-2 h-2 overflow-hidden rounded-full bg-white">
+        <span className={cn('absolute inset-y-0 left-0 rounded-full', getStrengthBarClass(area.status))} style={{ width: `${currentWidth}%` }} />
+        <span className="absolute inset-y-[-2px] w-0.5 rounded-full bg-text-primary/60" style={{ left: `${targetLeft}%` }} />
       </div>
-      <p className="mt-2 line-clamp-2 text-[11px] font-semibold leading-4 text-text-muted">{area.nextMove}</p>
+      <p className="mt-2 text-[11px] font-semibold leading-4 text-text-secondary">{area.maturityMeaning}</p>
+
+      <div className="mt-2 grid gap-1.5">
+        {area.capabilityBreakdown.map((capability) => (
+          <CapabilityRow key={capability.label} capability={capability} />
+        ))}
+      </div>
+
+      <div className="mt-2 grid gap-1.5">
+        <MaturityNote label="Next" body={area.nextMove} />
+        <MaturityNote label="Beyond" body={area.beyondMove} />
+      </div>
     </article>
+  )
+}
+
+function CapabilityRow({ capability }: { capability: DepartmentStrengthArea['capabilityBreakdown'][number] }) {
+  return (
+    <div className="rounded-md bg-white px-2.5 py-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className="truncate text-[11px] font-extrabold text-text-primary">{capability.label}</p>
+        <p className="shrink-0 text-[11px] font-extrabold text-accent-dark">{capability.score}%</p>
+      </div>
+      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-bg-surface">
+        <span
+          className="block h-full rounded-full bg-accent"
+          style={{ width: `${Math.min(100, capability.score)}%` }}
+        />
+      </div>
+      <p className="mt-1 line-clamp-2 text-[10px] font-semibold leading-4 text-text-muted">{capability.evidence}</p>
+    </div>
+  )
+}
+
+function MaturityNote({ label, body }: { label: string; body: string }) {
+  return (
+    <p className="rounded-md border border-border-soft bg-white px-2.5 py-2 text-[10px] font-semibold leading-4 text-text-muted">
+      <span className="font-extrabold text-text-primary">{label}: </span>
+      {body}
+    </p>
   )
 }
 
