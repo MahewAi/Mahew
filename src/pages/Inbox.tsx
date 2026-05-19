@@ -254,7 +254,7 @@ export default function Inbox() {
           <>
             <SectorTabs active={sector} onChange={setSector} />
             {sector === 'all' ? (
-              <CLevelPlanSection plans={visiblePlans} />
+              <CLevelPlanSection plans={visiblePlans} mode="overview" />
             ) : (
               <SectorWorkspace
                 role={sector}
@@ -305,15 +305,21 @@ export default function Inbox() {
   )
 }
 
-function CLevelPlanSection({ plans }: { plans: CLevelPlan[] }) {
+function CLevelPlanSection({ plans, mode = 'overview' }: { plans: CLevelPlan[]; mode?: 'overview' | 'workbench' }) {
+  const isWorkbench = mode === 'workbench'
+
   return (
     <section className="mt-4" aria-label="Rancangan C-Level">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-label-caps text-text-muted">Rancangan C-Level</p>
-          <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">Apa yang sedang mereka susun</h2>
+          <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">
+            {isWorkbench ? 'Workbench sektor ini' : 'Apa yang sedang mereka susun'}
+          </h2>
           <p className="mt-1 max-w-[340px] text-xs font-semibold leading-5 text-text-secondary">
-            Buka tiap role untuk melihat timeline, visual map, data signal, dan output yang mereka kirim.
+            {isWorkbench
+              ? 'Di sini baru muncul timeline, visual map, data signal, dan output yang dikirim C-level ini.'
+              : 'Bagian Semua hanya ringkasan. Pilih COO, CMO, CFO, atau CCO untuk membuka workbench interaktifnya.'}
           </p>
         </div>
         <span className="rounded-full bg-bg-surface px-2.5 py-1 text-[11px] font-extrabold text-text-secondary">
@@ -323,7 +329,7 @@ function CLevelPlanSection({ plans }: { plans: CLevelPlan[] }) {
 
       <div className="mt-3 grid gap-2.5">
         {plans.map((plan) => (
-          <CLevelPlanCard key={plan.role} plan={plan} />
+          <CLevelPlanCard key={plan.role} plan={plan} interactive={isWorkbench} />
         ))}
       </div>
     </section>
@@ -927,7 +933,7 @@ function SectorWorkspace({
         <CeoCouncilSnapshot />
       ) : (
         <>
-          <CLevelPlanSection plans={plans} />
+          <CLevelPlanSection plans={plans} mode="workbench" />
           <RoleSpecialistRoster role={role} roster={roster} />
         </>
       )}
@@ -1494,7 +1500,7 @@ function QueueMiniRow({ brief, tone, onClick }: { brief: Brief; tone: SectionTon
   )
 }
 
-function CLevelPlanCard({ plan }: { plan: CLevelPlan }) {
+function CLevelPlanCard({ plan, interactive = false }: { plan: CLevelPlan; interactive?: boolean }) {
   const [activeMode, setActiveMode] = useState<CLevelWorkbenchMode>('timeline')
 
   return (
@@ -1539,9 +1545,39 @@ function CLevelPlanCard({ plan }: { plan: CLevelPlan }) {
         ))}
       </div>
 
-      <CLevelWorkbenchTabs active={activeMode} onChange={setActiveMode} />
-      <CLevelWorkbenchPanel mode={activeMode} plan={plan} />
+      {interactive ? (
+        <>
+          <CLevelWorkbenchTabs active={activeMode} onChange={setActiveMode} />
+          <CLevelWorkbenchPanel mode={activeMode} plan={plan} />
+        </>
+      ) : (
+        <CLevelOverviewPreview plan={plan} />
+      )}
     </article>
+  )
+}
+
+function CLevelOverviewPreview({ plan }: { plan: CLevelPlan }) {
+  const timelineAverage = Math.round(plan.timeline.reduce((total, item) => total + item.progress, 0) / plan.timeline.length)
+
+  return (
+    <div className="mt-3 rounded-md border border-border-soft bg-bg-surface px-3 py-2.5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-text-muted">Ringkasan sektor</p>
+          <p className="mt-1 text-xs font-semibold leading-5 text-text-secondary">
+            {plan.timeline.length} timeline, {plan.visualPanels.length} visual, {plan.dataSignals.length} data signal.
+          </p>
+        </div>
+        <span className="shrink-0 rounded-md bg-white px-2.5 py-2 text-right">
+          <span className="block text-[16px] font-extrabold leading-none text-text-primary">{timelineAverage}%</span>
+          <span className="mt-1 block text-[9px] font-bold uppercase tracking-[0.05em] text-text-faint">progress</span>
+        </span>
+      </div>
+      <p className="mt-2 rounded-md bg-white px-2.5 py-2 text-[11px] font-semibold leading-4 text-text-muted">
+        Buka tab sektor {DEPARTMENT_LABEL_SHORT[plan.role]} untuk melihat tombol Timeline, Visual, Data, dan Output.
+      </p>
+    </div>
   )
 }
 
