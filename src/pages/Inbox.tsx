@@ -26,7 +26,7 @@ import {
 import { BriefDetailSheet } from '@/components/brief/BriefDetailSheet'
 import { ComposeSheet, simulateAiResponse } from '@/components/brief/ComposeSheet'
 import { agentRegistry } from '@/data/agentRegistry'
-import { cLevelPlans, type CLevelPlan } from '@/data/cLevelPlans'
+import { cLevelPlans, type CLevelOutputItem, type CLevelPlan, type CLevelTimelineItem, type CLevelVisualPanel } from '@/data/cLevelPlans'
 import { departmentStrengthAreas, workflowStages, type DepartmentStrengthArea } from '@/data/departmentStrength'
 import { intelligenceDimensions, intelligenceStages, type IntelligenceDimension } from '@/data/intelligenceMaturity'
 import {
@@ -66,6 +66,7 @@ import { cn } from '@/lib/utils'
 type SectorValue = 'all' | Role
 type SectionTone = 'decision' | 'doing' | 'review' | 'final' | 'neutral'
 type DashboardView = 'today' | 'sectors' | 'learning' | 'system'
+type CLevelWorkbenchMode = 'timeline' | 'visual' | 'data' | 'output'
 
 type StrengthIconKey = DepartmentStrengthArea['id']
 
@@ -311,6 +312,9 @@ function CLevelPlanSection({ plans }: { plans: CLevelPlan[] }) {
         <div>
           <p className="text-label-caps text-text-muted">Rancangan C-Level</p>
           <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">Apa yang sedang mereka susun</h2>
+          <p className="mt-1 max-w-[340px] text-xs font-semibold leading-5 text-text-secondary">
+            Buka tiap role untuk melihat timeline, visual map, data signal, dan output yang mereka kirim.
+          </p>
         </div>
         <span className="rounded-full bg-bg-surface px-2.5 py-1 text-[11px] font-extrabold text-text-secondary">
           {plans.length}
@@ -1491,6 +1495,8 @@ function QueueMiniRow({ brief, tone, onClick }: { brief: Brief; tone: SectionTon
 }
 
 function CLevelPlanCard({ plan }: { plan: CLevelPlan }) {
+  const [activeMode, setActiveMode] = useState<CLevelWorkbenchMode>('timeline')
+
   return (
     <article className="rounded-lg border border-border-med bg-white p-3.5 shadow-soft">
       <div className="flex items-start justify-between gap-3">
@@ -1532,7 +1538,193 @@ function CLevelPlanCard({ plan }: { plan: CLevelPlan }) {
           </span>
         ))}
       </div>
+
+      <CLevelWorkbenchTabs active={activeMode} onChange={setActiveMode} />
+      <CLevelWorkbenchPanel mode={activeMode} plan={plan} />
     </article>
+  )
+}
+
+function CLevelWorkbenchTabs({
+  active,
+  onChange,
+}: {
+  active: CLevelWorkbenchMode
+  onChange: (mode: CLevelWorkbenchMode) => void
+}) {
+  const items: Array<{ mode: CLevelWorkbenchMode; label: string; icon: typeof Timer }> = [
+    { mode: 'timeline', label: 'Timeline', icon: Timer },
+    { mode: 'visual', label: 'Visual', icon: ImageIcon },
+    { mode: 'data', label: 'Data', icon: BarChart3 },
+    { mode: 'output', label: 'Output', icon: Table2 },
+  ]
+
+  return (
+    <div className="mt-3 rounded-md border border-border-soft bg-bg-surface p-1" aria-label="C-level workbench mode">
+      <div className="grid grid-cols-4 gap-1">
+        {items.map((item) => {
+          const Icon = item.icon
+          const isActive = item.mode === active
+
+          return (
+            <button
+              key={item.mode}
+              type="button"
+              onClick={() => onChange(item.mode)}
+              className={cn(
+                'inline-flex min-h-touch flex-col items-center justify-center gap-1 rounded-md px-1.5 py-2 text-[10px] font-extrabold transition-colors duration-fast',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
+                isActive ? 'bg-text-primary text-white shadow-soft' : 'text-text-muted hover:bg-white',
+              )}
+            >
+              <Icon className="size-3.5" />
+              <span>{item.label}</span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function CLevelWorkbenchPanel({ mode, plan }: { mode: CLevelWorkbenchMode; plan: CLevelPlan }) {
+  if (mode === 'timeline') return <CLevelTimeline items={plan.timeline} />
+  if (mode === 'visual') return <CLevelVisualBoard role={plan.role} panels={plan.visualPanels} />
+  if (mode === 'data') return <CLevelDataSignals plan={plan} />
+  return <CLevelOutputList outputs={plan.latestOutputs} />
+}
+
+function CLevelTimeline({ items }: { items: CLevelTimelineItem[] }) {
+  return (
+    <div className="mt-3 rounded-md border border-border-soft bg-bg-surface px-3 py-3" aria-label="C-level timeline">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-text-muted">Timeline kerja</p>
+        <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-extrabold text-text-muted">
+          {items.length} phase
+        </span>
+      </div>
+      <div className="mt-3 space-y-2.5">
+        {items.map((item, index) => (
+          <div key={item.phase} className="flex gap-2.5">
+            <div className="flex flex-col items-center">
+              <span className="inline-flex size-7 items-center justify-center rounded-full bg-white text-[11px] font-extrabold text-text-primary">
+                {index + 1}
+              </span>
+              {index < items.length - 1 && <span className="my-1 h-8 w-px bg-border-med" />}
+            </div>
+            <div className="min-w-0 flex-1 pb-2">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs font-extrabold text-text-primary">{item.phase}</p>
+                  <p className="mt-0.5 text-[11px] font-semibold text-text-muted">{item.window} / {item.owner}</p>
+                </div>
+                <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[10px] font-extrabold text-accent-dark">
+                  {item.progress}%
+                </span>
+              </div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white">
+                <span className="block h-full rounded-full bg-accent" style={{ width: `${item.progress}%` }} />
+              </div>
+              <p className="mt-1.5 text-[11px] font-semibold leading-4 text-text-secondary">Output: {item.output}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function CLevelVisualBoard({ role, panels }: { role: Exclude<Role, 'ceo'>; panels: CLevelVisualPanel[] }) {
+  return (
+    <div className="mt-3 grid gap-2" aria-label="C-level visual board">
+      {panels.map((panel) => (
+        <article key={panel.title} className="overflow-hidden rounded-md border border-border-soft bg-bg-surface">
+          <div className={cn('relative min-h-[118px] p-3 text-white', roleAccent[role])}>
+            <div className="absolute inset-0 opacity-[0.18] [background-image:linear-gradient(90deg,rgba(255,255,255,.36)_1px,transparent_1px),linear-gradient(rgba(255,255,255,.32)_1px,transparent_1px)] [background-size:22px_22px]" />
+            <div className="relative">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-white/68">{panel.type}</p>
+                <ImageIcon className="size-4 text-white/76" />
+              </div>
+              <h3 className="mt-1 text-[15px] font-extrabold leading-5">{panel.title}</h3>
+              <p className="mt-1 max-w-[320px] text-[11px] font-semibold leading-4 text-white/76">{panel.description}</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-1.5 p-2.5">
+            {panel.nodes.map((node) => (
+              <div key={node} className="rounded-md border border-border-soft bg-white px-2.5 py-2">
+                <div className="flex items-center gap-1.5">
+                  <span className={cn('size-1.5 rounded-full', roleAccent[role])} />
+                  <p className="truncate text-[10px] font-extrabold text-text-primary">{node}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </article>
+      ))}
+    </div>
+  )
+}
+
+function CLevelDataSignals({ plan }: { plan: CLevelPlan }) {
+  return (
+    <div className="mt-3 rounded-md border border-border-soft bg-bg-surface px-3 py-3" aria-label="C-level data signals">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-text-muted">Data signal</p>
+        <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-extrabold text-text-muted">
+          {plan.dataSignals.length} signal
+        </span>
+      </div>
+      <div className="mt-3 grid gap-2">
+        {plan.dataSignals.map((signal) => (
+          <div key={signal.label} className="rounded-md border border-border-soft bg-white px-3 py-2.5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-extrabold text-text-primary">{signal.label}</p>
+                <p className="mt-1 text-[11px] font-semibold leading-4 text-text-muted">{signal.note}</p>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="text-[13px] font-extrabold text-text-primary">{signal.value}</p>
+                <span className={cn('mt-1 inline-flex rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.04em]', getConfidenceClass(signal.confidence))}>
+                  {signal.confidence}
+                </span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function CLevelOutputList({ outputs }: { outputs: CLevelOutputItem[] }) {
+  return (
+    <div className="mt-3 rounded-md border border-border-soft bg-bg-surface px-3 py-3" aria-label="C-level output list">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-text-muted">Output dikirim</p>
+        <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-extrabold text-text-muted">
+          {outputs.length}
+        </span>
+      </div>
+      <div className="mt-3 grid gap-2">
+        {outputs.map((output) => (
+          <article key={output.title} className="rounded-md border border-border-soft bg-white px-3 py-2.5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-extrabold text-text-primary">{output.title}</p>
+                <p className="mt-1 text-[11px] font-semibold leading-4 text-text-muted">{output.summary}</p>
+                <span className="mt-2 inline-flex rounded-full bg-bg-surface px-2 py-0.5 text-[10px] font-extrabold text-text-secondary">
+                  {output.format}
+                </span>
+              </div>
+              <span className={cn('shrink-0 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.04em]', getPlanStatusClass(output.status))}>
+                {getPlanStatusLabel(output.status)}
+              </span>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -1713,6 +1905,12 @@ function getPlanStatusLabel(status: CLevelPlan['status']) {
 function getPlanStatusClass(status: CLevelPlan['status']) {
   if (status === 'ready') return 'bg-status-final-bg text-status-final'
   if (status === 'draft') return 'bg-status-review-bg text-status-review'
+  return 'bg-status-decision-bg text-status-decision'
+}
+
+function getConfidenceClass(confidence: 'high' | 'medium' | 'low') {
+  if (confidence === 'high') return 'bg-status-final-bg text-status-final'
+  if (confidence === 'medium') return 'bg-status-doing-bg text-status-doing'
   return 'bg-status-decision-bg text-status-decision'
 }
 
