@@ -250,21 +250,26 @@ export default function Inbox() {
 
         <SectorTabs active={sector} onChange={setSector} />
 
-        <PlanningNorthStarSection />
-
-        <OperationalStrengthSection />
-
-        <PlannerCouncilSection />
-
-        <PlanningRitualSection />
-
-        <WorkflowFoundationSection />
-
-        <IntegrationReadinessSection health={agentHealth} lastBridgeResult={lastBridgeResult} />
-
-        <CLevelPlanSection plans={visiblePlans} />
-
-        <VisualSurfaceSection />
+        {sector === 'all' ? (
+          <>
+            <PlanningNorthStarSection />
+            <OperationalStrengthSection />
+            <PlannerCouncilSection />
+            <PlanningRitualSection />
+            <WorkflowFoundationSection />
+            <IntegrationReadinessSection health={agentHealth} lastBridgeResult={lastBridgeResult} />
+            <CLevelPlanSection plans={visiblePlans} />
+            <VisualSurfaceSection />
+          </>
+        ) : (
+          <SectorWorkspace
+            role={sector}
+            plans={visiblePlans}
+            attentionCount={attentionCount}
+            runningCount={runningBriefs.length}
+            outputCount={recentOutputBriefs.length}
+          />
+        )}
 
         <div className="mt-4 space-y-3">
           <TaskSection
@@ -584,6 +589,211 @@ function MiniList({ label, items }: { label: string; items: string[] }) {
         ))}
       </ul>
     </div>
+  )
+}
+
+function SectorWorkspace({
+  role,
+  plans,
+  attentionCount,
+  runningCount,
+  outputCount,
+}: {
+  role: Role
+  plans: CLevelPlan[]
+  attentionCount: number
+  runningCount: number
+  outputCount: number
+}) {
+  const planner = plannerRoles.find((item) => item.role === role)
+  const ownedStrength = departmentStrengthAreas.filter((area) => area.owner === role)
+  const roster = agentRegistry.filter((agent) => agent.parent === role || agent.id === role)
+  const isCeo = role === 'ceo'
+
+  return (
+    <section className="mt-4 space-y-3" aria-label={`${DEPARTMENT_LABEL_SHORT[role]} workspace`}>
+      <div className={cn('rounded-lg border border-border-med p-4 text-white shadow-card', roleAccent[role])}>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-white/68">
+              {DEPARTMENT_LABEL_SHORT[role]} workspace
+            </p>
+            <h2 className="mt-1 text-[22px] font-extrabold leading-6">{sectorMeta[role].title}</h2>
+            <p className="mt-2 max-w-[320px] text-xs font-semibold leading-5 text-white/78">
+              {planner?.planningMandate ?? 'Ruang kerja khusus untuk keputusan dan rencana role ini.'}
+            </p>
+          </div>
+          <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-md bg-white/16 text-sm font-extrabold text-white ring-1 ring-white/20">
+            {DEPARTMENT_LABEL_SHORT[role]}
+          </span>
+        </div>
+
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          <RoleMetric value={attentionCount} label="attention" />
+          <RoleMetric value={runningCount} label="running" />
+          <RoleMetric value={outputCount} label="output" />
+        </div>
+      </div>
+
+      {planner && <RolePlannerCard planner={planner} />}
+
+      {isCeo ? (
+        <CeoCouncilSnapshot />
+      ) : (
+        <>
+          <CLevelPlanSection plans={plans} />
+          <RoleSpecialistRoster role={role} roster={roster} />
+        </>
+      )}
+
+      <RoleStrengthSection role={role} areas={ownedStrength} />
+      <RoleDecisionStandard planner={planner} />
+    </section>
+  )
+}
+
+function RoleMetric({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="rounded-md border border-white/16 bg-white/12 px-2.5 py-2">
+      <p className="text-[22px] font-extrabold leading-none text-white">{value}</p>
+      <p className="mt-1 text-[9px] font-bold uppercase tracking-[0.08em] text-white/62">{label}</p>
+    </div>
+  )
+}
+
+function RolePlannerCard({ planner }: { planner: PlannerRole }) {
+  return (
+    <article className="rounded-lg border border-border-med bg-white p-3.5 shadow-soft">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-label-caps text-accent-dark">Planner mandate</p>
+          <h3 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">{planner.plannerName}</h3>
+          <p className="mt-2 text-xs leading-5 text-text-secondary">{planner.communicationStyle}</p>
+        </div>
+        <span className="shrink-0 rounded-full bg-bg-surface px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.05em] text-text-muted">
+          {planner.cadence}
+        </span>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <MiniList label="Output wajib" items={planner.planningOutputs} />
+        <MiniList label="Hak keputusan" items={planner.decisionRights} />
+      </div>
+      <div className="mt-2 rounded-md border border-border-soft bg-bg-surface px-3 py-2">
+        <p className="text-[10px] font-extrabold uppercase tracking-[0.08em] text-text-faint">Butuh dari Matthew</p>
+        <p className="mt-1 text-xs font-semibold leading-5 text-text-primary">{planner.asksMatthewFor.join(', ')}</p>
+      </div>
+    </article>
+  )
+}
+
+function CeoCouncilSnapshot() {
+  return (
+    <section className="rounded-lg border border-border-med bg-white p-3.5 shadow-soft" aria-label="CEO council snapshot">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-label-caps text-text-muted">Council control</p>
+          <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">Yang Atmaja orkestrasi</h2>
+        </div>
+        <span className="rounded-full bg-bg-surface px-2.5 py-1 text-[11px] font-extrabold text-text-secondary">
+          4 C-level
+        </span>
+      </div>
+      <div className="mt-3 grid gap-2">
+        {plannerRoles
+          .filter((planner) => planner.role !== 'ceo')
+          .map((planner) => (
+            <div key={planner.role} className="rounded-md border border-border-soft bg-bg-surface px-3 py-2.5">
+              <div className="flex items-start gap-2.5">
+                <span className={cn('mt-0.5 size-2 shrink-0 rounded-full', roleAccent[planner.role])} />
+                <div className="min-w-0">
+                  <p className="text-xs font-extrabold text-text-primary">{planner.plannerName}</p>
+                  <p className="mt-1 text-[11px] leading-4 text-text-muted">{planner.planningMandate}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+      </div>
+    </section>
+  )
+}
+
+function RoleSpecialistRoster({ role, roster }: { role: Role; roster: typeof agentRegistry }) {
+  return (
+    <section className="rounded-lg border border-border-med bg-bg-surface p-3.5" aria-label={`${DEPARTMENT_LABEL_SHORT[role]} specialist roster`}>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-label-caps text-text-muted">Specialist</p>
+          <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">{sectorMeta[role].subtitle} roster</h2>
+        </div>
+        <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-extrabold text-text-secondary">
+          {roster.length}
+        </span>
+      </div>
+      <div className="mt-3 grid gap-2">
+        {roster.map((agent) => (
+          <div key={agent.id} className="rounded-md border border-border-soft bg-white px-3 py-2.5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-extrabold text-text-primary">{CONTRIBUTOR_META[agent.id]?.name ?? agent.folder}</p>
+                <p className="mt-1 text-[11px] leading-4 text-text-muted">{agent.responsibility}</p>
+              </div>
+              <span className={cn('shrink-0 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.05em]', agent.status === 'ready' ? 'bg-status-final-bg text-status-final' : 'bg-status-decision-bg text-status-decision')}>
+                {agent.status}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function RoleStrengthSection({ role, areas }: { role: Role; areas: DepartmentStrengthArea[] }) {
+  return (
+    <section className="rounded-lg border border-border-med bg-white p-3.5 shadow-soft" aria-label={`${DEPARTMENT_LABEL_SHORT[role]} strength`}>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-label-caps text-text-muted">Area yang dijaga</p>
+          <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">{DEPARTMENT_LABEL_SHORT[role]} responsibility</h2>
+        </div>
+        <span className="rounded-full bg-bg-surface px-2.5 py-1 text-[11px] font-extrabold text-text-secondary">
+          {areas.length}
+        </span>
+      </div>
+      <div className="mt-3 grid gap-2">
+        {areas.length > 0 ? (
+          areas.map((area) => <StrengthAreaCard key={area.id} area={area} />)
+        ) : (
+          <div className="rounded-md border border-border-soft bg-bg-surface px-3 py-3">
+            <p className="text-xs font-semibold leading-5 text-text-muted">
+              Role ini bekerja melalui rencana C-level dan task lane, bukan owner langsung area sistem.
+            </p>
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+
+function RoleDecisionStandard({ planner }: { planner?: PlannerRole }) {
+  return (
+    <section className="rounded-lg border border-border-med bg-bg-surface p-3.5" aria-label="Role decision standard">
+      <p className="text-label-caps text-text-muted">Standar output</p>
+      <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">Cara role ini harus bicara</h2>
+      <div className="mt-3 grid gap-1.5">
+        {communicationPrinciples.slice(0, 4).map((principle) => (
+          <div key={principle.title} className="rounded-md border border-border-soft bg-white px-3 py-2">
+            <p className="text-[11px] font-extrabold text-text-primary">{principle.title}</p>
+            <p className="mt-1 text-[11px] leading-4 text-text-muted">{principle.rule}</p>
+          </div>
+        ))}
+      </div>
+      {planner && (
+        <p className="mt-3 rounded-md bg-white px-3 py-2 text-[11px] font-semibold leading-4 text-text-secondary">
+          Tone khusus: {planner.communicationStyle}
+        </p>
+      )}
+    </section>
   )
 }
 
