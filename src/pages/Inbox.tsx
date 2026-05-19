@@ -13,11 +13,13 @@ import {
   Database,
   FileText,
   GitBranch,
+  KeyRound,
   Image as ImageIcon,
   Layers3,
   ListChecks,
   MessageSquareText,
   Network,
+  PlugZap,
   Plus,
   Settings,
   ServerCog,
@@ -28,8 +30,16 @@ import {
 } from 'lucide-react'
 import { BriefDetailSheet } from '@/components/brief/BriefDetailSheet'
 import { ComposeSheet, simulateAiResponse } from '@/components/brief/ComposeSheet'
+import { agentRegistry } from '@/data/agentRegistry'
 import { cLevelPlans, type CLevelPlan } from '@/data/cLevelPlans'
 import { departmentStrengthAreas, workflowStages, type DepartmentStrengthArea } from '@/data/departmentStrength'
+import {
+  fallbackAgentHealth,
+  fetchAgentHealth,
+  submitAgentBrief,
+  type AgentHealth,
+  type SubmitAgentBriefResult,
+} from '@/lib/agentApi'
 import { loadStoredBriefs, saveStoredBriefs } from '@/lib/briefStore'
 import {
   CONTRIBUTOR_META,
@@ -103,10 +113,22 @@ export default function Inbox() {
   const [briefs, setBriefs] = useState<Brief[]>(() => loadStoredBriefs())
   const [sector, setSector] = useState<SectorValue>('all')
   const [composeOpen, setComposeOpen] = useState(false)
+  const [agentHealth, setAgentHealth] = useState<AgentHealth>(fallbackAgentHealth)
+  const [lastBridgeResult, setLastBridgeResult] = useState<SubmitAgentBriefResult | null>(null)
 
   useEffect(() => {
     saveStoredBriefs(briefs)
   }, [briefs])
+
+  useEffect(() => {
+    let cancelled = false
+    void fetchAgentHealth().then((health) => {
+      if (!cancelled) setAgentHealth(health)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const scopedBriefs = useMemo(() => briefs.filter((brief) => isInSector(brief, sector)), [briefs, sector])
 
@@ -156,6 +178,9 @@ export default function Inbox() {
 
   const handleComposeSubmit = (newBrief: Brief) => {
     setBriefs((prev) => [newBrief, ...prev])
+    void submitAgentBrief(newBrief).then((result) => {
+      setLastBridgeResult(result)
+    })
     window.setTimeout(() => {
       setBriefs((prev) => prev.map((brief) => (brief.id === newBrief.id ? simulateAiResponse(brief) : brief)))
     }, 2500)
@@ -220,6 +245,8 @@ export default function Inbox() {
         <OperationalStrengthSection />
 
         <WorkflowFoundationSection />
+
+        <IntegrationReadinessSection health={agentHealth} lastBridgeResult={lastBridgeResult} />
 
         <CLevelPlanSection plans={visiblePlans} />
 
@@ -332,7 +359,7 @@ function OperationalStrengthSection() {
   const averageScore = Math.round(
     departmentStrengthAreas.reduce((total, area) => total + area.score, 0) / departmentStrengthAreas.length,
   )
-  const needsBuild = departmentStrengthAreas.filter((area) => area.status === 'needs-build').length
+  const belowTarget = departmentStrengthAreas.filter((area) => area.score < area.target).length
 
   return (
     <section className="mt-4 rounded-lg border border-border-med bg-white p-3.5 shadow-soft" aria-label="Penguatan sistem">
@@ -357,9 +384,9 @@ function OperationalStrengthSection() {
       </div>
 
       <div className="mt-3 rounded-md border border-status-decision/20 bg-status-decision-bg px-3 py-2.5">
-        <p className="text-xs font-extrabold text-status-decision">{needsBuild} area masih perlu dibangun serius</p>
+        <p className="text-xs font-extrabold text-status-decision">{belowTarget} area belum mencapai target</p>
         <p className="mt-1 text-[11px] leading-4 text-text-secondary">
-          Prioritas teknis berikutnya: backend bridge, routing workflow, server health, dan audit memory.
+          Prioritas berikutnya: webhook live, job polling, runtime health, audit memory, dan security hardening.
         </p>
       </div>
     </section>
@@ -424,6 +451,118 @@ function WorkflowFoundationSection() {
         ))}
       </div>
     </section>
+  )
+}
+
+function IntegrationReadinessSection({
+  health,
+  lastBridgeResult,
+}: {
+  health: AgentHealth
+  lastBridgeResult: SubmitAgentBriefResult | null
+}) {
+  const readyAgents = agentRegistry.filter((agent) => agent.status === 'ready').length
+  const missingAgents = agentRegistry.filter((agent) => agent.status === 'missing')
+  const bridgeOnline = health.bridge.mode !== 'offline'
+
+  return (
+    <section className="mt-4 rounded-lg border border-border-med bg-white p-3.5 shadow-soft" aria-label="Agent bridge">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-label-caps text-accent-dark">Agent bridge</p>
+          <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">App siap disambungkan</h2>
+          <p className="mt-1 text-xs leading-5 text-text-secondary">
+            Brief sekarang masuk lewat API contract. Kalau webhook belum aktif, app tetap jalan di fallback lokal.
+          </p>
+        </div>
+        <span className={cn('inline-flex size-9 shrink-0 items-center justify-center rounded-md', bridgeOnline ? 'bg-status-final-bg text-status-final' : 'bg-status-review-bg text-status-review')}>
+          <PlugZap className="size-4" />
+        </span>
+      </div>
+
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <BridgeMetric
+          icon={Network}
+          label="Bridge"
+          value={health.bridge.mode}
+          tone={health.bridge.webhookConfigured ? 'final' : 'review'}
+        />
+        <BridgeMetric
+          icon={ServerCog}
+          label="Runtime"
+          value={health.runtime.status}
+          tone={health.runtime.status === 'active' ? 'final' : 'doing'}
+        />
+        <BridgeMetric
+          icon={KeyRound}
+          label="Token"
+          value={health.bridge.tokenConfigured ? 'ready' : 'needed'}
+          tone={health.bridge.tokenConfigured ? 'final' : 'decision'}
+        />
+      </div>
+
+      <div className="mt-3 rounded-md border border-border-soft bg-bg-surface px-3 py-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-extrabold text-text-primary">Registry agent</p>
+            <p className="mt-1 text-[11px] leading-4 text-text-muted">
+              {readyAgents} siap, {missingAgents.length} perlu dilengkapi.
+            </p>
+          </div>
+          <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-extrabold text-text-secondary">
+            {readyAgents}/{agentRegistry.length}
+          </span>
+        </div>
+        {missingAgents.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {missingAgents.map((agent) => (
+              <span key={agent.id} className="rounded-full bg-status-decision-bg px-2 py-1 text-[10px] font-bold text-status-decision">
+                missing: {agent.folder}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-3 grid gap-2">
+        <BridgeNote
+          title="Submit path"
+          body={lastBridgeResult ? `${lastBridgeResult.status} lewat mode ${lastBridgeResult.mode}` : 'Menunggu brief baru dari app.'}
+        />
+        <BridgeNote title="Security debt" body="Server masih perlu audit OpenClaw dan matikan insecure control UI sebelum target security dianggap tercapai." />
+      </div>
+    </section>
+  )
+}
+
+function BridgeMetric({
+  icon: Icon,
+  label,
+  value,
+  tone,
+}: {
+  icon: typeof Network
+  label: string
+  value: string
+  tone: SectionTone
+}) {
+  return (
+    <div className="min-h-[82px] rounded-md border border-border-soft bg-bg-surface px-2.5 py-2.5">
+      <span className={cn('inline-flex size-7 items-center justify-center rounded-md', getToneBg(tone), getToneText(tone))}>
+        <Icon className="size-3.5" />
+      </span>
+      <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.06em] text-text-faint">{label}</p>
+      <p className="mt-0.5 truncate text-[12px] font-extrabold text-text-primary">{value}</p>
+    </div>
+  )
+}
+
+function BridgeNote({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="rounded-md border border-border-soft bg-bg-surface px-3 py-2">
+      <p className="text-[11px] font-extrabold text-text-primary">{title}</p>
+      <p className="mt-1 text-[11px] leading-4 text-text-muted">{body}</p>
+    </div>
   )
 }
 

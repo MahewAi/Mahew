@@ -1,6 +1,6 @@
 # AI Department Strengthening Plan
 
-Status: implementation baseline, 19 May 2026.
+Status: bridge foundation, 19 May 2026.
 
 This document turns the eight-area assessment into an operating roadmap for the Gerai app and Atmaja backend.
 
@@ -8,14 +8,14 @@ This document turns the eight-area assessment into an operating roadmap for the 
 
 | Area | Current | Target | Primary Gap |
 | --- | ---: | ---: | --- |
-| Konsep Department | 80% | 92% | Lock role authority and escalation rules. |
-| App / Dashboard | 55% | 85% | Connect dashboard cards to real agent jobs. |
-| Rich Visual Output | 45% | 88% | Require agent output as `BriefBlock[]`, not plain text. |
-| Agent Runtime | 50% | 82% | Add server health, complete missing specialist registry, monitor OpenClaw. |
-| Integrasi App ke Agent | 20% | 80% | Build API bridge for submit, queue, polling, result return. |
-| Memory Bisnis | 60% | 86% | Separate permanent knowledge from temporary interaction traces. |
-| Automation Workflow | 35% | 82% | Add routing, approval, archive, and notification workflow. |
-| Security & Reliability | 40% | 84% | Close insecure control UI, add auth boundary, backups, logs. |
+| Konsep Department | 84% | 92% | Lock role authority and escalation rules. |
+| App / Dashboard | 68% | 85% | Connect dashboard cards to real agent jobs. |
+| Rich Visual Output | 66% | 88% | Validate real Atmaja output as `BriefBlock[]`. |
+| Agent Runtime | 58% | 82% | Expose authenticated runtime health from droplet. |
+| Integrasi App ke Agent | 48% | 80% | Configure webhook and add queue/result polling. |
+| Memory Bisnis | 66% | 86% | Build memory audit surface. |
+| Automation Workflow | 55% | 82% | Add backend routing, approvals, archive, and notification workflow. |
+| Security & Reliability | 48% | 84% | Close insecure OpenClaw control UI, add auth boundary, backups, logs. |
 
 ## Contract Direction
 
@@ -31,13 +31,27 @@ Every real agent response should eventually return:
 
 This keeps the app independent from Discord-style chat and prepares the app for OpenClaw, n8n, or a custom backend.
 
+## Bridge Foundation
+
+The app now has two serverless bridge endpoints:
+
+- `POST /api/agent/briefs`
+- `GET /api/agent/health`
+
+Environment variables for production:
+
+- `ATMAJA_BRIEF_WEBHOOK_URL`: webhook target for Atmaja, n8n, or a custom backend.
+- `ATMAJA_BRIDGE_TOKEN`: optional bearer token sent from the bridge to the webhook.
+
+If the webhook is not configured, the app uses `contract` mode. This is intentional: Matthew can keep using the app while the runtime integration is being wired.
+
 ## Next Engineering Milestones
 
-1. Backend bridge:
-   `POST /api/briefs` creates a job and routes it to Atmaja.
+1. Configure production bridge:
+   Set `ATMAJA_BRIEF_WEBHOOK_URL` and `ATMAJA_BRIDGE_TOKEN` in Vercel.
 
 2. Job polling:
-   `GET /api/briefs/:id` returns job status and final `AgentOutputEnvelope`.
+   `GET /api/agent/jobs/:id` returns job status and final `AgentOutputEnvelope`.
 
 3. Agent registry:
    Server exposes active roles, missing roles, health, and last run status.
