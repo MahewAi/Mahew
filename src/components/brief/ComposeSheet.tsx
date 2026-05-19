@@ -11,6 +11,7 @@ import {
   type BriefBlock,
   type Role,
 } from '@/lib/types'
+import { createAgentOutputEnvelope } from '@/lib/agentContracts'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/shared/Toast'
 
@@ -278,14 +279,20 @@ export function simulateAiResponse(brief: Brief): Brief {
   const targetRole = getContributorColorRole(brief.contributors[0] ?? 'ceo')
   const targetName = CONTRIBUTOR_META[targetRole].name
   const blocks = buildVisualBlocks(brief, targetRole, targetName)
+  const envelope = createAgentOutputEnvelope({
+    briefId: brief.id,
+    sourceRole: targetRole,
+    summary: `${targetName} telah menyelesaikan analisis awal dalam format visual. Lihat tabel, chart, diagram, dan rekomendasi C-suite di bawah.`,
+    blocks,
+  })
 
   return {
     ...brief,
     status: 'review',
     requestStatus: 'completed',
-    summary: `${targetName} telah menyelesaikan analisis awal dalam format visual. Lihat tabel, chart, diagram, dan rekomendasi C-suite di bawah.`,
+    summary: envelope.summary,
     timeAgo: 'Baru saja',
-    blocks,
+    blocks: envelope.blocks,
     csuiteInput: [
       {
         role: targetRole,

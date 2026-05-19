@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { Send, Sunrise, ArrowUpRight, Trash2 } from 'lucide-react'
-import { mockBriefs } from '@/data/mockBriefs'
+import { loadStoredBriefs } from '@/lib/briefStore'
 import { generateMockReply, type ChatMessage } from '@/lib/mockReplies'
 import { cn } from '@/lib/utils'
 
@@ -69,7 +69,7 @@ export default function Atmaja() {
   // Briefs yang melibatkan Atmaja (CEO contributor)
   const atmajaBriefs = useMemo(
     () =>
-      mockBriefs
+      loadStoredBriefs()
         .filter((b) => b.contributors.includes('ceo'))
         .sort((a, b) => (a.isDailyDigest ? -1 : b.isDailyDigest ? 1 : 0))
         .slice(0, 4),
@@ -368,4 +368,3 @@ function MessageBubble({ message, reduceMotion }: { message: AtmajaMessage; redu
     </motion.div>
   )
 }
-

@@ -1,27 +1,36 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
+  Activity,
   Bell,
   BarChart3,
+  BrainCircuit,
   CheckCircle2,
   ChevronRight,
   CircleDashed,
+  Database,
   FileText,
   GitBranch,
   Image as ImageIcon,
+  Layers3,
   ListChecks,
   MessageSquareText,
+  Network,
   Plus,
   Settings,
+  ServerCog,
+  ShieldCheck,
   Table2,
   Timer,
+  Workflow,
 } from 'lucide-react'
 import { BriefDetailSheet } from '@/components/brief/BriefDetailSheet'
 import { ComposeSheet, simulateAiResponse } from '@/components/brief/ComposeSheet'
-import { mockBriefs } from '@/data/mockBriefs'
 import { cLevelPlans, type CLevelPlan } from '@/data/cLevelPlans'
+import { departmentStrengthAreas, workflowStages, type DepartmentStrengthArea } from '@/data/departmentStrength'
+import { loadStoredBriefs, saveStoredBriefs } from '@/lib/briefStore'
 import {
   CONTRIBUTOR_META,
   DEPARTMENT_LABEL_SHORT,
@@ -35,6 +44,8 @@ import { cn } from '@/lib/utils'
 
 type SectorValue = 'all' | Role
 type SectionTone = 'decision' | 'doing' | 'review' | 'final' | 'neutral'
+
+type StrengthIconKey = DepartmentStrengthArea['id']
 
 const sectorMeta: Record<Role, { title: string; subtitle: string; specialists: string[] }> = {
   ceo: {
@@ -89,9 +100,13 @@ function getPrimaryOwner(brief: Brief) {
 export default function Inbox() {
   const navigate = useNavigate()
   const params = useParams<{ id?: string }>()
-  const [briefs, setBriefs] = useState<Brief[]>(mockBriefs)
+  const [briefs, setBriefs] = useState<Brief[]>(() => loadStoredBriefs())
   const [sector, setSector] = useState<SectorValue>('all')
   const [composeOpen, setComposeOpen] = useState(false)
+
+  useEffect(() => {
+    saveStoredBriefs(briefs)
+  }, [briefs])
 
   const scopedBriefs = useMemo(() => briefs.filter((brief) => isInSector(brief, sector)), [briefs, sector])
 
@@ -100,7 +115,7 @@ export default function Inbox() {
     [scopedBriefs],
   )
   const runningBriefs = useMemo(
-    () => scopedBriefs.filter((brief) => brief.status === 'doing' || brief.status === 'review'),
+    () => scopedBriefs.filter((brief) => brief.status === 'doing' || brief.requestStatus === 'pending'),
     [scopedBriefs],
   )
   const pendingInputBriefs = useMemo(
@@ -202,6 +217,10 @@ export default function Inbox() {
 
         <SectorTabs active={sector} onChange={setSector} />
 
+        <OperationalStrengthSection />
+
+        <WorkflowFoundationSection />
+
         <CLevelPlanSection plans={visiblePlans} />
 
         <VisualSurfaceSection />
@@ -292,6 +311,116 @@ function CLevelPlanSection({ plans }: { plans: CLevelPlan[] }) {
       <div className="mt-3 grid gap-2.5">
         {plans.map((plan) => (
           <CLevelPlanCard key={plan.role} plan={plan} />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+const strengthIconMap: Record<StrengthIconKey, typeof Activity> = {
+  concept: BrainCircuit,
+  dashboard: Layers3,
+  'rich-output': BarChart3,
+  'agent-runtime': ServerCog,
+  integration: Network,
+  memory: Database,
+  automation: Workflow,
+  security: ShieldCheck,
+}
+
+function OperationalStrengthSection() {
+  const averageScore = Math.round(
+    departmentStrengthAreas.reduce((total, area) => total + area.score, 0) / departmentStrengthAreas.length,
+  )
+  const needsBuild = departmentStrengthAreas.filter((area) => area.status === 'needs-build').length
+
+  return (
+    <section className="mt-4 rounded-lg border border-border-med bg-white p-3.5 shadow-soft" aria-label="Penguatan sistem">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-label-caps text-accent-dark">Penguatan sistem</p>
+          <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">8 area operasional</h2>
+          <p className="mt-1 max-w-[300px] text-xs leading-5 text-text-secondary">
+            Skor ini jadi peta kerja supaya app, agent, memory, workflow, dan security naik bareng.
+          </p>
+        </div>
+        <div className="shrink-0 rounded-md border border-border-med bg-bg-surface px-3 py-2 text-right">
+          <p className="text-[22px] font-extrabold leading-none text-text-primary">{averageScore}%</p>
+          <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.06em] text-text-muted">baseline</p>
+        </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        {departmentStrengthAreas.map((area) => (
+          <StrengthAreaCard key={area.id} area={area} />
+        ))}
+      </div>
+
+      <div className="mt-3 rounded-md border border-status-decision/20 bg-status-decision-bg px-3 py-2.5">
+        <p className="text-xs font-extrabold text-status-decision">{needsBuild} area masih perlu dibangun serius</p>
+        <p className="mt-1 text-[11px] leading-4 text-text-secondary">
+          Prioritas teknis berikutnya: backend bridge, routing workflow, server health, dan audit memory.
+        </p>
+      </div>
+    </section>
+  )
+}
+
+function StrengthAreaCard({ area }: { area: DepartmentStrengthArea }) {
+  const Icon = strengthIconMap[area.id]
+
+  return (
+    <article className="rounded-md border border-border-soft bg-bg-surface px-3 py-3">
+      <div className="flex items-start justify-between gap-2">
+        <span className={cn('inline-flex size-8 shrink-0 items-center justify-center rounded-md', getStrengthStatusClass(area.status))}>
+          <Icon className="size-4" />
+        </span>
+        <div className="min-w-0 flex-1 text-right">
+          <p className="text-[20px] font-extrabold leading-none text-text-primary">{area.score}%</p>
+          <p className="mt-1 text-[10px] font-bold text-text-faint">target {area.target}%</p>
+        </div>
+      </div>
+      <h3 className="mt-2 text-[12px] font-extrabold leading-4 text-text-primary">{area.title}</h3>
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white">
+        <span className={cn('block h-full rounded-full', getStrengthBarClass(area.status))} style={{ width: `${area.score}%` }} />
+      </div>
+      <p className="mt-2 line-clamp-2 text-[11px] font-semibold leading-4 text-text-muted">{area.nextMove}</p>
+    </article>
+  )
+}
+
+function WorkflowFoundationSection() {
+  return (
+    <section className="mt-4 rounded-lg border border-border-med bg-bg-surface p-3.5" aria-label="Workflow foundation">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-label-caps text-text-muted">Operating flow</p>
+          <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">Dari brief ke keputusan</h2>
+        </div>
+        <span className="inline-flex size-9 items-center justify-center rounded-md bg-text-primary text-white">
+          <Workflow className="size-4" />
+        </span>
+      </div>
+
+      <div className="mt-3 space-y-2">
+        {workflowStages.map((stage, index) => (
+          <div key={stage.id} className="flex gap-2.5">
+            <div className="flex flex-col items-center">
+              <span className={cn('inline-flex size-7 items-center justify-center rounded-full text-[11px] font-extrabold', getWorkflowStateClass(stage.state))}>
+                {index + 1}
+              </span>
+              {index < workflowStages.length - 1 && <span className="my-1 h-7 w-px bg-border-med" />}
+            </div>
+            <div className="min-w-0 flex-1 pb-2">
+              <div className="flex items-center gap-2">
+                <p className="text-xs font-extrabold text-text-primary">{stage.label}</p>
+                <span className={cn('rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.05em]', getWorkflowStateClass(stage.state))}>
+                  {stage.state}
+                </span>
+              </div>
+              <p className="mt-1 text-[11px] leading-4 text-text-muted">{stage.description}</p>
+            </div>
+          </div>
         ))}
       </div>
     </section>
@@ -616,5 +745,25 @@ function getPlanStatusLabel(status: CLevelPlan['status']) {
 function getPlanStatusClass(status: CLevelPlan['status']) {
   if (status === 'ready') return 'bg-status-final-bg text-status-final'
   if (status === 'draft') return 'bg-status-review-bg text-status-review'
+  return 'bg-status-decision-bg text-status-decision'
+}
+
+function getStrengthStatusClass(status: DepartmentStrengthArea['status']) {
+  if (status === 'active') return 'bg-status-final-bg text-status-final'
+  if (status === 'foundation') return 'bg-status-doing-bg text-status-doing'
+  if (status === 'needs-build') return 'bg-status-decision-bg text-status-decision'
+  return 'bg-status-review-bg text-status-review'
+}
+
+function getStrengthBarClass(status: DepartmentStrengthArea['status']) {
+  if (status === 'active') return 'bg-status-final'
+  if (status === 'foundation') return 'bg-status-doing'
+  if (status === 'needs-build') return 'bg-status-decision'
+  return 'bg-status-review'
+}
+
+function getWorkflowStateClass(state: 'ready' | 'partial' | 'missing') {
+  if (state === 'ready') return 'bg-status-final-bg text-status-final'
+  if (state === 'partial') return 'bg-status-doing-bg text-status-doing'
   return 'bg-status-decision-bg text-status-decision'
 }
