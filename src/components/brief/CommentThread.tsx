@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils'
 
 interface CommentThreadProps {
   brief: Brief
-  onAddComment: (text: string, replyAuthor: Contributor) => void
+  onAddComment: (text: string, author: Contributor | 'matthew') => void
 }
 
 const roleBg: Record<Role, string> = {
@@ -66,7 +66,7 @@ export function CommentThread({ brief, onAddComment }: CommentThreadProps) {
       author: c.author,
       text: c.text,
     }))
-    onAddComment(trimmed, replier)
+    onAddComment(trimmed, 'matthew')
     setText('')
     // Simulate AI reply with delay
     setTimeout(() => {

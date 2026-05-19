@@ -18,10 +18,18 @@ interface BriefDetailSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onApprove: (briefId: string) => void
+  onRequestRevision: (briefId: string) => void
   onAddComment: (briefId: string, comment: Comment) => void
 }
 
-export function BriefDetailSheet({ brief, open, onOpenChange, onApprove, onAddComment }: BriefDetailSheetProps) {
+export function BriefDetailSheet({
+  brief,
+  open,
+  onOpenChange,
+  onApprove,
+  onRequestRevision,
+  onAddComment,
+}: BriefDetailSheetProps) {
   const toast = useToast()
   const reduceMotion = useReducedMotion()
   const [askRole, setAskRole] = useState<Contributor | null>(null)
@@ -51,6 +59,13 @@ export function BriefDetailSheet({ brief, open, onOpenChange, onApprove, onAddCo
     onApprove(brief.id)
     onOpenChange(false)
     toast.show('Brief disetujui. Dipindahkan ke Final.', { variant: 'success' })
+  }
+
+  const handleRequestRevision = () => {
+    if (!brief) return
+    onRequestRevision(brief.id)
+    onOpenChange(false)
+    toast.show('Revisi dicatat sebagai signal belajar.', { variant: 'info' })
   }
 
   return (
@@ -225,7 +240,7 @@ export function BriefDetailSheet({ brief, open, onOpenChange, onApprove, onAddCo
                   <div className="mt-2 flex gap-2">
                     <button
                       type="button"
-                      onClick={() => toast.show('Mode revisi belum tersedia di MVP.', { variant: 'info' })}
+                      onClick={handleRequestRevision}
                       className={cn(
                         'flex-1 min-h-touch rounded-md border border-border-med',
                         'inline-flex items-center justify-center gap-2 px-3 py-2',
@@ -272,4 +287,3 @@ export function BriefDetailSheet({ brief, open, onOpenChange, onApprove, onAddCo
     </Dialog.Root>
   )
 }
-

@@ -88,13 +88,13 @@ export const departmentStrengthAreas: DepartmentStrengthArea[] = [
   {
     id: 'memory',
     title: 'Memory Bisnis',
-    score: 78,
+    score: 88,
     target: 100,
     northStar: 100,
-    status: 'foundation',
+    status: 'active',
     owner: 'cfo',
-    strengthenedBy: ['Business knowledge dipisah dari chat trace', 'Planning memory policy', 'Reset interaction tetap aman', 'Roadmap audit memory tertulis'],
-    nextMove: 'Buat halaman audit knowledge untuk keputusan, canon, preference, assumption, dan source.',
+    strengthenedBy: ['Self-learning V1 lesson store', 'Approval dan revision signals', 'Preference extraction', 'Business knowledge dipisah dari chat trace', 'Audit memory surface'],
+    nextMove: 'Sinkronkan lesson memory app ke memory-core server dan tambahkan outcome review mingguan.',
   },
   {
     id: 'automation',
@@ -149,6 +149,6 @@ export const workflowStages: WorkflowStage[] = [
     id: 'archive-memory',
     label: 'Archive & memory',
     state: 'partial',
-    description: 'Memory policy sudah masuk kontrak output; backend audit page belum dibuat.',
+    description: 'Lesson memory lokal sudah aktif untuk approval, revisi, dan preferensi; sinkronisasi server masih berikutnya.',
   },
 ]

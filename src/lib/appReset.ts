@@ -21,11 +21,11 @@ export function runAppMigrations(): void {
     const stored = localStorage.getItem(VERSION_KEY)
     if (stored === APP_VERSION) return
 
-    // Migration: clear all gerai:* keys (stale state from old version).
+    // Migration: clear stale app state, but keep durable business learning.
     const keysToRemove: string[] = []
     for (let i = 0; i < localStorage.length; i += 1) {
       const key = localStorage.key(i)
-      if (key && key.startsWith('gerai:') && key !== VERSION_KEY) {
+      if (key && key.startsWith('gerai:') && key !== VERSION_KEY && !key.startsWith('gerai:learning-memory')) {
         keysToRemove.push(key)
       }
     }

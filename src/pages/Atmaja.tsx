@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { Send, Sunrise, ArrowUpRight, Trash2, ChevronDown } from 'lucide-react'
 import { loadStoredBriefs } from '@/lib/briefStore'
+import { recordInteractionLessons } from '@/lib/learningMemory'
 import { generateMockReply, type ChatMessage } from '@/lib/mockReplies'
 import { cn } from '@/lib/utils'
 
@@ -87,19 +88,21 @@ export default function Atmaja() {
 
   const send = (msgText: string) => {
     if (!msgText.trim() || sending) return
+    const trimmed = msgText.trim()
     const userMsg: AtmajaMessage = {
       id: `m-${Date.now()}`,
       author: 'matthew',
-      text: msgText.trim(),
+      text: trimmed,
       timeAgo: 'Baru saja',
     }
     const historySnapshot = messages
+    recordInteractionLessons(trimmed, { type: 'atmaja-chat', author: 'matthew' })
     setMessages((prev) => [...prev, userMsg])
     setText('')
     setSending(true)
     window.setTimeout(() => {
       const result = generateMockReply({
-        userMessage: msgText.trim(),
+        userMessage: trimmed,
         history: historySnapshot,
         speaker: 'atmaja',
       })

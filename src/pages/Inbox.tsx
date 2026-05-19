@@ -45,6 +45,13 @@ import {
 } from '@/lib/agentApi'
 import { loadStoredBriefs, saveStoredBriefs } from '@/lib/briefStore'
 import {
+  getLearningSnapshot,
+  recordBriefApprovalLesson,
+  recordBriefRevisionLesson,
+  recordInteractionLessons,
+  type LearningSnapshot,
+} from '@/lib/learningMemory'
+import {
   CONTRIBUTOR_META,
   DEPARTMENT_LABEL_SHORT,
   DEPARTMENT_ORDER,
@@ -115,6 +122,7 @@ export default function Inbox() {
   const [composeOpen, setComposeOpen] = useState(false)
   const [agentHealth, setAgentHealth] = useState<AgentHealth>(fallbackAgentHealth)
   const [lastBridgeResult, setLastBridgeResult] = useState<SubmitAgentBriefResult | null>(null)
+  const [learningVersion, setLearningVersion] = useState(0)
 
   useEffect(() => {
     saveStoredBriefs(briefs)
@@ -156,13 +164,28 @@ export default function Inbox() {
     if (sector === 'all' || sector === 'ceo') return cLevelPlans
     return cLevelPlans.filter((plan) => plan.role === sector)
   }, [sector])
+  const learningSnapshot = useMemo(() => getLearningSnapshot(), [learningVersion])
 
   const attentionCount = confirmationBriefs.length + blockerBriefs.length
   const activeCount = briefs.filter((brief) => brief.status !== 'final').length
   const openBrief = params.id ? briefs.find((brief) => brief.id === params.id) ?? null : null
 
   const handleApprove = (id: string) => {
+    const approvedBrief = briefs.find((brief) => brief.id === id)
     setBriefs((prev) => prev.map((brief) => (brief.id === id ? { ...brief, status: 'final' } : brief)))
+    if (approvedBrief) {
+      recordBriefApprovalLesson(approvedBrief)
+      setLearningVersion((version) => version + 1)
+    }
+  }
+
+  const handleRequestRevision = (id: string) => {
+    const revisedBrief = briefs.find((brief) => brief.id === id)
+    setBriefs((prev) => prev.map((brief) => (brief.id === id ? { ...brief, status: 'review' } : brief)))
+    if (revisedBrief) {
+      recordBriefRevisionLesson(revisedBrief)
+      setLearningVersion((version) => version + 1)
+    }
   }
 
   const handleAddComment = (briefId: string, comment: Comment) => {
@@ -177,6 +200,14 @@ export default function Inbox() {
           : brief,
       ),
     )
+    if (comment.author === 'matthew') {
+      const lessons = recordInteractionLessons(comment.text, {
+        type: 'brief-comment',
+        briefId,
+        author: 'matthew',
+      })
+      if (lessons.length > 0) setLearningVersion((version) => version + 1)
+    }
   }
 
   const handleComposeSubmit = (newBrief: Brief) => {
@@ -236,6 +267,7 @@ export default function Inbox() {
         {dashboardView === 'system' && (
           <>
             <PlanningNorthStarSection />
+            <LearningMemorySection snapshot={learningSnapshot} />
             <OperationalStrengthSection />
             <PlannerCouncilSection />
             <PlanningRitualSection />
@@ -253,6 +285,7 @@ export default function Inbox() {
           if (!open) navigate('/')
         }}
         onApprove={handleApprove}
+        onRequestRevision={handleRequestRevision}
         onAddComment={handleAddComment}
       />
 
@@ -322,6 +355,70 @@ function NorthStarPill({ label, value }: { label: string; value: string }) {
     <div className="rounded-md border border-white/14 bg-white/8 px-2.5 py-2">
       <p className="text-[9px] font-bold uppercase tracking-[0.08em] text-white/52">{label}</p>
       <p className="mt-0.5 text-[12px] font-extrabold text-white">{value}</p>
+    </div>
+  )
+}
+
+function LearningMemorySection({ snapshot }: { snapshot: LearningSnapshot }) {
+  const categoryLabels: Array<{ key: keyof LearningSnapshot['byCategory']; label: string }> = [
+    { key: 'format', label: 'format' },
+    { key: 'decision', label: 'decision' },
+    { key: 'workflow', label: 'workflow' },
+    { key: 'ux', label: 'UX' },
+  ]
+
+  return (
+    <section className="mt-4 rounded-lg border border-border-med bg-white p-3.5 shadow-soft" aria-label="Self-learning memory">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-label-caps text-accent-dark">Self-learning V1</p>
+          <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">Lesson memory yang bisa diaudit</h2>
+          <p className="mt-1 max-w-[310px] text-xs leading-5 text-text-secondary">
+            App menyimpan pelajaran ringkas dari approval, revisi, dan preferensi Matthew. Raw chat tidak dijadikan memory default.
+          </p>
+        </div>
+        <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-md bg-status-final-bg text-status-final">
+          <Database className="size-4" />
+        </span>
+      </div>
+
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <MemoryMetric label="lessons" value={snapshot.total} />
+        <MemoryMetric label="high trust" value={snapshot.highConfidence} />
+        <MemoryMetric label="recent" value={snapshot.recent.length} />
+      </div>
+
+      <div className="mt-3 grid grid-cols-4 gap-1.5">
+        {categoryLabels.map((item) => (
+          <div key={item.key} className="rounded-md border border-border-soft bg-bg-surface px-2 py-2 text-center">
+            <p className="text-[15px] font-extrabold leading-none text-text-primary">{snapshot.byCategory[item.key]}</p>
+            <p className="mt-1 truncate text-[9px] font-bold uppercase tracking-[0.04em] text-text-muted">{item.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-3 space-y-2">
+        {snapshot.recent.slice(0, 3).map((lesson) => (
+          <article key={lesson.id} className="rounded-md border border-border-soft bg-bg-surface px-3 py-2.5">
+            <div className="flex items-center justify-between gap-3">
+              <p className="truncate text-xs font-extrabold text-text-primary">{lesson.title}</p>
+              <span className="rounded-full bg-white px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.04em] text-text-muted">
+                {lesson.confidence}
+              </span>
+            </div>
+            <p className="mt-1 line-clamp-2 text-[11px] font-semibold leading-4 text-text-secondary">{lesson.lesson}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function MemoryMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-md border border-border-soft bg-bg-surface px-3 py-2">
+      <p className="text-[20px] font-extrabold leading-none text-text-primary">{value}</p>
+      <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.06em] text-text-muted">{label}</p>
     </div>
   )
 }

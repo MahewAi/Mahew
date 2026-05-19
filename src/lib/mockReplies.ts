@@ -1,4 +1,5 @@
 import { CONTRIBUTOR_META, type Brief, type Contributor } from './types'
+import { getLearningGuidanceLines } from './learningMemory'
 
 /**
  * Fresh-start mock reply engine.
@@ -213,6 +214,21 @@ const PATTERNS: Array<{
       `Struktur department tetap utuh: CEO untuk sintesa, C-suite untuk judgment domain, specialist untuk depth. Yang perlu disetel ulang sekarang adalah alur kerja dan standar output mereka.`,
     ],
   },
+  {
+    match: (q) => /self.?learning|belajar|dipelajari|memory|inget|ingat/.test(q),
+    intent: 'learning_memory',
+    variants: () => {
+      const guidance = getLearningGuidanceLines(4)
+      if (guidance.length === 0) {
+        return [
+          `Self-learning baru aktif sebagai lesson memory. Saya belum punya lesson tambahan dari interaksi app, jadi saya akan mulai belajar dari approval, revisi, dan preferensi yang Anda tulis.`,
+        ]
+      }
+      return [
+        `Yang sudah saya pakai sebagai memory kerja:\n- ${guidance.join('\n- ')}\n\nSaya tetap tidak menyimpan raw chat sebagai default. Yang disimpan adalah lesson ringkas yang bisa diaudit.`,
+      ]
+    },
+  },
 ]
 
 function lastReplyByRole(history: ChatMessage[], role: 'matthew' | Contributor | 'atmaja'): ChatMessage | undefined {
@@ -268,6 +284,11 @@ export function generateMockReply(ctx: MockReplyContext): ReplyResult {
 
   if (ctx.brief) {
     text = `Berkaitan brief "${ctx.brief.title}", pertanyaan Anda layak didalami. Coba sebut aspek spesifik: ROI, risiko, tim, atau timeline?`
+  } else {
+    const guidance = getLearningGuidanceLines(2)
+    if (guidance.length > 0 && /buat|rancang|gimana|bagaimana|apa|tolong|coba|cb/.test(q)) {
+      text = `${text}\n\nSaya pakai memory kerja: ${guidance.join(' ')}`
+    }
   }
 
   return { text, intent: 'fallback' }
