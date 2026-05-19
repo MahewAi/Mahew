@@ -34,6 +34,14 @@ import { agentRegistry } from '@/data/agentRegistry'
 import { cLevelPlans, type CLevelPlan } from '@/data/cLevelPlans'
 import { departmentStrengthAreas, workflowStages, type DepartmentStrengthArea } from '@/data/departmentStrength'
 import {
+  communicationPrinciples,
+  plannerRoles,
+  planningNorthStar,
+  planningRituals,
+  type PlannerRole,
+  type PlanningRitual,
+} from '@/data/planningOperatingSystem'
+import {
   fallbackAgentHealth,
   fetchAgentHealth,
   submitAgentBrief,
@@ -242,7 +250,13 @@ export default function Inbox() {
 
         <SectorTabs active={sector} onChange={setSector} />
 
+        <PlanningNorthStarSection />
+
         <OperationalStrengthSection />
+
+        <PlannerCouncilSection />
+
+        <PlanningRitualSection />
 
         <WorkflowFoundationSection />
 
@@ -355,6 +369,38 @@ const strengthIconMap: Record<StrengthIconKey, typeof Activity> = {
   security: ShieldCheck,
 }
 
+function PlanningNorthStarSection() {
+  return (
+    <section className="mt-4 rounded-lg border border-text-primary bg-text-primary p-4 text-white shadow-card" aria-label="Planning north star">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-white/62">North star</p>
+          <h2 className="mt-1 text-[20px] font-extrabold leading-6">{planningNorthStar.title}</h2>
+          <p className="mt-2 max-w-[320px] text-xs leading-5 text-white/72">{planningNorthStar.body}</p>
+        </div>
+        <div className="shrink-0 rounded-md bg-white px-3 py-2 text-right text-text-primary">
+          <p className="text-[24px] font-extrabold leading-none">{planningNorthStar.score}%</p>
+          <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.06em] text-text-muted">target</p>
+        </div>
+      </div>
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <NorthStarPill label="Planner" value="Atmaja" />
+        <NorthStarPill label="Council" value="C-level" />
+        <NorthStarPill label="Output" value="Plan" />
+      </div>
+    </section>
+  )
+}
+
+function NorthStarPill({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-white/14 bg-white/8 px-2.5 py-2">
+      <p className="text-[9px] font-bold uppercase tracking-[0.08em] text-white/52">{label}</p>
+      <p className="mt-0.5 text-[12px] font-extrabold text-white">{value}</p>
+    </div>
+  )
+}
+
 function OperationalStrengthSection() {
   const averageScore = Math.round(
     departmentStrengthAreas.reduce((total, area) => total + area.score, 0) / departmentStrengthAreas.length,
@@ -413,6 +459,131 @@ function StrengthAreaCard({ area }: { area: DepartmentStrengthArea }) {
       </div>
       <p className="mt-2 line-clamp-2 text-[11px] font-semibold leading-4 text-text-muted">{area.nextMove}</p>
     </article>
+  )
+}
+
+function PlannerCouncilSection() {
+  return (
+    <section className="mt-4 rounded-lg border border-border-med bg-white p-3.5 shadow-soft" aria-label="Planner council">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-label-caps text-accent-dark">Planner council</p>
+          <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">Atmaja + C-level sebagai perencana</h2>
+          <p className="mt-1 text-xs leading-5 text-text-secondary">
+            Setiap role punya mandat planning, hak keputusan, output wajib, dan gaya penyampaian.
+          </p>
+        </div>
+        <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-md bg-accent-bg text-accent-dark">
+          <BrainCircuit className="size-4" />
+        </span>
+      </div>
+
+      <div className="mt-3 grid gap-2.5">
+        {plannerRoles.map((planner) => (
+          <PlannerRoleCard key={planner.role} planner={planner} />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function PlannerRoleCard({ planner }: { planner: PlannerRole }) {
+  return (
+    <article className="rounded-md border border-border-soft bg-bg-surface px-3 py-3">
+      <div className="flex items-start gap-3">
+        <span className={cn('mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-md text-xs font-extrabold text-white', roleAccent[planner.role])}>
+          {DEPARTMENT_LABEL_SHORT[planner.role]}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-[13px] font-extrabold leading-4 text-text-primary">{planner.plannerName}</h3>
+            <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.05em] text-text-muted">
+              {planner.cadence}
+            </span>
+          </div>
+          <p className="mt-1 text-[11px] leading-4 text-text-secondary">{planner.planningMandate}</p>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <MiniList label="Output" items={planner.planningOutputs.slice(0, 3)} />
+            <MiniList label="Decision" items={planner.decisionRights.slice(0, 3)} />
+          </div>
+          <p className="mt-2 rounded-md bg-white px-2.5 py-2 text-[11px] font-semibold leading-4 text-text-muted">
+            {planner.communicationStyle}
+          </p>
+        </div>
+      </div>
+    </article>
+  )
+}
+
+function PlanningRitualSection() {
+  return (
+    <section className="mt-4 rounded-lg border border-border-med bg-bg-surface p-3.5" aria-label="Planning rituals">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-label-caps text-text-muted">Planning ritual</p>
+          <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">Ritme kerja yang harus hidup</h2>
+        </div>
+        <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-extrabold text-text-secondary">
+          {planningRituals.length}
+        </span>
+      </div>
+
+      <div className="mt-3 grid gap-2">
+        {planningRituals.map((ritual) => (
+          <PlanningRitualCard key={ritual.id} ritual={ritual} />
+        ))}
+      </div>
+
+      <div className="mt-3 rounded-md border border-border-soft bg-white px-3 py-3">
+        <p className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-text-faint">Standar penyampaian</p>
+        <div className="mt-2 grid gap-1.5">
+          {communicationPrinciples.map((principle) => (
+            <div key={principle.title} className="flex gap-2 text-[11px] leading-4">
+              <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-accent" />
+              <p className="text-text-muted">
+                <span className="font-extrabold text-text-primary">{principle.title}: </span>
+                {principle.rule}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function PlanningRitualCard({ ritual }: { ritual: PlanningRitual }) {
+  return (
+    <article className="rounded-md border border-border-soft bg-white px-3 py-2.5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className={cn('size-2 rounded-full', roleAccent[ritual.owner])} />
+            <h3 className="text-xs font-extrabold text-text-primary">{ritual.title}</h3>
+          </div>
+          <p className="mt-1 text-[11px] leading-4 text-text-secondary">{ritual.purpose}</p>
+          <p className="mt-1 text-[11px] font-semibold leading-4 text-text-muted">Output: {ritual.output}</p>
+        </div>
+        <span className="shrink-0 rounded-full bg-bg-surface px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.05em] text-text-muted">
+          {ritual.cadence}
+        </span>
+      </div>
+    </article>
+  )
+}
+
+function MiniList({ label, items }: { label: string; items: string[] }) {
+  return (
+    <div className="rounded-md bg-white px-2.5 py-2">
+      <p className="text-[9px] font-extrabold uppercase tracking-[0.08em] text-text-faint">{label}</p>
+      <ul className="mt-1 space-y-1">
+        {items.map((item) => (
+          <li key={item} className="truncate text-[10px] font-semibold text-text-muted">
+            {item}
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
 
@@ -579,6 +750,9 @@ function CLevelPlanCard({ plan }: { plan: CLevelPlan }) {
           </div>
           <h3 className="mt-1 text-[15px] font-extrabold leading-5 text-text-primary">{plan.title}</h3>
           <p className="mt-1 text-xs leading-5 text-text-secondary">{plan.mandate}</p>
+          <p className="mt-2 rounded-md bg-bg-surface px-2.5 py-2 text-[11px] font-semibold leading-4 text-text-primary">
+            {plan.plannerMode}
+          </p>
         </div>
         <span className={cn('shrink-0 rounded-full px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.04em]', getPlanStatusClass(plan.status))}>
           {getPlanStatusLabel(plan.status)}
@@ -586,7 +760,12 @@ function CLevelPlanCard({ plan }: { plan: CLevelPlan }) {
       </div>
 
       <div className="mt-3 grid gap-2">
+        <div className="rounded-md border border-border-soft bg-bg-surface px-3 py-2">
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.08em] text-text-faint">Cadence</p>
+          <p className="mt-1 text-xs font-bold leading-5 text-text-primary">{plan.planningCadence}</p>
+        </div>
         <PlanList label="Dirancang" items={plan.designing} />
+        <PlanList label="Pertanyaan planning" items={plan.planningQuestions} />
         <PlanList label="Butuh dari Matthew" items={plan.needsFromMatthew} muted />
       </div>
 

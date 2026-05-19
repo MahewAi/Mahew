@@ -275,14 +275,13 @@ export function ComposeSheet({ open, onOpenChange, onSubmit }: ComposeSheetProps
 
 /** Helper: simulate AI completion of a pending brief (mock). Returns updated brief. */
 export function simulateAiResponse(brief: Brief): Brief {
-  // For MVP — just fill csuiteInput with mock content
   const targetRole = getContributorColorRole(brief.contributors[0] ?? 'ceo')
   const targetName = CONTRIBUTOR_META[targetRole].name
   const blocks = buildVisualBlocks(brief, targetRole, targetName)
   const envelope = createAgentOutputEnvelope({
     briefId: brief.id,
     sourceRole: targetRole,
-    summary: `${targetName} telah menyelesaikan analisis awal dalam format visual. Lihat tabel, chart, diagram, dan rekomendasi C-suite di bawah.`,
+    summary: `${targetName} membuat planning brief: objective, opsi, risiko, decision gate, dan next action sudah dipetakan. Matthew tinggal memilih lanjut, revisi data, atau tahan.`,
     blocks,
   })
 
@@ -297,11 +296,11 @@ export function simulateAiResponse(brief: Brief): Brief {
       {
         role: targetRole,
         name: targetName,
-        subtitle: `Analisis ${targetName}`,
+        subtitle: `Planning output ${targetName}`,
         bullets: [
-          'Konteks pertanyaan sudah dipetakan terhadap tujuan, data, opsi, dan risiko.',
-          'Output utama tersedia dalam format visual agar mudah dibaca dan dibandingkan.',
-          'Perlu validasi tambahan dari Matthew untuk angka, deadline, atau prioritas final.',
+          'Objective, current state, opsi, risiko, dan decision gate sudah dipisahkan.',
+          'Output utama memakai visual blocks agar rencana mudah dibandingkan.',
+          'Matthew perlu memilih lanjut, revisi data, atau tahan sebelum masuk eksekusi.',
         ],
       },
     ],
@@ -313,57 +312,70 @@ function buildVisualBlocks(brief: Brief, targetRole: Role, targetName: string): 
     {
       type: 'callout',
       variant: 'info',
-      title: 'Status analisis',
-      content: `Brief **${brief.title}** sudah dipetakan sebagai bahan keputusan awal. Output ini sengaja dibuat visual agar bisa dibaca cepat oleh Matthew dan C-level.`,
+      title: 'Planning status',
+      content: `Brief **${brief.title}** sudah dipetakan sebagai planning brief. Fokusnya bukan jawaban panjang, tapi rencana yang bisa diputuskan.`,
     },
     {
       type: 'markdown',
-      content: `## Sintesa awal\n\n${targetName} melihat brief ini sebagai pekerjaan yang perlu dipecah menjadi **tujuan**, **data yang dibutuhkan**, **opsi**, dan **risiko keputusan**. Bagian di bawah memberi bentuk kerja yang bisa langsung ditindaklanjuti.`,
+      content: `## Executive planning frame\n\n${targetName} membaca brief ini sebagai pekerjaan planning. Output wajibnya: **objective**, **current state**, **2 opsi tindakan**, **risiko**, **decision needed**, dan **next action**. Kalau data belum cukup, agent wajib push-back dan meminta input spesifik.`,
     },
     {
       type: 'table',
-      headers: ['Area', 'Yang Dicek', 'Output'],
+      headers: ['Planning Layer', 'Yang Diputuskan', 'Output'],
       rows: [
-        ['Konteks', 'Tujuan, batasan, stakeholder', 'Decision frame'],
-        ['Data', 'Angka, dokumen, asumsi, source', 'Input checklist'],
-        ['Opsi', '2-3 pilihan tindakan', 'Comparison matrix'],
-        ['Risiko', 'Konsekuensi dan mitigation', 'Risk note'],
+        ['Objective', 'Apa hasil bisnis yang dikejar', '1 kalimat target'],
+        ['Current state', 'Apa yang sudah diketahui dan belum diketahui', 'Assumption log'],
+        ['Options', 'Lanjut cepat atau tahan untuk data', 'Plan A / Plan B'],
+        ['Risk gate', 'Risiko yang bisa membuat rencana batal', 'Red flag list'],
+        ['Decision', 'Pilihan yang Matthew perlu ambil', 'Approve / revise / hold'],
       ],
-      caption: 'Struktur dasar yang dipakai agent sebelum membuat rekomendasi final.',
+      caption: 'Struktur wajib untuk setiap planning brief Atmaja dan C-level.',
+    },
+    {
+      type: 'grid',
+      columns: 2,
+      items: [
+        { title: 'Plan A: Fast track', content: 'Gunakan data sekarang, jalankan eksperimen kecil, baca signal cepat.', accent: '#3D6F58' },
+        { title: 'Plan B: Validate first', content: 'Tahan eksekusi sampai angka, source, atau constraint utama lengkap.', accent: '#3F5F8C' },
+        { title: 'Kill criteria', content: 'Rencana batal kalau asumsi inti tidak bisa dibuktikan atau ROI turun di bawah guardrail.', accent: '#C25541' },
+        { title: 'Decision gate', content: 'Matthew pilih: approve, revise data, delegate ke C-level, atau hold.', accent: '#85547A' },
+      ],
     },
     {
       type: 'chart',
       kind: 'bar',
-      caption: 'Skor awal prioritas kerja. Angka ini dummy visual untuk preview cara app menampilkan data.',
+      caption: 'Skor planning readiness. Angka preview ini menunjukkan cara app membaca kesiapan rencana.',
       data: {
         points: [
+          { label: 'Clarity', score: 84 },
           { label: 'Impact', score: 82 },
-          { label: 'Urgency', score: 68 },
-          { label: 'Confidence', score: 56 },
-          { label: 'Effort', score: 42 },
+          { label: 'Evidence', score: 58 },
+          { label: 'Execution', score: 72 },
+          { label: 'Risk', score: 64 },
         ],
         series: [{ key: 'score', label: 'Score', color: 'hsl(33, 36%, 57%)' }],
       },
     },
     {
       type: 'mermaid',
-      caption: 'Alur kerja brief dari input sampai keputusan.',
+      caption: 'Alur planning dari brief sampai keputusan Matthew.',
       code: `flowchart TD
   A[Input Matthew] --> B[Atmaja framing]
-  B --> C[${targetName} analysis]
-  C --> D{Need more data?}
-  D -->|Yes| E[Pending input]
-  D -->|No| F[Recommendation]
-  F --> G[Matthew confirmation]`,
+  B --> C[${targetName} planning]
+  C --> D[Plan A / Plan B]
+  D --> E{Decision gate}
+  E -->|Approve| F[Execution queue]
+  E -->|Revise| G[Ask precise data]
+  E -->|Hold| H[Archive assumption]`,
     },
     {
       type: 'grid',
       columns: 2,
       items: [
-        { title: 'Decision', content: 'Apa yang perlu diputuskan, bukan sekadar dibahas.', accent: '#C25541' },
-        { title: 'Data', content: 'Angka, source, gambar, atau dokumen yang perlu dilampirkan.', accent: '#3F5F8C' },
-        { title: 'Risk', content: 'Trade-off yang harus dilihat sebelum eksekusi.', accent: '#85547A' },
-        { title: 'Action', content: 'Langkah berikutnya setelah Matthew memberi sinyal.', accent: '#3D6F58' },
+        { title: 'Objective', content: 'Tujuan bisnis dalam 1 kalimat, bukan pembahasan kabur.', accent: '#C25541' },
+        { title: 'Owner', content: 'Siapa yang pegang next action dan kapan harus selesai.', accent: '#3F5F8C' },
+        { title: 'Evidence', content: 'Data atau source yang perlu dipercaya sebelum eksekusi.', accent: '#85547A' },
+        { title: 'Decision', content: 'Approve, revise, delegate, atau hold.', accent: '#3D6F58' },
       ],
     },
     {
@@ -378,7 +390,7 @@ function buildVisualBlocks(brief: Brief, targetRole: Role, targetName: string): 
         {
           role: 'ceo',
           recommendation: 'A',
-          reasoning: `Atmaja melihat output ${targetName} cukup jelas untuk masuk ke framing detail dan validasi Matthew.`,
+          reasoning: `Atmaja melihat planning frame ${targetName} cukup jelas untuk masuk decision gate Matthew.`,
         },
         {
           role: 'coo',
@@ -410,9 +422,9 @@ function buildPreviewImage(title: string, owner: string): string {
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
   <rect width="1200" height="720" fill="#FAF8F4"/>
   <rect x="72" y="72" width="1056" height="576" rx="28" fill="#FFFFFF" stroke="#E8DED0"/>
-  <text x="112" y="142" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#8A6B43">VISUAL BRIEF MAP</text>
+  <text x="112" y="142" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#8A6B43">PLANNING BRIEF MAP</text>
   <text x="112" y="204" font-family="Inter, Arial, sans-serif" font-size="44" font-weight="800" fill="#1F1A14">${escapeSvg(title).slice(0, 42)}</text>
-  <text x="112" y="252" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="600" fill="#6B6253">${escapeSvg(owner)} output surface</text>
+  <text x="112" y="252" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="600" fill="#6B6253">${escapeSvg(owner)} planning surface</text>
   <g transform="translate(112 330)">
     <rect width="210" height="150" rx="18" fill="#F4EBDC"/>
     <rect x="270" width="210" height="150" rx="18" fill="#EDF3F6"/>

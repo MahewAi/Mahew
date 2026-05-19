@@ -25,5 +25,5 @@ export const agentRegistry: AgentRegistryItem[] = [
   { id: 'financial_analyst', folder: 'financial-analyst', parent: 'cfo', status: 'ready', responsibility: 'ROI, forecast, pricing, budget discipline.' },
   { id: 'document_writer', folder: 'document-architect', parent: 'cco', status: 'ready', responsibility: 'Business plan, technical doc, internal memo.' },
   { id: 'editorial', folder: 'editorial-reviewer', parent: 'cco', status: 'ready', responsibility: 'Copywriting dan brand voice consistency.' },
-  { id: 'web_researcher', folder: 'web-researcher', parent: 'cco', status: 'missing', responsibility: 'Web source gathering dan fact-checking.' },
+  { id: 'web_researcher', folder: 'web-researcher', parent: 'cco', status: 'ready', responsibility: 'Web source gathering dan fact-checking.' },
 ]

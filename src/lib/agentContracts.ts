@@ -15,12 +15,26 @@ export interface AgentNextAction {
   urgency: 'now' | 'next' | 'later'
 }
 
+export interface AgentPlanningFrame {
+  objective: string
+  currentState: string
+  planningHorizon: 'today' | 'week' | 'month' | 'quarter'
+  options: Array<{
+    label: string
+    upside: string
+    risk: string
+  }>
+  decisionNeeded: string
+  plannerStandard: string
+}
+
 export interface AgentOutputEnvelope {
   version: 'gerai-agent-output-v1'
   briefId: string
   sourceRole: Role
   status: AgentJobStatus
   summary: string
+  planningFrame: AgentPlanningFrame
   blocks: BriefBlock[]
   qualityGates: AgentQualityGate[]
   nextActions: AgentNextAction[]
@@ -43,6 +57,25 @@ export function createAgentOutputEnvelope(input: {
     sourceRole: input.sourceRole,
     status: 'waiting_confirmation',
     summary: input.summary,
+    planningFrame: {
+      objective: 'Mengubah brief menjadi rencana yang bisa diputuskan dan dieksekusi.',
+      currentState: 'Konteks awal sudah masuk, tetapi angka dan constraint final masih perlu validasi.',
+      planningHorizon: 'week',
+      options: [
+        {
+          label: 'Plan A',
+          upside: 'Cepat dijalankan dengan asumsi yang tersedia.',
+          risk: 'Bisa meleset kalau data baseline belum kuat.',
+        },
+        {
+          label: 'Plan B',
+          upside: 'Lebih aman karena meminta data tambahan sebelum eksekusi.',
+          risk: 'Lebih lambat dan bisa menahan momentum.',
+        },
+      ],
+      decisionNeeded: 'Matthew perlu memilih apakah brief ini masuk eksekusi, revisi data, atau ditunda.',
+      plannerStandard: 'Objective, current state, options, risks, decision needed, next action.',
+    },
     blocks: input.blocks,
     qualityGates: [
       {
