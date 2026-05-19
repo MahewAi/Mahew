@@ -152,6 +152,10 @@ export default function Inbox() {
     () => scopedBriefs.filter((brief) => brief.requestStatus === 'pending'),
     [scopedBriefs],
   )
+  const blockerBriefs = useMemo(
+    () => scopedBriefs.filter((brief) => brief.status === 'review'),
+    [scopedBriefs],
+  )
   const recentOutputBriefs = useMemo(
     () => scopedBriefs.filter((brief) => brief.status === 'final' || brief.requestStatus === 'completed'),
     [scopedBriefs],
@@ -161,8 +165,7 @@ export default function Inbox() {
     return cLevelPlans.filter((plan) => plan.role === sector)
   }, [sector])
 
-  const attentionCount = confirmationBriefs.length + scopedBriefs.filter((brief) => brief.status === 'review').length
-  const blockerCount = 0
+  const attentionCount = confirmationBriefs.length + blockerBriefs.length
   const activeCount = briefs.filter((brief) => brief.status !== 'final').length
   const openBrief = params.id ? briefs.find((brief) => brief.id === params.id) ?? null : null
 
@@ -199,54 +202,18 @@ export default function Inbox() {
       <main className="mx-auto flex min-h-screen w-full max-w-xl flex-col px-4 pt-safe-top">
         <DashboardHeader activeCount={activeCount} confirmationCount={confirmationBriefs.length} />
 
-        <motion.section
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-          className="mt-4 rounded-lg border border-border-med bg-bg-surface px-4 py-4 shadow-soft"
-          aria-label="Ringkasan Atmaja"
-        >
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-label-caps text-accent-dark">Ringkasan Atmaja</p>
-              <h1 className="mt-2 text-[25px] font-extrabold leading-[1.05] tracking-[0] text-text-primary">
-                Dashboard kerja
-              </h1>
-              <p className="mt-2 max-w-[280px] text-sm leading-5 text-text-secondary">
-                Workspace bersih. Business knowledge tetap aktif. Mulai dari brief pertama saat siap.
-              </p>
-            </div>
-            <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-md bg-text-primary text-white shadow-card">
-              <MessageSquareText className="size-5" />
-            </span>
-          </div>
-
-          <div className="mt-4 grid grid-cols-4 divide-x divide-border-med rounded-md border border-border-med bg-white">
-            <MetricTile value={attentionCount} label="perlu perhatian" />
-            <MetricTile value={confirmationBriefs.length} label="konfirmasi" tone="decision" />
-            <MetricTile value={runningBriefs.length} label="berjalan" tone="doing" />
-            <MetricTile value={blockerCount} label="hambatan" />
-          </div>
-
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setComposeOpen(true)}
-              className="inline-flex min-h-touch items-center justify-center gap-2 rounded-md bg-text-primary px-3 text-sm font-bold text-white shadow-card transition-transform duration-fast active:scale-[0.98]"
-            >
-              <Plus className="size-4" />
-              Buat brief
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/atmaja')}
-              className="inline-flex min-h-touch items-center justify-center gap-2 rounded-md border border-border-med bg-white px-3 text-sm font-bold text-text-primary transition-transform duration-fast active:scale-[0.98]"
-            >
-              <MessageSquareText className="size-4" />
-              Tanya Atmaja
-            </button>
-          </div>
-        </motion.section>
+        <CommandCenterSection
+          sector={sector}
+          attentionCount={attentionCount}
+          confirmationBriefs={confirmationBriefs}
+          runningBriefs={runningBriefs}
+          pendingInputBriefs={pendingInputBriefs}
+          blockerBriefs={blockerBriefs}
+          recentOutputBriefs={recentOutputBriefs}
+          onCompose={() => setComposeOpen(true)}
+          onAskAtmaja={() => navigate('/atmaja')}
+          onOpenBrief={(id) => navigate(`/brief/${id}`)}
+        />
 
         <SectorTabs active={sector} onChange={setSector} />
 
@@ -947,6 +914,216 @@ function BridgeNote({ title, body }: { title: string; body: string }) {
   )
 }
 
+function CommandCenterSection({
+  sector,
+  attentionCount,
+  confirmationBriefs,
+  runningBriefs,
+  pendingInputBriefs,
+  blockerBriefs,
+  recentOutputBriefs,
+  onCompose,
+  onAskAtmaja,
+  onOpenBrief,
+}: {
+  sector: SectorValue
+  attentionCount: number
+  confirmationBriefs: Brief[]
+  runningBriefs: Brief[]
+  pendingInputBriefs: Brief[]
+  blockerBriefs: Brief[]
+  recentOutputBriefs: Brief[]
+  onCompose: () => void
+  onAskAtmaja: () => void
+  onOpenBrief: (id: string) => void
+}) {
+  const sectorLabel = sector === 'all' ? 'Semua sektor' : `${DEPARTMENT_LABEL_SHORT[sector]} / ${sectorMeta[sector].subtitle}`
+  const totalQueue = confirmationBriefs.length + runningBriefs.length + pendingInputBriefs.length + blockerBriefs.length
+
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
+      className="mt-4 rounded-lg border border-border-med bg-white p-3.5 shadow-card"
+      aria-label="Pusat kendali"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-label-caps text-accent-dark">Pusat kendali</p>
+          <h1 className="mt-1 text-[24px] font-extrabold leading-[1.08] tracking-[0] text-text-primary">
+            Prioritas hari ini
+          </h1>
+          <p className="mt-2 text-xs font-semibold leading-5 text-text-secondary">
+            {sectorLabel}. Lihat yang menunggu keputusan, sedang berjalan, butuh input, dan tertahan.
+          </p>
+        </div>
+        <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-md bg-text-primary text-white shadow-card">
+          <Activity className="size-5" />
+        </span>
+      </div>
+
+      <div className="mt-4 grid grid-cols-4 divide-x divide-border-med rounded-md border border-border-med bg-bg-surface">
+        <MetricTile value={attentionCount} label="attention" />
+        <MetricTile value={confirmationBriefs.length} label="confirm" tone="decision" />
+        <MetricTile value={runningBriefs.length} label="running" tone="doing" />
+        <MetricTile value={blockerBriefs.length} label="blocked" tone="review" />
+      </div>
+
+      <div className="mt-3 grid gap-2.5">
+        <QueueLaneCard
+          title="Perlu Konfirmasi"
+          icon={CheckCircle2}
+          tone="decision"
+          items={confirmationBriefs}
+          emptyText="Belum ada keputusan yang menunggu."
+          onOpenBrief={onOpenBrief}
+        />
+        <QueueLaneCard
+          title="Sedang Running"
+          icon={Timer}
+          tone="doing"
+          items={runningBriefs}
+          emptyText="Belum ada agent yang sedang memproses brief."
+          onOpenBrief={onOpenBrief}
+        />
+        <QueueLaneCard
+          title="Todo / Butuh Input"
+          icon={ListChecks}
+          tone="neutral"
+          items={pendingInputBriefs}
+          emptyText="Belum ada data yang diminta dari Matthew."
+          onOpenBrief={onOpenBrief}
+        />
+        <QueueLaneCard
+          title="Blocked / Review"
+          icon={CircleDashed}
+          tone="review"
+          items={blockerBriefs}
+          emptyText="Belum ada hambatan yang perlu dibuka."
+          onOpenBrief={onOpenBrief}
+        />
+      </div>
+
+      {totalQueue === 0 && (
+        <div className="mt-3 rounded-md border border-dashed border-border-med bg-bg-surface px-3 py-3">
+          <p className="text-sm font-extrabold text-text-primary">Workspace masih bersih</p>
+          <p className="mt-1 text-xs font-semibold leading-5 text-text-muted">
+            Business knowledge tetap aktif. Mulai dengan brief pertama atau tanya Atmaja untuk framing.
+          </p>
+        </div>
+      )}
+
+      {recentOutputBriefs.length > 0 && (
+        <div className="mt-3 rounded-md border border-border-soft bg-bg-surface px-3 py-2.5">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-text-muted">Output terbaru</p>
+            <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-extrabold text-status-final">
+              {recentOutputBriefs.length}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => onOpenBrief(recentOutputBriefs[0].id)}
+            className="mt-2 flex w-full items-center justify-between gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            <span className="min-w-0">
+              <span className="block truncate text-xs font-extrabold text-text-primary">{recentOutputBriefs[0].title}</span>
+              <span className="mt-0.5 block text-[11px] font-semibold text-text-muted">{recentOutputBriefs[0].timeAgo}</span>
+            </span>
+            <ChevronRight className="size-4 shrink-0 text-text-faint" />
+          </button>
+        </div>
+      )}
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={onCompose}
+          className="inline-flex min-h-touch items-center justify-center gap-2 rounded-md bg-text-primary px-3 text-sm font-bold text-white shadow-card transition-transform duration-fast active:scale-[0.98]"
+        >
+          <Plus className="size-4" />
+          Buat brief
+        </button>
+        <button
+          type="button"
+          onClick={onAskAtmaja}
+          className="inline-flex min-h-touch items-center justify-center gap-2 rounded-md border border-border-med bg-white px-3 text-sm font-bold text-text-primary transition-transform duration-fast active:scale-[0.98]"
+        >
+          <MessageSquareText className="size-4" />
+          Tanya Atmaja
+        </button>
+      </div>
+    </motion.section>
+  )
+}
+
+function QueueLaneCard({
+  title,
+  icon: Icon,
+  tone,
+  items,
+  emptyText,
+  onOpenBrief,
+}: {
+  title: string
+  icon: typeof CheckCircle2
+  tone: SectionTone
+  items: Brief[]
+  emptyText: string
+  onOpenBrief: (id: string) => void
+}) {
+  return (
+    <section className="rounded-md border border-border-soft bg-bg-surface px-3 py-2.5" aria-label={title}>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className={cn('inline-flex size-8 items-center justify-center rounded-md', getToneBg(tone), getToneText(tone))}>
+            <Icon className="size-4" />
+          </span>
+          <h2 className="text-xs font-extrabold uppercase tracking-[0.04em] text-text-primary">{title}</h2>
+        </div>
+        <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-extrabold', getToneBg(tone), getToneText(tone))}>
+          {items.length}
+        </span>
+      </div>
+
+      <div className="mt-2 space-y-1.5">
+        {items.length > 0 ? (
+          items.slice(0, 2).map((brief) => (
+            <QueueMiniRow key={brief.id} brief={brief} tone={tone} onClick={() => onOpenBrief(brief.id)} />
+          ))
+        ) : (
+          <p className="rounded-md bg-white px-3 py-2 text-[11px] font-semibold leading-4 text-text-muted">{emptyText}</p>
+        )}
+      </div>
+    </section>
+  )
+}
+
+function QueueMiniRow({ brief, tone, onClick }: { brief: Brief; tone: SectionTone; onClick: () => void }) {
+  const leadRole = getLeadRole(brief)
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group flex w-full items-center gap-2 rounded-md bg-white px-2.5 py-2 text-left shadow-soft transition-colors duration-fast hover:bg-bg-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+    >
+      <span className={cn('h-8 w-1 shrink-0 rounded-full', getToneBar(tone))} />
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-1.5">
+          <span className={cn('size-1.5 rounded-full', roleAccent[leadRole])} />
+          <span className="text-[10px] font-extrabold uppercase tracking-[0.04em] text-text-faint">
+            {DEPARTMENT_LABEL_SHORT[leadRole]}
+          </span>
+        </span>
+        <span className="mt-0.5 block truncate text-xs font-extrabold text-text-primary">{brief.title}</span>
+      </span>
+      <ChevronRight className="size-3.5 shrink-0 text-text-faint transition-transform duration-fast group-hover:translate-x-0.5" />
+    </button>
+  )
+}
+
 function CLevelPlanCard({ plan }: { plan: CLevelPlan }) {
   return (
     <article className="rounded-lg border border-border-med bg-white p-3.5 shadow-soft">
@@ -1093,7 +1270,9 @@ function MetricTile({ value, label, tone = 'neutral' }: { value: number; label: 
       ? 'text-status-decision'
       : tone === 'doing'
         ? 'text-status-doing'
-        : 'text-text-primary'
+        : tone === 'review'
+          ? 'text-status-review'
+          : 'text-text-primary'
 
   return (
     <div className="min-h-[76px] px-2 py-3 text-center">
