@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { Send, Sunrise, ArrowUpRight, Trash2 } from 'lucide-react'
+import { Send, Sunrise, ArrowUpRight, Trash2, ChevronDown } from 'lucide-react'
 import { loadStoredBriefs } from '@/lib/briefStore'
 import { generateMockReply, type ChatMessage } from '@/lib/mockReplies'
 import { cn } from '@/lib/utils'
@@ -54,6 +54,7 @@ export default function Atmaja() {
   const [messages, setMessages] = useState<AtmajaMessage[]>(() => loadThread())
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
+  const [quickOpen, setQuickOpen] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -261,23 +262,36 @@ export default function Atmaja() {
 
         {messages.length <= 1 && (
           <div className="mb-3">
-            <p className="mb-2 px-1 text-meta font-bold text-text-muted">Pertanyaan cepat:</p>
-            <div className="flex flex-wrap gap-2">
-              {quickPrompts.map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => send(p)}
-                  className={cn(
-                    'rounded-pill bg-white/58 px-3.5 py-2 text-left text-xs font-bold text-text-primary shadow-soft',
-                    'transition-colors duration-fast hover:bg-white/78',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
-                  )}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
+            <button
+              type="button"
+              onClick={() => setQuickOpen((open) => !open)}
+              className={cn(
+                'inline-flex min-h-touch items-center gap-2 rounded-md border border-border-med bg-white px-3 text-xs font-extrabold text-text-primary shadow-soft',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+              )}
+              aria-expanded={quickOpen}
+            >
+              Contoh pertanyaan
+              <ChevronDown className={cn('size-3.5 transition-transform duration-fast', quickOpen && 'rotate-180')} />
+            </button>
+            {quickOpen && (
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                {quickPrompts.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => send(p)}
+                    className={cn(
+                      'rounded-md bg-white/72 px-3 py-2.5 text-left text-xs font-bold leading-4 text-text-primary shadow-soft',
+                      'transition-colors duration-fast hover:bg-white',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+                    )}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

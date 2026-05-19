@@ -1,27 +1,22 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   Activity,
-  Bell,
   BarChart3,
   BrainCircuit,
   CheckCircle2,
   ChevronRight,
   CircleDashed,
   Database,
-  FileText,
   GitBranch,
   KeyRound,
   Image as ImageIcon,
   Layers3,
   ListChecks,
-  MessageSquareText,
   Network,
   PlugZap,
   Plus,
-  Settings,
   ServerCog,
   ShieldCheck,
   Table2,
@@ -62,6 +57,7 @@ import { cn } from '@/lib/utils'
 
 type SectorValue = 'all' | Role
 type SectionTone = 'decision' | 'doing' | 'review' | 'final' | 'neutral'
+type DashboardView = 'today' | 'sectors' | 'system'
 
 type StrengthIconKey = DepartmentStrengthArea['id']
 
@@ -110,16 +106,12 @@ function getLeadRole(brief: Brief): Role {
   return getBriefDepartments(brief.contributors)[0] ?? 'ceo'
 }
 
-function getPrimaryOwner(brief: Brief) {
-  const contributor = brief.contributors[0] ?? 'ceo'
-  return CONTRIBUTOR_META[contributor]?.name ?? 'Atmaja'
-}
-
 export default function Inbox() {
   const navigate = useNavigate()
   const params = useParams<{ id?: string }>()
   const [briefs, setBriefs] = useState<Brief[]>(() => loadStoredBriefs())
   const [sector, setSector] = useState<SectorValue>('all')
+  const [dashboardView, setDashboardView] = useState<DashboardView>('today')
   const [composeOpen, setComposeOpen] = useState(false)
   const [agentHealth, setAgentHealth] = useState<AgentHealth>(fallbackAgentHealth)
   const [lastBridgeResult, setLastBridgeResult] = useState<SubmitAgentBriefResult | null>(null)
@@ -202,22 +194,46 @@ export default function Inbox() {
       <main className="mx-auto flex min-h-screen w-full max-w-xl flex-col px-4 pt-safe-top">
         <DashboardHeader activeCount={activeCount} confirmationCount={confirmationBriefs.length} />
 
-        <CommandCenterSection
-          sector={sector}
+        <DashboardViewTabs
+          active={dashboardView}
+          onChange={setDashboardView}
           attentionCount={attentionCount}
-          confirmationBriefs={confirmationBriefs}
-          runningBriefs={runningBriefs}
-          pendingInputBriefs={pendingInputBriefs}
-          blockerBriefs={blockerBriefs}
-          recentOutputBriefs={recentOutputBriefs}
-          onCompose={() => setComposeOpen(true)}
-          onAskAtmaja={() => navigate('/atmaja')}
-          onOpenBrief={(id) => navigate(`/brief/${id}`)}
+          runningCount={runningBriefs.length}
+          systemCount={departmentStrengthAreas.length}
         />
 
-        <SectorTabs active={sector} onChange={setSector} />
+        {dashboardView === 'today' && (
+          <CommandCenterSection
+            sector={sector}
+            attentionCount={attentionCount}
+            confirmationBriefs={confirmationBriefs}
+            runningBriefs={runningBriefs}
+            pendingInputBriefs={pendingInputBriefs}
+            blockerBriefs={blockerBriefs}
+            recentOutputBriefs={recentOutputBriefs}
+            onCompose={() => setComposeOpen(true)}
+            onOpenBrief={(id) => navigate(`/brief/${id}`)}
+          />
+        )}
 
-        {sector === 'all' ? (
+        {dashboardView === 'sectors' && (
+          <>
+            <SectorTabs active={sector} onChange={setSector} />
+            {sector === 'all' ? (
+              <CLevelPlanSection plans={visiblePlans} />
+            ) : (
+              <SectorWorkspace
+                role={sector}
+                plans={visiblePlans}
+                attentionCount={attentionCount}
+                runningCount={runningBriefs.length}
+                outputCount={recentOutputBriefs.length}
+              />
+            )}
+          </>
+        )}
+
+        {dashboardView === 'system' && (
           <>
             <PlanningNorthStarSection />
             <OperationalStrengthSection />
@@ -225,72 +241,9 @@ export default function Inbox() {
             <PlanningRitualSection />
             <WorkflowFoundationSection />
             <IntegrationReadinessSection health={agentHealth} lastBridgeResult={lastBridgeResult} />
-            <CLevelPlanSection plans={visiblePlans} />
             <VisualSurfaceSection />
           </>
-        ) : (
-          <SectorWorkspace
-            role={sector}
-            plans={visiblePlans}
-            attentionCount={attentionCount}
-            runningCount={runningBriefs.length}
-            outputCount={recentOutputBriefs.length}
-          />
         )}
-
-        <div className="mt-4 space-y-3">
-          <TaskSection
-            title="Perlu Konfirmasi"
-            count={confirmationBriefs.length}
-            icon={CheckCircle2}
-            tone="decision"
-            emptyTitle="Tidak ada konfirmasi"
-            emptyBody="Kalau ada brief yang butuh keputusan Matthew, ia akan muncul di sini."
-          >
-            {confirmationBriefs.slice(0, 4).map((brief) => (
-              <TaskRow key={brief.id} brief={brief} tone="decision" onClick={() => navigate(`/brief/${brief.id}`)} />
-            ))}
-          </TaskSection>
-
-          <TaskSection
-            title="Sedang Berjalan"
-            count={runningBriefs.length}
-            icon={Timer}
-            tone="doing"
-            emptyTitle="Belum ada pekerjaan berjalan"
-            emptyBody="Brief baru yang sedang dianalisis oleh agent akan masuk ke area ini."
-          >
-            {runningBriefs.slice(0, 4).map((brief) => (
-              <TaskRow key={brief.id} brief={brief} tone={brief.status === 'review' ? 'review' : 'doing'} onClick={() => navigate(`/brief/${brief.id}`)} />
-            ))}
-          </TaskSection>
-
-          <TaskSection
-            title="Todo / Pending Input"
-            count={pendingInputBriefs.length}
-            icon={ListChecks}
-            tone="neutral"
-            emptyTitle="Belum ada input yang diminta"
-            emptyBody="Jika agent butuh angka, dokumen, atau pilihan dari Anda, itemnya akan muncul di sini."
-          >
-            {pendingInputBriefs.slice(0, 3).map((brief) => (
-              <TaskRow key={brief.id} brief={brief} tone="neutral" onClick={() => navigate(`/brief/${brief.id}`)} />
-            ))}
-          </TaskSection>
-
-          <TaskSection
-            title="Output Terbaru"
-            count={recentOutputBriefs.length}
-            icon={FileText}
-            tone="final"
-            emptyTitle="Belum ada output"
-            emptyBody="Memo, report, table, atau brief selesai akan tersimpan di sini."
-          >
-            {recentOutputBriefs.slice(0, 3).map((brief) => (
-              <TaskRow key={brief.id} brief={brief} tone="final" onClick={() => navigate(`/brief/${brief.id}`)} />
-            ))}
-          </TaskSection>
-        </div>
       </main>
 
       <BriefDetailSheet
@@ -914,6 +867,64 @@ function BridgeNote({ title, body }: { title: string; body: string }) {
   )
 }
 
+function DashboardViewTabs({
+  active,
+  onChange,
+  attentionCount,
+  runningCount,
+  systemCount,
+}: {
+  active: DashboardView
+  onChange: (view: DashboardView) => void
+  attentionCount: number
+  runningCount: number
+  systemCount: number
+}) {
+  const items: Array<{ value: DashboardView; label: string; helper: string; count: number }> = [
+    { value: 'today', label: 'Hari ini', helper: 'prioritas', count: attentionCount + runningCount },
+    { value: 'sectors', label: 'Sektor', helper: 'C-level', count: DEPARTMENT_ORDER.length },
+    { value: 'system', label: 'Sistem', helper: 'fondasi', count: systemCount },
+  ]
+
+  return (
+    <nav className="mt-3 rounded-lg border border-border-med bg-white p-1 shadow-soft" aria-label="Mode dashboard">
+      <div className="grid grid-cols-3 gap-1">
+        {items.map((item) => {
+          const isActive = item.value === active
+
+          return (
+            <button
+              key={item.value}
+              type="button"
+              onClick={() => onChange(item.value)}
+              className={cn(
+                'min-h-[58px] rounded-md px-2 py-2 text-left transition-colors duration-fast',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
+                isActive ? 'bg-text-primary text-white shadow-card' : 'text-text-secondary hover:bg-bg-surface',
+              )}
+            >
+              <span className="flex items-center justify-between gap-2">
+                <span className="text-xs font-extrabold">{item.label}</span>
+                <span
+                  className={cn(
+                    'rounded-full px-1.5 py-0.5 text-[10px] font-extrabold',
+                    isActive ? 'bg-white/16 text-white' : 'bg-bg-surface text-text-muted',
+                  )}
+                >
+                  {item.count}
+                </span>
+              </span>
+              <span className={cn('mt-1 block text-[10px] font-semibold', isActive ? 'text-white/60' : 'text-text-faint')}>
+                {item.helper}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+    </nav>
+  )
+}
+
 function CommandCenterSection({
   sector,
   attentionCount,
@@ -923,7 +934,6 @@ function CommandCenterSection({
   blockerBriefs,
   recentOutputBriefs,
   onCompose,
-  onAskAtmaja,
   onOpenBrief,
 }: {
   sector: SectorValue
@@ -934,7 +944,6 @@ function CommandCenterSection({
   blockerBriefs: Brief[]
   recentOutputBriefs: Brief[]
   onCompose: () => void
-  onAskAtmaja: () => void
   onOpenBrief: (id: string) => void
 }) {
   const sectorLabel = sector === 'all' ? 'Semua sektor' : `${DEPARTMENT_LABEL_SHORT[sector]} / ${sectorMeta[sector].subtitle}`
@@ -1036,22 +1045,14 @@ function CommandCenterSection({
         </div>
       )}
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      <div className="mt-3">
         <button
           type="button"
           onClick={onCompose}
-          className="inline-flex min-h-touch items-center justify-center gap-2 rounded-md bg-text-primary px-3 text-sm font-bold text-white shadow-card transition-transform duration-fast active:scale-[0.98]"
+          className="inline-flex min-h-touch w-full items-center justify-center gap-2 rounded-md bg-text-primary px-3 text-sm font-bold text-white shadow-card transition-transform duration-fast active:scale-[0.98]"
         >
           <Plus className="size-4" />
-          Buat brief
-        </button>
-        <button
-          type="button"
-          onClick={onAskAtmaja}
-          className="inline-flex min-h-touch items-center justify-center gap-2 rounded-md border border-border-med bg-white px-3 text-sm font-bold text-text-primary transition-transform duration-fast active:scale-[0.98]"
-        >
-          <MessageSquareText className="size-4" />
-          Tanya Atmaja
+          Buat brief baru
         </button>
       </div>
     </motion.section>
@@ -1235,24 +1236,9 @@ function DashboardHeader({ activeCount, confirmationCount }: { activeCount: numb
           </p>
           <p className="mt-1 text-xs font-semibold text-text-muted">Hari ini / Dashboard kerja</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            aria-label={`${confirmationCount} konfirmasi menunggu`}
-            className="relative inline-flex size-10 items-center justify-center rounded-md border border-border-med bg-white text-text-primary"
-          >
-            <Bell className="size-4" />
-            {confirmationCount > 0 && (
-              <span className="absolute right-2 top-2 size-2 rounded-full bg-status-decision shadow-[0_0_8px_rgba(194,85,65,0.55)]" />
-            )}
-          </button>
-          <button
-            type="button"
-            aria-label="Pengaturan"
-            className="inline-flex size-10 items-center justify-center rounded-md border border-border-med bg-white text-text-primary"
-          >
-            <Settings className="size-4" />
-          </button>
+        <div className="rounded-md border border-border-med bg-white px-3 py-2 text-right shadow-soft">
+          <p className="text-[17px] font-extrabold leading-none text-text-primary">{activeCount}</p>
+          <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.06em] text-text-muted">aktif</p>
         </div>
       </div>
       <div className="mt-3 flex items-center gap-2 text-[11px] font-semibold text-text-muted">
@@ -1326,96 +1312,6 @@ function SectorTabs({ active, onChange }: { active: SectorValue; onChange: (sect
         })}
       </div>
     </section>
-  )
-}
-
-function TaskSection({
-  title,
-  count,
-  icon: Icon,
-  tone,
-  emptyTitle,
-  emptyBody,
-  children,
-}: {
-  title: string
-  count: number
-  icon: typeof CheckCircle2
-  tone: SectionTone
-  emptyTitle: string
-  emptyBody: string
-  children: ReactNode
-}) {
-  return (
-    <section className="rounded-lg border border-border-med bg-white" aria-label={title}>
-      <div className="flex min-h-[56px] items-center justify-between gap-3 border-b border-border-soft px-3.5">
-        <div className="flex items-center gap-2.5">
-          <span className={cn('inline-flex size-8 items-center justify-center rounded-md', getToneBg(tone), getToneText(tone))}>
-            <Icon className="size-4" />
-          </span>
-          <h2 className="text-[13px] font-extrabold uppercase tracking-[0.04em] text-text-primary">{title}</h2>
-        </div>
-        <span className={cn('rounded-full px-2 py-1 text-[11px] font-extrabold', getToneBg(tone), getToneText(tone))}>
-          {count}
-        </span>
-      </div>
-
-      <div className="divide-y divide-border-soft">
-        {count > 0 ? (
-          children
-        ) : (
-          <div className="px-3.5 py-4">
-            <div className="flex gap-3">
-              <span className="mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-bg-surface text-text-muted">
-                <CircleDashed className="size-4" />
-              </span>
-              <div>
-                <p className="text-sm font-bold text-text-primary">{emptyTitle}</p>
-                <p className="mt-1 text-xs leading-5 text-text-muted">{emptyBody}</p>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </section>
-  )
-}
-
-function TaskRow({ brief, tone, onClick }: { brief: Brief; tone: SectionTone; onClick: () => void }) {
-  const leadRole = getLeadRole(brief)
-  const progress = brief.requestStatus === 'pending' ? 35 : brief.status === 'review' ? 82 : brief.status === 'final' ? 100 : 58
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="group flex w-full items-center gap-3 px-3.5 py-3 text-left transition-colors duration-fast hover:bg-bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
-    >
-      <span className={cn('h-10 w-1 shrink-0 rounded-full', getToneBar(tone))} />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.04em]', getToneBg(tone), getToneText(tone))}>
-            {brief.status}
-          </span>
-          <span className="text-[10px] font-bold uppercase tracking-[0.04em] text-text-faint">
-            {DEPARTMENT_LABEL_SHORT[leadRole]}
-          </span>
-        </div>
-        <p className="mt-1 truncate text-sm font-bold text-text-primary">{brief.title}</p>
-        <div className="mt-2 flex items-center gap-2">
-          <span className={cn('size-1.5 rounded-full', roleAccent[leadRole])} />
-          <span className="truncate text-[11px] font-semibold text-text-muted">{getPrimaryOwner(brief)}</span>
-          <span className="h-1 w-1 rounded-full bg-border-strong" />
-          <span className="text-[11px] font-semibold text-text-faint">{brief.timeAgo}</span>
-        </div>
-        {(brief.status === 'doing' || brief.status === 'review' || brief.requestStatus === 'pending') && (
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-bg-soft">
-            <span className={cn('block h-full rounded-full', getToneBar(tone))} style={{ width: `${progress}%` }} />
-          </div>
-        )}
-      </div>
-      <ChevronRight className="size-4 shrink-0 text-text-faint transition-transform duration-fast group-hover:translate-x-0.5" />
-    </button>
   )
 }
 
