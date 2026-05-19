@@ -28,6 +28,7 @@ import { ComposeSheet, simulateAiResponse } from '@/components/brief/ComposeShee
 import { agentRegistry } from '@/data/agentRegistry'
 import { cLevelPlans, type CLevelPlan } from '@/data/cLevelPlans'
 import { departmentStrengthAreas, workflowStages, type DepartmentStrengthArea } from '@/data/departmentStrength'
+import { intelligenceDimensions, intelligenceStages, type IntelligenceDimension } from '@/data/intelligenceMaturity'
 import {
   communicationPrinciples,
   plannerRoles,
@@ -64,7 +65,7 @@ import { cn } from '@/lib/utils'
 
 type SectorValue = 'all' | Role
 type SectionTone = 'decision' | 'doing' | 'review' | 'final' | 'neutral'
-type DashboardView = 'today' | 'sectors' | 'system'
+type DashboardView = 'today' | 'sectors' | 'learning' | 'system'
 
 type StrengthIconKey = DepartmentStrengthArea['id']
 
@@ -230,6 +231,7 @@ export default function Inbox() {
           onChange={setDashboardView}
           attentionCount={attentionCount}
           runningCount={runningBriefs.length}
+          learningCount={learningSnapshot.total}
           systemCount={departmentStrengthAreas.length}
         />
 
@@ -264,10 +266,18 @@ export default function Inbox() {
           </>
         )}
 
+        {dashboardView === 'learning' && (
+          <>
+            <IntelligenceOverviewSection snapshot={learningSnapshot} />
+            <IntelligenceDimensionSection />
+            <LearningMemorySection snapshot={learningSnapshot} />
+            <IntelligenceUpgradePathSection />
+          </>
+        )}
+
         {dashboardView === 'system' && (
           <>
             <PlanningNorthStarSection />
-            <LearningMemorySection snapshot={learningSnapshot} />
             <OperationalStrengthSection />
             <PlannerCouncilSection />
             <PlanningRitualSection />
@@ -356,6 +366,155 @@ function NorthStarPill({ label, value }: { label: string; value: string }) {
       <p className="text-[9px] font-bold uppercase tracking-[0.08em] text-white/52">{label}</p>
       <p className="mt-0.5 text-[12px] font-extrabold text-white">{value}</p>
     </div>
+  )
+}
+
+function IntelligenceOverviewSection({ snapshot }: { snapshot: LearningSnapshot }) {
+  const intelligenceIndex = getIntelligenceIndex(snapshot)
+  const activeStage = getIntelligenceStage(intelligenceIndex)
+  const averageDimension = Math.round(
+    intelligenceDimensions.reduce((total, dimension) => total + dimension.score, 0) / intelligenceDimensions.length,
+  )
+  const weakestDimension = intelligenceDimensions.reduce((weakest, dimension) =>
+    dimension.score < weakest.score ? dimension : weakest,
+  )
+
+  return (
+    <section className="mt-4 rounded-lg border border-text-primary bg-text-primary p-4 text-white shadow-card" aria-label="Otak AI">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-white/62">Otak AI</p>
+          <h2 className="mt-1 text-[24px] font-extrabold leading-7">Seberapa pintar sekarang</h2>
+          <p className="mt-2 max-w-[340px] text-xs font-semibold leading-5 text-white/72">
+            Ini bukan IQ. Ini intelligence readiness: seberapa baik Atmaja memahami bisnis, belajar dari Matthew, riset data, menyusun rencana, dan menjaga batas aman.
+          </p>
+        </div>
+        <div className="shrink-0 rounded-md bg-white px-3 py-2 text-right text-text-primary">
+          <p className="text-[28px] font-extrabold leading-none">{intelligenceIndex}%</p>
+          <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.06em] text-text-muted">index</p>
+        </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <NorthStarPill label="Stage" value={activeStage.label} />
+        <NorthStarPill label="Core" value={`${averageDimension}%`} />
+        <NorthStarPill label="Lessons" value={`${snapshot.total}`} />
+      </div>
+
+      <div className="mt-3 rounded-md border border-white/14 bg-white/8 px-3 py-2.5">
+        <div className="flex items-start gap-2.5">
+          <BrainCircuit className="mt-0.5 size-4 shrink-0 text-white/72" />
+          <div>
+            <p className="text-xs font-extrabold text-white">Yang paling menahan: {weakestDimension.title}</p>
+            <p className="mt-1 text-[11px] font-semibold leading-4 text-white/68">{weakestDimension.upgradeMove}</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function IntelligenceDimensionSection() {
+  return (
+    <section className="mt-4 rounded-lg border border-border-med bg-white p-3.5 shadow-soft" aria-label="Breakdown kecerdasan AI">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-label-caps text-accent-dark">Intelligence breakdown</p>
+          <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">7 sektor kecerdasan</h2>
+          <p className="mt-1 max-w-[320px] text-xs leading-5 text-text-secondary">
+            Setiap sektor punya current score, target 110, beyond 120, evidence, dan gap yang harus dibuka.
+          </p>
+        </div>
+        <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-md bg-accent-bg text-accent-dark">
+          <BarChart3 className="size-4" />
+        </span>
+      </div>
+
+      <div className="mt-3 grid gap-2">
+        {intelligenceDimensions.map((dimension) => (
+          <IntelligenceDimensionCard key={dimension.id} dimension={dimension} />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function IntelligenceDimensionCard({ dimension }: { dimension: IntelligenceDimension }) {
+  const currentWidth = Math.min(100, Math.round((dimension.score / dimension.northStar) * 100))
+  const targetLeft = Math.min(100, Math.round((dimension.target / dimension.northStar) * 100))
+
+  return (
+    <article className="rounded-md border border-border-soft bg-bg-surface px-3 py-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className={cn('inline-flex size-7 shrink-0 items-center justify-center rounded-md text-[10px] font-extrabold', getIntelligenceStatusClass(dimension.status))}>
+              {dimension.shortLabel.slice(0, 2).toUpperCase()}
+            </span>
+            <h3 className="min-w-0 text-[13px] font-extrabold leading-4 text-text-primary">{dimension.title}</h3>
+          </div>
+          <p className="mt-2 text-[11px] font-semibold leading-4 text-text-secondary">{dimension.meaning}</p>
+        </div>
+        <div className="shrink-0 text-right">
+          <p className="text-[20px] font-extrabold leading-none text-text-primary">{dimension.score}%</p>
+          <p className="mt-1 text-[9px] font-bold uppercase tracking-[0.05em] text-text-faint">target {dimension.target}</p>
+        </div>
+      </div>
+
+      <div className="relative mt-2 h-2.5 overflow-hidden rounded-full bg-white">
+        <span
+          className={cn('absolute inset-y-0 left-0 rounded-full', getIntelligenceBarClass(dimension.status))}
+          style={{ width: `${currentWidth}%` }}
+        />
+        <span className="absolute inset-y-[-2px] w-0.5 rounded-full bg-text-primary/60" style={{ left: `${targetLeft}%` }} />
+      </div>
+
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {dimension.evidence.slice(0, 4).map((item) => (
+          <span key={item} className="rounded-full border border-border-soft bg-white px-2 py-1 text-[10px] font-bold text-text-secondary">
+            {item}
+          </span>
+        ))}
+      </div>
+
+      <div className="mt-2 grid gap-1.5">
+        <MaturityNote label="Gap" body={dimension.blindSpot} />
+        <MaturityNote label="Naikkan" body={dimension.upgradeMove} />
+      </div>
+    </article>
+  )
+}
+
+function IntelligenceUpgradePathSection() {
+  return (
+    <section className="mt-4 rounded-lg border border-border-med bg-bg-surface p-3.5" aria-label="Tahap kecerdasan AI">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-label-caps text-text-muted">Tahap pintar</p>
+          <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">Cara membaca skornya</h2>
+          <p className="mt-1 text-xs leading-5 text-text-secondary">
+            Makin tinggi bukan berarti makin bebas. Makin tinggi berarti makin bisa bekerja mandiri dengan evidence dan approval gate.
+          </p>
+        </div>
+        <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-md bg-white text-text-primary">
+          <ShieldCheck className="size-4" />
+        </span>
+      </div>
+
+      <div className="mt-3 grid gap-2">
+        {intelligenceStages.map((stage) => (
+          <div key={stage.label} className="rounded-md border border-border-soft bg-white px-3 py-2.5">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-extrabold text-text-primary">{stage.label}</p>
+              <span className="rounded-full bg-bg-surface px-2 py-0.5 text-[10px] font-extrabold text-text-muted">
+                {stage.range}
+              </span>
+            </div>
+            <p className="mt-1 text-[11px] font-semibold leading-4 text-text-muted">{stage.meaning}</p>
+          </div>
+        ))}
+      </div>
+    </section>
   )
 }
 
@@ -1075,23 +1234,26 @@ function DashboardViewTabs({
   onChange,
   attentionCount,
   runningCount,
+  learningCount,
   systemCount,
 }: {
   active: DashboardView
   onChange: (view: DashboardView) => void
   attentionCount: number
   runningCount: number
+  learningCount: number
   systemCount: number
 }) {
   const items: Array<{ value: DashboardView; label: string; helper: string; count: number }> = [
     { value: 'today', label: 'Hari ini', helper: 'prioritas', count: attentionCount + runningCount },
     { value: 'sectors', label: 'Sektor', helper: 'C-level', count: DEPARTMENT_ORDER.length },
+    { value: 'learning', label: 'Otak', helper: 'learning', count: learningCount },
     { value: 'system', label: 'Sistem', helper: 'fondasi', count: systemCount },
   ]
 
   return (
     <nav className="mt-3 rounded-lg border border-border-med bg-white p-1 shadow-soft" aria-label="Mode dashboard">
-      <div className="grid grid-cols-3 gap-1">
+      <div className="grid grid-cols-4 gap-1">
         {items.map((item) => {
           const isActive = item.value === active
 
@@ -1572,4 +1734,36 @@ function getWorkflowStateClass(state: 'ready' | 'partial' | 'missing') {
   if (state === 'ready') return 'bg-status-final-bg text-status-final'
   if (state === 'partial') return 'bg-status-doing-bg text-status-doing'
   return 'bg-status-decision-bg text-status-decision'
+}
+
+function getIntelligenceIndex(snapshot: LearningSnapshot) {
+  const baseScore = Math.round(
+    intelligenceDimensions.reduce((total, dimension) => total + dimension.score, 0) / intelligenceDimensions.length,
+  )
+  const lessonBonus = Math.min(5, Math.floor(snapshot.total / 3))
+  const trustBonus = Math.min(4, snapshot.highConfidence)
+
+  return Math.min(120, baseScore + lessonBonus + trustBonus)
+}
+
+function getIntelligenceStage(score: number) {
+  if (score >= 111) return intelligenceStages[4]
+  if (score >= 101) return intelligenceStages[3]
+  if (score >= 86) return intelligenceStages[2]
+  if (score >= 61) return intelligenceStages[1]
+  return intelligenceStages[0]
+}
+
+function getIntelligenceStatusClass(status: IntelligenceDimension['status']) {
+  if (status === 'strong') return 'bg-status-final-bg text-status-final'
+  if (status === 'active') return 'bg-status-doing-bg text-status-doing'
+  if (status === 'developing') return 'bg-status-review-bg text-status-review'
+  return 'bg-status-decision-bg text-status-decision'
+}
+
+function getIntelligenceBarClass(status: IntelligenceDimension['status']) {
+  if (status === 'strong') return 'bg-status-final'
+  if (status === 'active') return 'bg-status-doing'
+  if (status === 'developing') return 'bg-status-review'
+  return 'bg-status-decision'
 }
