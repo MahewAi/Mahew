@@ -129,15 +129,7 @@ export default function Atmaja() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 pb-32 pt-safe-top sm:px-6 lg:px-8">
-      <header className="relative overflow-hidden pb-5 pt-6">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-16 -top-24 size-72 rounded-full opacity-40"
-          style={{
-            background: 'radial-gradient(circle at center, hsl(var(--role-ceo) / 0.6), transparent 65%)',
-          }}
-        />
-
+      <header className="relative pb-5 pt-6">
         <div className="relative">
           <div className="flex items-center justify-between gap-3">
             <p className="text-label-caps text-text-muted">CEO · Sintesis kepemimpinan</p>
