@@ -340,218 +340,138 @@ function CLevelPlanSection({ plans, mode = 'overview' }: { plans: CLevelPlan[]; 
   )
 }
 
-const departmentArchitectureLayers = [
-  {
-    label: 'Layer 0',
-    title: 'Matthew',
-    subtitle: 'Owner intent dan approval gate',
-    nodes: ['Arah bisnis', 'Prioritas', 'Approval'],
-    output: 'Mandat jelas untuk Atmaja.',
-  },
-  {
-    label: 'Layer 1',
-    title: 'Atmaja',
-    subtitle: 'CEO synthesis dan orchestration',
-    nodes: ['Sintesis', 'Push-back', 'Decision brief'],
-    output: 'Scope kerja turun ke C-level.',
-  },
-  {
-    label: 'Layer 2',
-    title: 'C-level',
-    subtitle: 'COO, CMO, CFO, CCO sebagai perancang area',
-    nodes: ['Operasi', 'Market', 'Finance', 'Creative'],
-    output: 'Rencana per sektor dan trade-off.',
-  },
-  {
-    label: 'Layer 3',
-    title: 'Specialist',
-    subtitle: '12 agent domain yang mengerjakan detail',
-    nodes: ['Research', 'Planning', 'Writing', 'Analysis'],
-    output: 'Data, opsi, risiko, timeline.',
-  },
-  {
-    label: 'Layer 4',
-    title: 'Render & Gate',
-    subtitle: 'Output visual sebelum keputusan',
-    nodes: ['Chart', 'Table', 'Diagram', 'Confirm'],
-    output: 'Brief siap dibaca dan diputuskan.',
-  },
-]
-
 function DepartmentArchitectureSection() {
-  const specialistCount = agentRegistry.filter((agent) => agent.parent && !['ceo', 'coo', 'cmo', 'cfo', 'cco'].includes(agent.id)).length
-
   return (
-    <section className="mt-4 space-y-3" aria-label="AI Department architecture map">
-      <div className="rounded-lg border border-text-primary bg-text-primary p-4 text-white shadow-card">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-white/62">Architecture map</p>
-            <h1 className="mt-1 text-[24px] font-extrabold leading-7">Breakdown AI Department</h1>
-            <p className="mt-2 max-w-[360px] text-xs font-semibold leading-5 text-white/72">
-              Peta ini menjelaskan struktur dari Matthew sampai specialist: siapa memegang layer apa, alurnya ke mana, dan output apa yang harus kembali ke approval.
-            </p>
-          </div>
-          <span className="shrink-0 rounded-md bg-white px-3 py-2 text-right text-text-primary">
-            <span className="block text-[18px] font-extrabold leading-none">5</span>
-            <span className="mt-1 block text-[9px] font-bold uppercase tracking-[0.06em] opacity-70">layer</span>
-          </span>
-        </div>
-
-        <div className="mt-3 grid grid-cols-3 gap-2">
-          <NorthStarPill label="C-level" value="4" />
-          <NorthStarPill label="Specialist" value={`${specialistCount}`} />
-          <NorthStarPill label="Gate" value="CEO" />
-        </div>
-      </div>
-
-      <DepartmentArchitectureFlow />
-
-      <div className="grid gap-2">
-        {DEPARTMENT_ORDER.map((role) => (
-          <ArchitectureRoleCard key={role} role={role} />
-        ))}
-      </div>
-    </section>
-  )
-}
-
-function DepartmentArchitectureFlow() {
-  return (
-    <section className="rounded-lg border border-border-med bg-white p-3.5 shadow-soft" aria-label="Department architecture flow">
-      <div className="flex items-start justify-between gap-3">
+    <section className="mt-4 space-y-3" aria-label="Live Department architecture dashboard">
+      <div className="flex items-end justify-between gap-3">
         <div>
-          <p className="text-label-caps text-accent-dark">Denah utama</p>
-          <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">Alur arsitektural</h2>
-          <p className="mt-1 text-xs font-semibold leading-5 text-text-secondary">
-            Ini bukan daftar aktivitas. Ini peta kerja permanen: input turun dari owner, diproses per layer, lalu kembali sebagai keputusan.
+          <p className="text-label-caps text-text-muted">Live Department</p>
+          <h1 className="mt-1 text-[24px] font-extrabold leading-7 text-text-primary">Peta arsitektur kerja</h1>
+          <p className="mt-1 max-w-[360px] text-xs font-semibold leading-5 text-text-secondary">
+            Denah alur dashboard, riset, C-level workspace, brief detail, dan render output.
           </p>
         </div>
-        <Workflow className="size-5 shrink-0 text-accent-dark" />
+        <span className="rounded-full border border-border-med bg-white px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.06em] text-text-muted shadow-soft">
+          geser
+        </span>
       </div>
-      <div className="mt-3 grid gap-2">
-        {departmentArchitectureLayers.map((layer, index) => (
-          <div key={layer.label} className="relative rounded-md border border-border-soft bg-bg-surface p-3">
-            {index < departmentArchitectureLayers.length - 1 && (
-              <span className="absolute -bottom-2 left-6 h-2 w-px bg-border-med" aria-hidden="true" />
-            )}
-            <div className="flex items-start gap-2.5">
-              <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-white text-[11px] font-extrabold text-accent-dark shadow-soft">
-                {index + 1}
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <p className="text-[12px] font-extrabold text-text-primary">{layer.title}</p>
-                  <span className="rounded-full bg-white px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.05em] text-text-muted">
-                    {layer.label}
-                  </span>
-                </div>
-                <p className="mt-1 text-[11px] font-semibold leading-4 text-text-secondary">{layer.subtitle}</p>
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {layer.nodes.map((node) => (
-                    <span key={node} className="rounded-full border border-border-soft bg-white px-2 py-1 text-[10px] font-extrabold text-text-secondary">
-                      {node}
-                    </span>
-                  ))}
-                </div>
-                <p className="mt-2 text-[10px] font-bold leading-4 text-text-muted">Output: {layer.output}</p>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+      <LiveDepartmentMap />
     </section>
   )
 }
 
-function ArchitectureRoleCard({ role }: { role: Role }) {
-  const [expanded, setExpanded] = useState(role === 'ceo')
-  const plan = cLevelPlans.find((item) => item.role === role)
-  const roster =
-    role === 'ceo'
-      ? agentRegistry.filter((agent) => ['coo', 'cmo', 'cfo', 'cco'].includes(agent.id))
-      : agentRegistry.filter((agent) => agent.parent === role && agent.id !== role)
-  const architectureRole = role === 'ceo' ? 'Layer pusat yang membaca mandat, membagi scope, dan menjaga keputusan tetap tajam.' : plan?.title ?? 'Layer sektor yang mengubah mandat menjadi rencana kerja.'
+function LiveDepartmentMap() {
+  type MapNode = {
+    id: string
+    label: string
+    x: number
+    y: number
+    w: number
+    h: number
+    tone?: 'primary' | 'accent'
+  }
+  const mapNodes: MapNode[] = [
+    { id: 'main', label: 'Dashboard Utama', x: 118, y: 18, w: 128, h: 36, tone: 'primary' },
+    { id: 'pending', label: 'Pending', x: 24, y: 88, w: 84, h: 34 },
+    { id: 'running', label: 'Running', x: 138, y: 88, w: 84, h: 34 },
+    { id: 'confirm', label: 'Need Confirmation', x: 256, y: 88, w: 138, h: 34 },
+    { id: 'alerts', label: 'Research Alerts', x: 434, y: 88, w: 118, h: 34 },
+    { id: 'radar', label: 'Tavily Research Radar', x: 420, y: 158, w: 150, h: 34, tone: 'accent' },
+    { id: 'competitor', label: 'Competitor Table', x: 170, y: 232, w: 128, h: 34 },
+    { id: 'market', label: 'Market Signal Map', x: 330, y: 232, w: 140, h: 34 },
+    { id: 'source', label: 'Source Evidence', x: 500, y: 232, w: 128, h: 34 },
+    { id: 'workspace', label: 'C-Level Workspaces', x: 804, y: 88, w: 150, h: 34, tone: 'primary' },
+    { id: 'ceo', label: 'CEO / Atmaja', x: 646, y: 158, w: 108, h: 34 },
+    { id: 'coo', label: 'COO', x: 782, y: 158, w: 72, h: 34 },
+    { id: 'cmo', label: 'CMO', x: 882, y: 158, w: 72, h: 34 },
+    { id: 'cfo', label: 'CFO', x: 982, y: 158, w: 72, h: 34 },
+    { id: 'cco', label: 'CCO', x: 1082, y: 158, w: 72, h: 34 },
+    { id: 'brief', label: 'Brief Detail', x: 774, y: 230, w: 120, h: 34, tone: 'accent' },
+    { id: 'markdown', label: 'Markdown', x: 508, y: 310, w: 92, h: 34 },
+    { id: 'table', label: 'Table', x: 644, y: 310, w: 72, h: 34 },
+    { id: 'chart', label: 'Chart', x: 780, y: 310, w: 72, h: 34 },
+    { id: 'mermaid', label: 'Mermaid Diagram', x: 910, y: 310, w: 132, h: 34 },
+    { id: 'decision', label: 'Decision Buttons', x: 1100, y: 310, w: 140, h: 34 },
+  ]
+
+  const nodeById = new Map(mapNodes.map((node) => [node.id, node]))
+  const center = (id: string) => {
+    const node = nodeById.get(id)!
+    return { x: node.x + node.w / 2, y: node.y + node.h / 2 }
+  }
+  const path = (from: string, to: string, bend = 34) => {
+    const start = center(from)
+    const end = center(to)
+    const midY = Math.max(start.y, end.y) + bend
+
+    return `M ${start.x} ${start.y + 18} C ${start.x} ${midY}, ${end.x} ${midY}, ${end.x} ${end.y - 18}`
+  }
 
   return (
-    <article className="rounded-lg border border-border-med bg-white p-3.5 shadow-soft">
-      <button
-        type="button"
-        onClick={() => setExpanded((value) => !value)}
-        className="w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
-        aria-expanded={expanded}
-      >
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className={cn('inline-flex size-9 shrink-0 items-center justify-center rounded-md text-xs font-extrabold text-white', roleAccent[role])}>
-                {DEPARTMENT_LABEL_SHORT[role]}
-              </span>
-              <div className="min-w-0">
-                <h3 className="text-[14px] font-extrabold leading-4 text-text-primary">{sectorMeta[role].title}</h3>
-                <p className="mt-0.5 text-[11px] font-semibold text-text-muted">{sectorMeta[role].subtitle}</p>
-              </div>
-            </div>
-            <p className="mt-2 text-[11px] font-semibold leading-4 text-text-secondary">{architectureRole}</p>
-          </div>
-          <div className="shrink-0 text-right">
-            <p className="text-[20px] font-extrabold leading-none text-text-primary">{roster.length}</p>
-            <p className="mt-1 text-[9px] font-bold uppercase tracking-[0.05em] text-text-faint">node</p>
-          </div>
+    <div className="overflow-x-auto rounded-lg border border-[#2b2926] bg-[#171716] shadow-card [scrollbar-color:#6d6256_#171716]">
+      <div className="relative h-[380px] w-[1280px] overflow-hidden bg-[#171716]">
+        <div className="absolute left-4 top-3 z-10 flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-white/45">
+          <span className="inline-flex size-2 rounded-full bg-status-final" />
+          Architecture Flow
         </div>
-        <div className="mt-2 flex items-center justify-between gap-3">
-          <span className="text-[10px] font-extrabold uppercase tracking-[0.06em] text-text-faint">
-            {role === 'ceo' ? 'C-level layer' : 'Specialist layer'}
-          </span>
-          <span className="rounded-full bg-bg-surface px-2 py-1 text-[10px] font-extrabold text-accent-dark">
-            {expanded ? 'Tutup' : 'Buka denah'}
-          </span>
+        <div className="absolute right-4 top-3 z-10 flex gap-2">
+          <span className="rounded-sm border border-white/10 px-2 py-1 text-[10px] font-bold text-white/45">AI Dept</span>
+          <span className="rounded-sm border border-white/10 px-2 py-1 text-[10px] font-bold text-white/45">Output Map</span>
         </div>
-      </button>
 
-      {expanded && (
-        <div className="mt-3 grid gap-2">
-          <ArchitectureDetailPanel
-            title="Breakdown arsitektural"
-            nodes={role === 'ceo' ? ['Atmaja', 'COO', 'CMO', 'CFO', 'CCO', 'Matthew gate'] : [sectorMeta[role].title, ...roster.map((agent) => CONTRIBUTOR_META[agent.id]?.name ?? agent.folder), 'Output']}
-            flow={getRoleArchitectureFlow(role)}
-            notes={[
-              { label: 'Fungsi', body: architectureRole },
-              { label: 'Output visual', body: role === 'ceo' ? 'Synthesis brief, decision map, dan approval lane.' : 'Timeline, diagram, data signal, dan recommendation block dari sektor ini.' },
-            ]}
-          />
+        <svg className="absolute inset-0 size-full" viewBox="0 0 1280 380" aria-hidden="true">
+          <defs>
+            <marker id="department-arrow" markerHeight="6" markerWidth="6" orient="auto" refX="5" refY="3">
+              <path d="M0,0 L6,3 L0,6 Z" fill="#7e7972" />
+            </marker>
+          </defs>
+          <g fill="none" stroke="#6f6a63" strokeLinecap="round" strokeWidth="1.2" opacity="0.82" markerEnd="url(#department-arrow)">
+            <path d={path('main', 'pending', 6)} />
+            <path d={path('main', 'running', 8)} />
+            <path d={path('main', 'confirm', 8)} />
+            <path d={path('main', 'alerts', 8)} />
+            <path d={path('alerts', 'radar', 4)} />
+            <path d={path('radar', 'competitor', 10)} />
+            <path d={path('radar', 'market', 8)} />
+            <path d={path('radar', 'source', 8)} />
+            <path d="M 246 36 C 520 48, 730 40, 879 88" />
+            <path d={path('workspace', 'ceo', 10)} />
+            <path d={path('workspace', 'coo', 10)} />
+            <path d={path('workspace', 'cmo', 10)} />
+            <path d={path('workspace', 'cfo', 10)} />
+            <path d={path('workspace', 'cco', 10)} />
+            <path d={path('ceo', 'brief', 6)} />
+            <path d={path('coo', 'brief', 8)} />
+            <path d={path('cmo', 'brief', 8)} />
+            <path d={path('cfo', 'brief', 8)} />
+            <path d={path('cco', 'brief', 8)} />
+            <path d={path('source', 'brief', 16)} />
+            <path d={path('brief', 'markdown', 10)} />
+            <path d={path('brief', 'table', 8)} />
+            <path d={path('brief', 'chart', 8)} />
+            <path d={path('brief', 'mermaid', 8)} />
+            <path d={path('brief', 'decision', 8)} />
+          </g>
+        </svg>
 
-          {plan && (
-            <div className="rounded-md border border-border-soft bg-bg-surface p-3">
-              <p className="text-[10px] font-extrabold uppercase tracking-[0.08em] text-text-faint">Output area</p>
-              <div className="mt-2 grid grid-cols-2 gap-1.5">
-                {['Timeline', 'Visual map', 'Data signal', 'Decision brief'].map((item) => (
-                  <span key={item} className="rounded-full bg-white px-2 py-1.5 text-center text-[10px] font-extrabold text-text-secondary shadow-soft">
-                    {item}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="grid gap-1.5">
-            {roster.map((agent) => (
-              <div key={agent.id} className="rounded-md border border-border-soft bg-bg-surface px-3 py-2">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-extrabold text-text-primary">{CONTRIBUTOR_META[agent.id]?.name ?? agent.folder}</p>
-                    <p className="mt-1 text-[10px] font-semibold leading-4 text-text-muted">{agent.responsibility}</p>
-                  </div>
-                  <span className={cn('shrink-0 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.04em]', agent.status === 'ready' ? 'bg-status-final-bg text-status-final' : 'bg-status-review-bg text-status-review')}>
-                    {agent.status}
-                  </span>
-                </div>
-              </div>
-            ))}
+        {mapNodes.map((node) => (
+          <div
+            key={node.id}
+            className={cn(
+              'absolute z-20 flex items-center justify-center border px-2 text-center text-[10px] font-extrabold leading-3 text-white shadow-[0_8px_22px_rgba(0,0,0,0.24)]',
+              node.tone === 'primary'
+                ? 'border-white/14 bg-[#3a3836]'
+                : node.tone === 'accent'
+                  ? 'border-[#a38a6b]/35 bg-[#3f3b35]'
+                  : 'border-white/10 bg-[#302f2e]',
+            )}
+            style={{ left: node.x, top: node.y, width: node.w, height: node.h }}
+          >
+            {node.label}
           </div>
-        </div>
-      )}
-    </article>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -1573,7 +1493,7 @@ function DashboardViewTabs({
 }) {
   const items: Array<{ value: DashboardView; label: string; helper: string; count: number }> = [
     { value: 'today', label: 'Hari ini', helper: 'prioritas', count: attentionCount + runningCount },
-    { value: 'department', label: 'Peta', helper: 'arsitektur', count: agentRegistry.length },
+    { value: 'department', label: 'Live', helper: 'map', count: agentRegistry.length },
     { value: 'sectors', label: 'Sektor', helper: 'C-level', count: DEPARTMENT_ORDER.length },
     { value: 'learning', label: 'Otak', helper: 'learning', count: learningCount },
     { value: 'system', label: 'Sistem', helper: 'fondasi', count: systemCount },
@@ -2294,56 +2214,6 @@ function getWorkflowStateClass(state: 'ready' | 'partial' | 'missing') {
   if (state === 'ready') return 'bg-status-final-bg text-status-final'
   if (state === 'partial') return 'bg-status-doing-bg text-status-doing'
   return 'bg-status-decision-bg text-status-decision'
-}
-
-function getRoleArchitectureFlow(role: Role) {
-  if (role === 'ceo') {
-    return [
-      'Matthew memberi arah, batasan, atau pertanyaan strategis.',
-      'Atmaja membaca konteks bisnis, memecah scope, dan menentukan C-level yang perlu bergerak.',
-      'COO, CMO, CFO, dan CCO mengembalikan trade-off dari area masing-masing.',
-      'Atmaja menyusun synthesis brief, push-back, dan opsi keputusan.',
-      'Output berhenti di Matthew gate untuk approval, revisi, atau prioritas baru.',
-    ]
-  }
-
-  if (role === 'coo') {
-    return [
-      'Atmaja menurunkan mandat operasi ke COO.',
-      'COO memecah pekerjaan ke HR & Systems, Production Manager, dan Curator.',
-      'Specialist mengembalikan sistem kerja, supply chain, vendor, katalog, dan risiko eksekusi.',
-      'COO menyusun operating plan, timeline, blocker, dan kebutuhan keputusan.',
-      'Hasil naik ke Atmaja sebagai bagian dari synthesis brief.',
-    ]
-  }
-
-  if (role === 'cmo') {
-    return [
-      'Atmaja menurunkan mandat market, brand, atau growth ke CMO.',
-      'CMO membagi scope ke Brand Strategist, Market Researcher, Sales Strategist, dan Innovation Scout.',
-      'Specialist mengembalikan positioning, competitor signal, funnel, trend, dan ide produk.',
-      'CMO menyusun market thesis, channel strategy, visual map, dan risk signal.',
-      'Hasil naik ke Atmaja untuk dipertemukan dengan operasi dan finance.',
-    ]
-  }
-
-  if (role === 'cfo') {
-    return [
-      'Atmaja menurunkan mandat model bisnis, budget, pricing, atau ROI ke CFO.',
-      'CFO membagi scope ke Business Designer dan Financial Analyst.',
-      'Specialist mengembalikan revenue logic, cost structure, forecast, dan sensitivity analysis.',
-      'CFO menyusun financial decision frame dan batas aman eksekusi.',
-      'Hasil naik ke Atmaja untuk dibandingkan dengan peluang market dan kapasitas operasi.',
-    ]
-  }
-
-  return [
-    'Atmaja menurunkan mandat komunikasi, dokumen, atau evidence ke CCO.',
-    'CCO membagi scope ke Document Writer, Editorial, dan Web Researcher.',
-    'Specialist mengembalikan source, copy, narasi, dokumen, dan consistency check.',
-    'CCO menyusun brief naratif, document pack, dan source-backed output.',
-    'Hasil naik ke Atmaja agar keputusan punya bahasa, bukti, dan format yang siap dibaca.',
-  ]
 }
 
 function getIntelligenceFlow(dimension: IntelligenceDimension) {
