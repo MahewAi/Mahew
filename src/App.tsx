@@ -21,7 +21,7 @@ export default function App() {
         {/* Global grain texture overlay */}
         <svg
           aria-hidden="true"
-          className="fixed inset-0 size-full opacity-[0.035] mix-blend-multiply pointer-events-none z-0"
+          className="fixed inset-0 size-full opacity-[0.02] mix-blend-multiply pointer-events-none z-0"
         >
           <filter id="app-grain">
             <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch" />
