@@ -1,63 +1,105 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { RefreshCw } from 'lucide-react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { cn } from '@/lib/utils'
 
-/**
- * Listens for service worker updates and shows a toast prompt.
- *
- * Update detection triggers:
- * 1. Periodic — setiap 60 detik (untuk PWA yang lama dibuka)
- * 2. Visibility change — saat user buka app dari background (use case paling umum)
- * 3. Online status change — saat reconnect ke internet
- * 4. Window focus — saat user tap PWA icon dari homescreen
- *
- * Konsekuensi: setelah user pertama kali install versi ini, semua deploy baru
- * akan otomatis ke-detect dalam beberapa detik tanpa perlu uninstall.
- */
 export function PwaUpdatePrompt() {
   const registrationRef = useRef<ServiceWorkerRegistration | null>(null)
   const hasReloadedRef = useRef(false)
+  const intervalRef = useRef<number | null>(null)
+  const dismissedUntilRef = useRef(0)
+  const [serverUpdateAvailable, setServerUpdateAvailable] = useState(false)
+
+  const checkServerBundle = useCallback(async () => {
+    if (dismissedUntilRef.current > Date.now()) return
+
+    const currentBundle = Array.from(document.scripts)
+      .map((script) => script.src)
+      .find((src) => /\/assets\/index-[\w-]+\.js$/.test(src))
+
+    if (!currentBundle) return
+
+    try {
+      const response = await fetch(`/?__gerai_update_check=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          Pragma: 'no-cache',
+        },
+      })
+      const html = await response.text()
+      const nextBundle = html.match(/\/assets\/index-[\w-]+\.js/)?.[0]
+      if (nextBundle && !currentBundle.endsWith(nextBundle)) {
+        setServerUpdateAvailable(true)
+      }
+    } catch {
+      // Offline or transient network failure.
+    }
+  }, [])
 
   const {
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
   } = useRegisterSW({
-    onRegistered(registration) {
+    immediate: true,
+    onRegisteredSW(_swUrl, registration) {
       if (!registration) return
       registrationRef.current = registration
-      // Periodic check setiap 60 detik
-      setInterval(() => {
+      registration.update().catch(() => {
+        // Ignore transient update failures.
+      })
+      void checkServerBundle()
+
+      if (intervalRef.current !== null) {
+        window.clearInterval(intervalRef.current)
+      }
+      intervalRef.current = window.setInterval(() => {
         registration.update().catch(() => {
-          /* ignore — offline atau transient error */
+          // Offline or transient network failure.
         })
-      }, 60 * 1000)
+        void checkServerBundle()
+      }, 20 * 1000)
     },
     onRegisterError(error) {
       console.error('SW registration error', error)
     },
   })
 
-  // Trigger update check di banyak event — bukan cuma timer
+  const hardRefreshApp = useCallback(async () => {
+    try {
+      await updateServiceWorker(true)
+    } catch {
+      // Continue with cache-busting fallback.
+    }
+
+    try {
+      const cacheNames = await caches.keys()
+      await Promise.all(cacheNames.map((name) => caches.delete(name)))
+    } catch {
+      // Cache API unavailable.
+    }
+
+    const url = new URL(window.location.href)
+    url.searchParams.set('refresh', `pwa-${Date.now()}`)
+    window.location.replace(url.toString())
+  }, [updateServiceWorker])
+
   useEffect(() => {
     const checkForUpdate = () => {
       registrationRef.current?.update().catch(() => {
-        /* ignore */
+        // Ignore transient update failures.
       })
+      void checkServerBundle()
     }
 
-    // Saat user buka app dari background (pin di homescreen → buka)
     const onVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         checkForUpdate()
       }
     }
 
-    // Saat reconnect ke internet (user dari offline → online)
     const onOnline = () => checkForUpdate()
-
-    // Saat window dapat focus (desktop tab switch)
     const onFocus = () => checkForUpdate()
 
     const onControllerChange = () => {
@@ -71,28 +113,31 @@ export function PwaUpdatePrompt() {
     window.addEventListener('focus', onFocus)
     navigator.serviceWorker?.addEventListener('controllerchange', onControllerChange)
 
-    // Initial check kalau registration sudah ready
-    if (registrationRef.current) checkForUpdate()
+    checkForUpdate()
 
     return () => {
       document.removeEventListener('visibilitychange', onVisibilityChange)
       window.removeEventListener('online', onOnline)
       window.removeEventListener('focus', onFocus)
       navigator.serviceWorker?.removeEventListener('controllerchange', onControllerChange)
+      if (intervalRef.current !== null) {
+        window.clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
     }
-  }, [])
+  }, [checkServerBundle])
 
-  // Kalau user dismiss, jangan langsung trigger lagi (silent until next update)
-  useEffect(() => {
-    if (!needRefresh) return
-    // Auto-dismiss setelah 60 detik kalau user diam
-    const id = window.setTimeout(() => setNeedRefresh(false), 60_000)
-    return () => window.clearTimeout(id)
-  }, [needRefresh, setNeedRefresh])
+  const showPrompt = needRefresh || serverUpdateAvailable
+
+  const dismissPrompt = () => {
+    dismissedUntilRef.current = Date.now() + 10 * 60 * 1000
+    setNeedRefresh(false)
+    setServerUpdateAvailable(false)
+  }
 
   return (
     <AnimatePresence>
-      {needRefresh && (
+      {showPrompt && (
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -104,30 +149,28 @@ export function PwaUpdatePrompt() {
             'fixed bottom-24 left-1/2 -translate-x-1/2 z-toast mb-safe-bottom',
             'glass-strong rounded-full shadow-glass-hero',
             'px-3 py-2 flex items-center gap-2.5',
-            'min-w-[280px] max-w-[88vw]',
+            'min-w-[300px] max-w-[92vw]',
           )}
         >
-          <RefreshCw aria-hidden="true" className="size-4 text-accent-dark shrink-0" />
-          <span className="text-sm font-medium text-text-primary flex-1">
-            Versi baru tersedia
-          </span>
+          <RefreshCw aria-hidden="true" className="size-4 shrink-0 text-accent-dark" />
+          <span className="flex-1 text-sm font-bold text-text-primary">Versi baru siap dipakai</span>
           <button
             type="button"
-            onClick={() => setNeedRefresh(false)}
-            className="text-meta font-medium text-text-muted hover:text-text-primary px-2"
+            onClick={dismissPrompt}
+            className="px-2 text-meta font-medium text-text-muted hover:text-text-primary"
           >
             Nanti
           </button>
           <button
             type="button"
-            onClick={() => updateServiceWorker(true)}
+            onClick={() => void hardRefreshApp()}
             className={cn(
-              'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full',
-              'bg-accent text-white text-meta font-semibold shadow-glow-accent',
-              'hover:bg-accent-dark transition-colors duration-fast',
+              'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5',
+              'bg-accent text-meta font-semibold text-white shadow-glow-accent',
+              'transition-colors duration-fast hover:bg-accent-dark',
             )}
           >
-            Muat ulang
+            Update
           </button>
         </motion.div>
       )}
