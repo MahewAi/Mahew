@@ -65,7 +65,7 @@ import { cn } from '@/lib/utils'
 
 type SectorValue = 'all' | Role
 type SectionTone = 'decision' | 'doing' | 'review' | 'final' | 'neutral'
-type DashboardView = 'today' | 'sectors' | 'learning' | 'system'
+type DashboardView = 'today' | 'department' | 'sectors' | 'learning' | 'system'
 type CLevelWorkbenchMode = 'brief' | 'timeline' | 'visual' | 'data' | 'output'
 
 type StrengthIconKey = DepartmentStrengthArea['id']
@@ -250,6 +250,14 @@ export default function Inbox() {
           />
         )}
 
+        {dashboardView === 'department' && (
+          <DepartmentLiveSection
+            briefs={briefs}
+            health={agentHealth}
+            onOpenBrief={(id) => navigate(`/brief/${id}`)}
+          />
+        )}
+
         {dashboardView === 'sectors' && (
           <>
             <SectorTabs active={sector} onChange={setSector} />
@@ -333,6 +341,199 @@ function CLevelPlanSection({ plans, mode = 'overview' }: { plans: CLevelPlan[]; 
         ))}
       </div>
     </section>
+  )
+}
+
+function DepartmentLiveSection({
+  briefs,
+  health,
+  onOpenBrief,
+}: {
+  briefs: Brief[]
+  health: AgentHealth
+  onOpenBrief: (id: string) => void
+}) {
+  const activeBriefs = briefs.filter((brief) => brief.status !== 'final')
+  const readyAgents = agentRegistry.filter((agent) => agent.status === 'ready').length
+  const runtimeActive = health.runtime.status === 'active'
+
+  return (
+    <section className="mt-4 space-y-3" aria-label="AI Department live map">
+      <div className="rounded-lg border border-text-primary bg-text-primary p-4 text-white shadow-card">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-white/62">Live department map</p>
+            <h1 className="mt-1 text-[24px] font-extrabold leading-7">AI Department dari atas ke bawah</h1>
+            <p className="mt-2 max-w-[360px] text-xs font-semibold leading-5 text-white/72">
+              Peta ini membaca siapa yang memegang area, sedang menyusun apa, dan bagaimana output naik kembali ke Matthew.
+            </p>
+          </div>
+          <span className={cn('shrink-0 rounded-md px-3 py-2 text-right', runtimeActive ? 'bg-white text-text-primary' : 'bg-status-review-bg text-status-review')}>
+            <span className="block text-[18px] font-extrabold leading-none">{runtimeActive ? 'Live' : 'Fallback'}</span>
+            <span className="mt-1 block text-[9px] font-bold uppercase tracking-[0.06em] opacity-70">runtime</span>
+          </span>
+        </div>
+
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          <NorthStarPill label="Agents" value={`${readyAgents}/${agentRegistry.length}`} />
+          <NorthStarPill label="Active" value={`${activeBriefs.length}`} />
+          <NorthStarPill label="Bridge" value={health.bridge.mode} />
+        </div>
+      </div>
+
+      <DepartmentFlowMap />
+
+      <div className="grid gap-2">
+        {DEPARTMENT_ORDER.map((role) => (
+          <LiveRoleCard
+            key={role}
+            role={role}
+            briefs={briefs.filter((brief) => getBriefDepartments(brief.contributors).includes(role))}
+            onOpenBrief={onOpenBrief}
+          />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function DepartmentFlowMap() {
+  const flow = ['Matthew', 'Atmaja', 'C-level', 'Specialist', 'Visual output', 'Approval']
+
+  return (
+    <section className="rounded-lg border border-border-med bg-white p-3.5 shadow-soft" aria-label="Department architecture flow">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-label-caps text-accent-dark">Alur kerja</p>
+          <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">Dari input ke keputusan</h2>
+          <p className="mt-1 text-xs font-semibold leading-5 text-text-secondary">
+            Brief turun dari Matthew ke Atmaja, dipecah ke C-level, dikerjakan specialist, lalu kembali sebagai output visual dan decision gate.
+          </p>
+        </div>
+        <Workflow className="size-5 shrink-0 text-accent-dark" />
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-1.5">
+        {flow.map((item, index) => (
+          <div key={item} className="rounded-md border border-border-soft bg-bg-surface px-2.5 py-2">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-white text-[10px] font-extrabold text-text-muted">
+                {index + 1}
+              </span>
+              <p className="text-[11px] font-extrabold text-text-primary">{item}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function LiveRoleCard({
+  role,
+  briefs,
+  onOpenBrief,
+}: {
+  role: Role
+  briefs: Brief[]
+  onOpenBrief: (id: string) => void
+}) {
+  const [expanded, setExpanded] = useState(role === 'ceo')
+  const activeBriefs = briefs.filter((brief) => brief.status !== 'final')
+  const plan = cLevelPlans.find((item) => item.role === role)
+  const roster =
+    role === 'ceo'
+      ? agentRegistry.filter((agent) => ['coo', 'cmo', 'cfo', 'cco'].includes(agent.id))
+      : agentRegistry.filter((agent) => agent.parent === role && agent.id !== role)
+  const currentWork = role === 'ceo' ? 'Orkestrasi C-level, sintesis keputusan, dan approval gate.' : plan?.title ?? 'Monitoring sektor.'
+
+  return (
+    <article className="rounded-lg border border-border-med bg-white p-3.5 shadow-soft">
+      <button
+        type="button"
+        onClick={() => setExpanded((value) => !value)}
+        className="w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+        aria-expanded={expanded}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className={cn('inline-flex size-9 shrink-0 items-center justify-center rounded-md text-xs font-extrabold text-white', roleAccent[role])}>
+                {DEPARTMENT_LABEL_SHORT[role]}
+              </span>
+              <div className="min-w-0">
+                <h3 className="text-[14px] font-extrabold leading-4 text-text-primary">{sectorMeta[role].title}</h3>
+                <p className="mt-0.5 text-[11px] font-semibold text-text-muted">{sectorMeta[role].subtitle}</p>
+              </div>
+            </div>
+            <p className="mt-2 text-[11px] font-semibold leading-4 text-text-secondary">{currentWork}</p>
+          </div>
+          <div className="shrink-0 text-right">
+            <p className="text-[20px] font-extrabold leading-none text-text-primary">{activeBriefs.length}</p>
+            <p className="mt-1 text-[9px] font-bold uppercase tracking-[0.05em] text-text-faint">aktif</p>
+          </div>
+        </div>
+        <div className="mt-2 flex items-center justify-between gap-3">
+          <span className="text-[10px] font-extrabold uppercase tracking-[0.06em] text-text-faint">
+            {roster.length} bawahan / {briefs.length} brief
+          </span>
+          <span className="rounded-full bg-bg-surface px-2 py-1 text-[10px] font-extrabold text-accent-dark">
+            {expanded ? 'Tutup' : 'Lihat live'}
+          </span>
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="mt-3 grid gap-2">
+          <ArchitectureDetailPanel
+            title="Denah kerja role"
+            nodes={role === 'ceo' ? ['Atmaja', 'COO', 'CMO', 'CFO', 'CCO', 'Matthew gate'] : [sectorMeta[role].title, ...roster.map((agent) => CONTRIBUTOR_META[agent.id]?.name ?? agent.folder), 'Output']}
+            flow={[
+              `${sectorMeta[role].title} menerima mandat dan membaca brief aktif.`,
+              role === 'ceo'
+                ? 'Atmaja membagi scope ke C-level lalu menyatukan trade-off.'
+                : `${sectorMeta[role].title} menurunkan tugas ke specialist sesuai domain.`,
+              'Output kembali sebagai timeline, visual, data signal, dan decision gate.',
+              'Matthew memberi approval, revisi, atau prioritas baru.',
+            ]}
+            notes={[
+              { label: 'Sedang', body: currentWork },
+              { label: 'Live data', body: 'Saat ini memakai registry, plan, dan brief app. Job stream server akan membuat status ini real-time.' },
+            ]}
+          />
+
+          {activeBriefs.slice(0, 2).map((brief) => (
+            <button
+              key={brief.id}
+              type="button"
+              onClick={() => onOpenBrief(brief.id)}
+              className="flex items-center justify-between gap-3 rounded-md border border-border-soft bg-bg-surface px-3 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              <span className="min-w-0">
+                <span className="block truncate text-xs font-extrabold text-text-primary">{brief.title}</span>
+                <span className="mt-0.5 block text-[11px] font-semibold text-text-muted">{brief.status}</span>
+              </span>
+              <ChevronRight className="size-4 shrink-0 text-text-faint" />
+            </button>
+          ))}
+
+          <div className="grid gap-1.5">
+            {roster.map((agent) => (
+              <div key={agent.id} className="rounded-md border border-border-soft bg-bg-surface px-3 py-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-extrabold text-text-primary">{CONTRIBUTOR_META[agent.id]?.name ?? agent.folder}</p>
+                    <p className="mt-1 text-[10px] font-semibold leading-4 text-text-muted">{agent.responsibility}</p>
+                  </div>
+                  <span className={cn('shrink-0 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.04em]', agent.status === 'ready' ? 'bg-status-final-bg text-status-final' : 'bg-status-review-bg text-status-review')}>
+                    {agent.status}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </article>
   )
 }
 
@@ -504,6 +705,7 @@ function IntelligenceDimensionCard({ dimension }: { dimension: IntelligenceDimen
         <ArchitectureDetailPanel
           title="Struktur arsitektural"
           nodes={['Input', ...dimension.evidence.slice(0, 4), 'Gap', 'Upgrade']}
+          flow={getIntelligenceFlow(dimension)}
           notes={[
             { label: 'Gap', body: dimension.blindSpot },
             { label: 'Naikkan', body: dimension.upgradeMove },
@@ -518,9 +720,11 @@ function ArchitectureDetailPanel({
   title,
   nodes,
   notes,
+  flow,
 }: {
   title: string
   nodes: string[]
+  flow?: string[]
   notes: Array<{ label: string; body: string }>
 }) {
   return (
@@ -541,6 +745,21 @@ function ArchitectureDetailPanel({
           </div>
         ))}
       </div>
+      {flow && flow.length > 0 && (
+        <div className="mt-3 rounded-md border border-border-soft bg-bg-surface px-3 py-2.5">
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.08em] text-text-faint">Alur kinerja</p>
+          <div className="mt-2 space-y-2">
+            {flow.map((step, index) => (
+              <div key={`${step}-${index}`} className="flex gap-2">
+                <span className="mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-white text-[9px] font-extrabold text-text-muted">
+                  {index + 1}
+                </span>
+                <p className="text-[11px] font-semibold leading-4 text-text-secondary">{step}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="mt-2 grid gap-1.5">
         {notes.map((note) => (
           <MaturityNote key={note.label} label={note.label} body={note.body} />
@@ -794,6 +1013,7 @@ function StrengthAreaCard({ area }: { area: DepartmentStrengthArea }) {
           <ArchitectureDetailPanel
             title="Struktur sistem"
             nodes={area.capabilityBreakdown.map((capability) => capability.label)}
+            flow={getSystemFlow(area)}
             notes={[
               { label: 'Next', body: area.nextMove },
               { label: 'Beyond', body: area.beyondMove },
@@ -1335,6 +1555,7 @@ function DashboardViewTabs({
 }) {
   const items: Array<{ value: DashboardView; label: string; helper: string; count: number }> = [
     { value: 'today', label: 'Hari ini', helper: 'prioritas', count: attentionCount + runningCount },
+    { value: 'department', label: 'Live', helper: 'AI dept', count: agentRegistry.length },
     { value: 'sectors', label: 'Sektor', helper: 'C-level', count: DEPARTMENT_ORDER.length },
     { value: 'learning', label: 'Otak', helper: 'learning', count: learningCount },
     { value: 'system', label: 'Sistem', helper: 'fondasi', count: systemCount },
@@ -1342,7 +1563,7 @@ function DashboardViewTabs({
 
   return (
     <nav className="mt-3 rounded-lg border border-border-med bg-white p-1 shadow-soft" aria-label="Mode dashboard">
-      <div className="grid grid-cols-4 gap-1">
+      <div className="flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {items.map((item) => {
           const isActive = item.value === active
 
@@ -1352,7 +1573,7 @@ function DashboardViewTabs({
               type="button"
               onClick={() => onChange(item.value)}
               className={cn(
-                'min-h-[58px] rounded-md px-2 py-2 text-left transition-colors duration-fast',
+                'min-h-[58px] min-w-[86px] flex-1 rounded-md px-2 py-2 text-left transition-colors duration-fast',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
                 isActive ? 'bg-text-primary text-white shadow-card' : 'text-text-secondary hover:bg-bg-surface',
               )}
@@ -2055,6 +2276,103 @@ function getWorkflowStateClass(state: 'ready' | 'partial' | 'missing') {
   if (state === 'ready') return 'bg-status-final-bg text-status-final'
   if (state === 'partial') return 'bg-status-doing-bg text-status-doing'
   return 'bg-status-decision-bg text-status-decision'
+}
+
+function getIntelligenceFlow(dimension: IntelligenceDimension) {
+  const base = {
+    input: 'Matthew memberi brief, approval, revisi, atau preference signal.',
+    output: 'Atmaja mengubahnya menjadi rekomendasi, visual brief, atau decision gate.',
+    feedback: 'Hasil approval/revisi masuk kembali sebagai lesson untuk keputusan berikutnya.',
+  }
+
+  if (dimension.id === 'self-learning') {
+    return [
+      base.input,
+      'App mengekstrak lesson ringkas, bukan menyimpan raw chat sebagai memory default.',
+      'Lesson dipakai untuk menyesuaikan format, tone, workflow, dan standar output.',
+      base.feedback,
+    ]
+  }
+
+  if (dimension.id === 'research-intelligence') {
+    return [
+      'Brief riset memicu Web Researcher atau Market Researcher.',
+      'Tavily mencari source, lalu agent memisahkan fact, inference, dan limited data.',
+      'Evidence masuk ke table, market signal, competitor map, atau source log.',
+      base.output,
+    ]
+  }
+
+  if (dimension.id === 'autonomy') {
+    return [
+      'Trigger datang dari jadwal, market signal, blocker, atau brief Matthew.',
+      'Atmaja menentukan apakah cukup aman untuk jalan sendiri atau perlu approval dulu.',
+      'C-level menjalankan scan, draft plan, dan follow-up sesuai role.',
+      'Aksi penting tetap berhenti di Matthew approval gate.',
+    ]
+  }
+
+  if (dimension.id === 'safety-judgment') {
+    return [
+      'Sistem membaca apakah data, tool, dan aksi punya risiko keamanan atau platform.',
+      'Action berisiko seperti social scraping login/cookies/proxy ditolak.',
+      'Agent memilih jalur resmi, source publik, atau menandai limited visibility.',
+      'Keputusan sensitif naik ke Matthew approval gate.',
+    ]
+  }
+
+  return [
+    base.input,
+    `${dimension.title} membaca konteks, evidence, dan gap yang tersedia.`,
+    'Agent menyusun arsitektur kerja: siapa pegang apa, data apa kurang, output apa keluar.',
+    base.output,
+    base.feedback,
+  ]
+}
+
+function getSystemFlow(area: DepartmentStrengthArea) {
+  if (area.id === 'integration') {
+    return [
+      'Brief dibuat di app lalu masuk ke submit bridge.',
+      'Bridge mengirim job ke Atmaja atau fallback contract jika endpoint belum aktif.',
+      'Hasil agent dipolling kembali sebagai structured result.',
+      'Matthew approve, revisi, atau arsipkan ke memory.',
+    ]
+  }
+
+  if (area.id === 'agent-runtime') {
+    return [
+      'OpenClaw menjalankan Atmaja dan 16 agent lain di droplet.',
+      'Atmaja membagi brief ke C-level, C-level memanggil specialist.',
+      'Tool seperti Tavily dipakai saat data eksternal dibutuhkan.',
+      'Runtime health dan job metrics akan ditampilkan balik ke app.',
+    ]
+  }
+
+  if (area.id === 'automation') {
+    return [
+      'Trigger berasal dari jadwal, dashboard pending, market alert, atau follow-up.',
+      'Queue menentukan owner dan prioritas.',
+      'Agent mengerjakan scan, draft, atau review.',
+      'Approval routing menentukan mana yang boleh lanjut dan mana yang harus ditahan.',
+    ]
+  }
+
+  if (area.id === 'security') {
+    return [
+      'Secret hanya hidup di server-side env.',
+      'Runtime flag dan plugin policy dicek sebelum fitur dianggap aman.',
+      'Tool berisiko diberi guardrail dan audit trail.',
+      'Rollback tersedia jika update membuat agent atau app bermasalah.',
+    ]
+  }
+
+  return [
+    'Input datang dari brief, dashboard, atau ritme planning.',
+    `${area.title} memproses capability inti dan gap yang belum matang.`,
+    'Output menjadi visual brief, workflow, table, chart, atau decision gate.',
+    'Feedback Matthew menaikkan maturity melalui approval, revisi, dan memory.',
+  ]
 }
 
 function getIntelligenceIndex(snapshot: LearningSnapshot) {
