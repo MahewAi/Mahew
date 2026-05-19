@@ -66,7 +66,7 @@ import { cn } from '@/lib/utils'
 type SectorValue = 'all' | Role
 type SectionTone = 'decision' | 'doing' | 'review' | 'final' | 'neutral'
 type DashboardView = 'today' | 'sectors' | 'learning' | 'system'
-type CLevelWorkbenchMode = 'timeline' | 'visual' | 'data' | 'output'
+type CLevelWorkbenchMode = 'brief' | 'timeline' | 'visual' | 'data' | 'output'
 
 type StrengthIconKey = DepartmentStrengthArea['id']
 
@@ -450,48 +450,103 @@ function IntelligenceDimensionSection() {
 }
 
 function IntelligenceDimensionCard({ dimension }: { dimension: IntelligenceDimension }) {
+  const [expanded, setExpanded] = useState(false)
   const currentWidth = Math.min(100, Math.round((dimension.score / dimension.northStar) * 100))
   const targetLeft = Math.min(100, Math.round((dimension.target / dimension.northStar) * 100))
 
   return (
     <article className="rounded-md border border-border-soft bg-bg-surface px-3 py-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span className={cn('inline-flex size-7 shrink-0 items-center justify-center rounded-md text-[10px] font-extrabold', getIntelligenceStatusClass(dimension.status))}>
-              {dimension.shortLabel.slice(0, 2).toUpperCase()}
-            </span>
-            <h3 className="min-w-0 text-[13px] font-extrabold leading-4 text-text-primary">{dimension.title}</h3>
+      <button
+        type="button"
+        onClick={() => setExpanded((value) => !value)}
+        className="w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+        aria-expanded={expanded}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className={cn('inline-flex size-7 shrink-0 items-center justify-center rounded-md text-[10px] font-extrabold', getIntelligenceStatusClass(dimension.status))}>
+                {dimension.shortLabel.slice(0, 2).toUpperCase()}
+              </span>
+              <h3 className="min-w-0 text-[13px] font-extrabold leading-4 text-text-primary">{dimension.title}</h3>
+            </div>
+            <p className="mt-2 text-[11px] font-semibold leading-4 text-text-secondary">{dimension.meaning}</p>
           </div>
-          <p className="mt-2 text-[11px] font-semibold leading-4 text-text-secondary">{dimension.meaning}</p>
+          <div className="shrink-0 text-right">
+            <p className="text-[20px] font-extrabold leading-none text-text-primary">{dimension.score}%</p>
+            <p className="mt-1 text-[9px] font-bold uppercase tracking-[0.05em] text-text-faint">target {dimension.target}</p>
+          </div>
         </div>
-        <div className="shrink-0 text-right">
-          <p className="text-[20px] font-extrabold leading-none text-text-primary">{dimension.score}%</p>
-          <p className="mt-1 text-[9px] font-bold uppercase tracking-[0.05em] text-text-faint">target {dimension.target}</p>
+
+        <div className="relative mt-2 h-2.5 overflow-hidden rounded-full bg-white">
+          <span
+            className={cn('absolute inset-y-0 left-0 rounded-full', getIntelligenceBarClass(dimension.status))}
+            style={{ width: `${currentWidth}%` }}
+          />
+          <span className="absolute inset-y-[-2px] w-0.5 rounded-full bg-text-primary/60" style={{ left: `${targetLeft}%` }} />
         </div>
-      </div>
 
-      <div className="relative mt-2 h-2.5 overflow-hidden rounded-full bg-white">
-        <span
-          className={cn('absolute inset-y-0 left-0 rounded-full', getIntelligenceBarClass(dimension.status))}
-          style={{ width: `${currentWidth}%` }}
-        />
-        <span className="absolute inset-y-[-2px] w-0.5 rounded-full bg-text-primary/60" style={{ left: `${targetLeft}%` }} />
-      </div>
-
-      <div className="mt-2 flex flex-wrap gap-1.5">
-        {dimension.evidence.slice(0, 4).map((item) => (
-          <span key={item} className="rounded-full border border-border-soft bg-white px-2 py-1 text-[10px] font-bold text-text-secondary">
-            {item}
+        <div className="mt-2 flex items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-wrap gap-1.5">
+            {dimension.evidence.slice(0, 3).map((item) => (
+              <span key={item} className="rounded-full border border-border-soft bg-white px-2 py-1 text-[10px] font-bold text-text-secondary">
+                {item}
+              </span>
+            ))}
+          </div>
+          <span className="shrink-0 rounded-full bg-white px-2 py-1 text-[10px] font-extrabold text-accent-dark">
+            {expanded ? 'Tutup' : 'Arsitektur'}
           </span>
+        </div>
+      </button>
+
+      {expanded && (
+        <ArchitectureDetailPanel
+          title="Struktur arsitektural"
+          nodes={['Input', ...dimension.evidence.slice(0, 4), 'Gap', 'Upgrade']}
+          notes={[
+            { label: 'Gap', body: dimension.blindSpot },
+            { label: 'Naikkan', body: dimension.upgradeMove },
+          ]}
+        />
+      )}
+    </article>
+  )
+}
+
+function ArchitectureDetailPanel({
+  title,
+  nodes,
+  notes,
+}: {
+  title: string
+  nodes: string[]
+  notes: Array<{ label: string; body: string }>
+}) {
+  return (
+    <div className="mt-3 rounded-md border border-border-soft bg-white px-3 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-text-muted">{title}</p>
+        <GitBranch className="size-4 text-text-faint" />
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-1.5">
+        {nodes.map((node, index) => (
+          <div key={`${node}-${index}`} className="rounded-md border border-border-soft bg-bg-surface px-2.5 py-2">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-white text-[9px] font-extrabold text-text-muted">
+                {index + 1}
+              </span>
+              <p className="min-w-0 truncate text-[10px] font-extrabold text-text-primary">{node}</p>
+            </div>
+          </div>
         ))}
       </div>
-
       <div className="mt-2 grid gap-1.5">
-        <MaturityNote label="Gap" body={dimension.blindSpot} />
-        <MaturityNote label="Naikkan" body={dimension.upgradeMove} />
+        {notes.map((note) => (
+          <MaturityNote key={note.label} label={note.label} body={note.body} />
+        ))}
       </div>
-    </article>
+    </div>
   )
 }
 
@@ -696,38 +751,62 @@ function MaturityBarChart({ areas }: { areas: DepartmentStrengthArea[] }) {
 }
 
 function StrengthAreaCard({ area }: { area: DepartmentStrengthArea }) {
+  const [expanded, setExpanded] = useState(false)
   const Icon = strengthIconMap[area.id]
   const currentWidth = Math.min(100, Math.round((area.score / area.northStar) * 100))
   const targetLeft = Math.min(100, Math.round((area.target / area.northStar) * 100))
 
   return (
     <article className="rounded-md border border-border-soft bg-bg-surface px-3 py-3">
-      <div className="flex items-start justify-between gap-2">
-        <span className={cn('inline-flex size-8 shrink-0 items-center justify-center rounded-md', getStrengthStatusClass(area.status))}>
-          <Icon className="size-4" />
-        </span>
-        <div className="min-w-0 flex-1 text-right">
-          <p className="text-[20px] font-extrabold leading-none text-text-primary">{area.score}%</p>
-          <p className="mt-1 text-[10px] font-bold text-text-faint">target {area.target}% / beyond {area.northStar}%</p>
+      <button
+        type="button"
+        onClick={() => setExpanded((value) => !value)}
+        className="w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+        aria-expanded={expanded}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <span className={cn('inline-flex size-8 shrink-0 items-center justify-center rounded-md', getStrengthStatusClass(area.status))}>
+            <Icon className="size-4" />
+          </span>
+          <div className="min-w-0 flex-1 text-right">
+            <p className="text-[20px] font-extrabold leading-none text-text-primary">{area.score}%</p>
+            <p className="mt-1 text-[10px] font-bold text-text-faint">target {area.target}% / beyond {area.northStar}%</p>
+          </div>
         </div>
-      </div>
-      <h3 className="mt-2 text-[12px] font-extrabold leading-4 text-text-primary">{area.title}</h3>
-      <div className="relative mt-2 h-2 overflow-hidden rounded-full bg-white">
-        <span className={cn('absolute inset-y-0 left-0 rounded-full', getStrengthBarClass(area.status))} style={{ width: `${currentWidth}%` }} />
-        <span className="absolute inset-y-[-2px] w-0.5 rounded-full bg-text-primary/60" style={{ left: `${targetLeft}%` }} />
-      </div>
-      <p className="mt-2 text-[11px] font-semibold leading-4 text-text-secondary">{area.maturityMeaning}</p>
+        <h3 className="mt-2 text-[12px] font-extrabold leading-4 text-text-primary">{area.title}</h3>
+        <div className="relative mt-2 h-2 overflow-hidden rounded-full bg-white">
+          <span className={cn('absolute inset-y-0 left-0 rounded-full', getStrengthBarClass(area.status))} style={{ width: `${currentWidth}%` }} />
+          <span className="absolute inset-y-[-2px] w-0.5 rounded-full bg-text-primary/60" style={{ left: `${targetLeft}%` }} />
+        </div>
+        <p className="mt-2 text-[11px] font-semibold leading-4 text-text-secondary">{area.maturityMeaning}</p>
+        <div className="mt-2 flex items-center justify-between gap-3">
+          <span className="text-[10px] font-extrabold uppercase tracking-[0.06em] text-text-faint">
+            {area.capabilityBreakdown.length} capability
+          </span>
+          <span className="shrink-0 rounded-full bg-white px-2 py-1 text-[10px] font-extrabold text-accent-dark">
+            {expanded ? 'Tutup' : 'Arsitektur'}
+          </span>
+        </div>
+      </button>
 
-      <div className="mt-2 grid gap-1.5">
-        {area.capabilityBreakdown.map((capability) => (
-          <CapabilityRow key={capability.label} capability={capability} />
-        ))}
-      </div>
+      {expanded && (
+        <div className="mt-3">
+          <ArchitectureDetailPanel
+            title="Struktur sistem"
+            nodes={area.capabilityBreakdown.map((capability) => capability.label)}
+            notes={[
+              { label: 'Next', body: area.nextMove },
+              { label: 'Beyond', body: area.beyondMove },
+            ]}
+          />
 
-      <div className="mt-2 grid gap-1.5">
-        <MaturityNote label="Next" body={area.nextMove} />
-        <MaturityNote label="Beyond" body={area.beyondMove} />
-      </div>
+          <div className="mt-2 grid gap-1.5">
+            {area.capabilityBreakdown.map((capability) => (
+              <CapabilityRow key={capability.label} capability={capability} />
+            ))}
+          </div>
+        </div>
+      )}
     </article>
   )
 }
@@ -1501,7 +1580,7 @@ function QueueMiniRow({ brief, tone, onClick }: { brief: Brief; tone: SectionTon
 }
 
 function CLevelPlanCard({ plan, interactive = false }: { plan: CLevelPlan; interactive?: boolean }) {
-  const [activeMode, setActiveMode] = useState<CLevelWorkbenchMode>('timeline')
+  const [activeMode, setActiveMode] = useState<CLevelWorkbenchMode>('brief')
 
   return (
     <article className="rounded-lg border border-border-med bg-white p-3.5 shadow-soft">
@@ -1515,34 +1594,10 @@ function CLevelPlanCard({ plan, interactive = false }: { plan: CLevelPlan; inter
           </div>
           <h3 className="mt-1 text-[15px] font-extrabold leading-5 text-text-primary">{plan.title}</h3>
           <p className="mt-1 text-xs leading-5 text-text-secondary">{plan.mandate}</p>
-          <p className="mt-2 rounded-md bg-bg-surface px-2.5 py-2 text-[11px] font-semibold leading-4 text-text-primary">
-            {plan.plannerMode}
-          </p>
         </div>
         <span className={cn('shrink-0 rounded-full px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.04em]', getPlanStatusClass(plan.status))}>
           {getPlanStatusLabel(plan.status)}
         </span>
-      </div>
-
-      <div className="mt-3 grid gap-2">
-        <div className="rounded-md border border-border-soft bg-bg-surface px-3 py-2">
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.08em] text-text-faint">Cadence</p>
-          <p className="mt-1 text-xs font-bold leading-5 text-text-primary">{plan.planningCadence}</p>
-        </div>
-        <PlanList label="Dirancang" items={plan.designing} />
-        <PlanList label="Pertanyaan planning" items={plan.planningQuestions} />
-        <PlanList label="Butuh dari Matthew" items={plan.needsFromMatthew} muted />
-      </div>
-
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {plan.outputFormats.map((format) => (
-          <span
-            key={format}
-            className="rounded-full border border-border-soft bg-bg-surface px-2.5 py-1 text-[10px] font-bold text-text-secondary"
-          >
-            {format}
-          </span>
-        ))}
       </div>
 
       {interactive ? (
@@ -1589,6 +1644,7 @@ function CLevelWorkbenchTabs({
   onChange: (mode: CLevelWorkbenchMode) => void
 }) {
   const items: Array<{ mode: CLevelWorkbenchMode; label: string; icon: typeof Timer }> = [
+    { mode: 'brief', label: 'Brief', icon: ListChecks },
     { mode: 'timeline', label: 'Timeline', icon: Timer },
     { mode: 'visual', label: 'Visual', icon: ImageIcon },
     { mode: 'data', label: 'Data', icon: BarChart3 },
@@ -1597,7 +1653,7 @@ function CLevelWorkbenchTabs({
 
   return (
     <div className="mt-3 rounded-md border border-border-soft bg-bg-surface p-1" aria-label="C-level workbench mode">
-      <div className="grid grid-cols-4 gap-1">
+      <div className="grid grid-cols-5 gap-1">
         {items.map((item) => {
           const Icon = item.icon
           const isActive = item.mode === active
@@ -1624,10 +1680,41 @@ function CLevelWorkbenchTabs({
 }
 
 function CLevelWorkbenchPanel({ mode, plan }: { mode: CLevelWorkbenchMode; plan: CLevelPlan }) {
+  if (mode === 'brief') return <CLevelBriefPanel plan={plan} />
   if (mode === 'timeline') return <CLevelTimeline items={plan.timeline} />
   if (mode === 'visual') return <CLevelVisualBoard role={plan.role} panels={plan.visualPanels} />
   if (mode === 'data') return <CLevelDataSignals plan={plan} />
   return <CLevelOutputList outputs={plan.latestOutputs} />
+}
+
+function CLevelBriefPanel({ plan }: { plan: CLevelPlan }) {
+  return (
+    <div className="mt-3 rounded-md border border-border-soft bg-bg-surface px-3 py-3" aria-label="C-level brief panel">
+      <div className="rounded-md border border-border-soft bg-white px-3 py-2">
+        <p className="text-[10px] font-extrabold uppercase tracking-[0.08em] text-text-faint">Mode kerja</p>
+        <p className="mt-1 text-xs font-semibold leading-5 text-text-primary">{plan.plannerMode}</p>
+      </div>
+      <div className="mt-2 rounded-md border border-border-soft bg-white px-3 py-2">
+        <p className="text-[10px] font-extrabold uppercase tracking-[0.08em] text-text-faint">Cadence</p>
+        <p className="mt-1 text-xs font-bold leading-5 text-text-primary">{plan.planningCadence}</p>
+      </div>
+      <div className="mt-2 grid gap-2">
+        <PlanList label="Dirancang" items={plan.designing} />
+        <PlanList label="Pertanyaan planning" items={plan.planningQuestions} />
+        <PlanList label="Butuh dari Matthew" items={plan.needsFromMatthew} muted />
+      </div>
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {plan.outputFormats.map((format) => (
+          <span
+            key={format}
+            className="rounded-full border border-border-soft bg-white px-2.5 py-1 text-[10px] font-bold text-text-secondary"
+          >
+            {format}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 function CLevelTimeline({ items }: { items: CLevelTimelineItem[] }) {
