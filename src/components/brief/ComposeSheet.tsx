@@ -379,10 +379,16 @@ function buildVisualBlocks(brief: Brief, targetRole: Role, targetName: string): 
       ],
     },
     {
-      type: 'image',
-      src: buildPreviewImage(brief.title, targetName),
-      alt: `Visual map untuk ${brief.title}`,
-      caption: 'Contoh image block: bisa diganti dengan foto produk, layout toko, reference visual, atau mockup.',
+      type: 'generated-image',
+      title: 'Generated visual draft',
+      prompt: `Premium planning visual untuk "${brief.title}". Tampilkan denah keputusan, lane C-level, dan output artifact dalam gaya Gerai 1000 Pintu yang bersih dan editorial.`,
+      src: buildGeneratedImage(brief.title, targetName),
+      alt: `Generated visual draft untuk ${brief.title}`,
+      caption: 'Hasil image generator bisa masuk sebagai URL, data image, atau asset CDN dari backend agent.',
+      status: 'completed',
+      provider: 'Gerai image generator',
+      generatedAt: new Date().toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
+      aspectRatio: '16:9',
     },
     {
       type: 'csuite-vote',
@@ -417,23 +423,51 @@ function buildVisualBlocks(brief: Brief, targetRole: Role, targetName: string): 
   ]
 }
 
-function buildPreviewImage(title: string, owner: string): string {
+function buildGeneratedImage(title: string, owner: string): string {
   const svg = `
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
-  <rect width="1200" height="720" fill="#FAF8F4"/>
-  <rect x="72" y="72" width="1056" height="576" rx="28" fill="#FFFFFF" stroke="#E8DED0"/>
-  <text x="112" y="142" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#8A6B43">PLANNING BRIEF MAP</text>
-  <text x="112" y="204" font-family="Inter, Arial, sans-serif" font-size="44" font-weight="800" fill="#1F1A14">${escapeSvg(title).slice(0, 42)}</text>
-  <text x="112" y="252" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="600" fill="#6B6253">${escapeSvg(owner)} planning surface</text>
-  <g transform="translate(112 330)">
-    <rect width="210" height="150" rx="18" fill="#F4EBDC"/>
-    <rect x="270" width="210" height="150" rx="18" fill="#EDF3F6"/>
-    <rect x="540" width="210" height="150" rx="18" fill="#F7EDF2"/>
-    <rect x="810" width="210" height="150" rx="18" fill="#EEF5EF"/>
-    <text x="34" y="84" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="800" fill="#8A6B43">TABLE</text>
-    <text x="304" y="84" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="800" fill="#3F5F8C">CHART</text>
-    <text x="574" y="84" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="800" fill="#85547A">FLOW</text>
-    <text x="844" y="84" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="800" fill="#3D6F58">VOTE</text>
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FAF8F4"/>
+      <stop offset="1" stop-color="#EDDFC8"/>
+    </linearGradient>
+    <linearGradient id="ink" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1F1A14"/>
+      <stop offset="1" stop-color="#3D342B"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#1F1A14" flood-opacity="0.14"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="720" fill="url(#paper)"/>
+  <path d="M0 560 C180 500 310 610 470 550 C650 482 760 408 940 472 C1064 516 1128 466 1200 420 L1200 720 L0 720 Z" fill="#FFFFFF" opacity="0.5"/>
+  <g filter="url(#softShadow)">
+    <rect x="74" y="68" width="1052" height="584" rx="32" fill="#FFFFFF" stroke="#E8DED0"/>
+  </g>
+  <text x="116" y="136" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="800" letter-spacing="4" fill="#8A6B43">AI GENERATED VISUAL</text>
+  <text x="116" y="198" font-family="Inter, Arial, sans-serif" font-size="44" font-weight="850" fill="url(#ink)">${escapeSvg(title).slice(0, 42)}</text>
+  <text x="116" y="246" font-family="Inter, Arial, sans-serif" font-size="23" font-weight="650" fill="#6B6253">${escapeSvg(owner)} planning surface</text>
+  <g transform="translate(116 318)">
+    <rect width="250" height="178" rx="22" fill="#F4EBDC"/>
+    <rect x="24" y="28" width="202" height="16" rx="8" fill="#B8956B"/>
+    <rect x="24" y="64" width="148" height="12" rx="6" fill="#8A6B43" opacity="0.45"/>
+    <rect x="24" y="94" width="178" height="12" rx="6" fill="#8A6B43" opacity="0.25"/>
+    <text x="24" y="142" font-family="Inter, Arial, sans-serif" font-size="21" font-weight="850" fill="#8A6B43">BRIEF</text>
+
+    <rect x="320" width="250" height="178" rx="22" fill="#EDF3F6"/>
+    <circle cx="382" cy="68" r="32" fill="#3F5F8C" opacity="0.18"/>
+    <circle cx="448" cy="92" r="42" fill="#3F5F8C" opacity="0.26"/>
+    <circle cx="506" cy="62" r="24" fill="#3F5F8C" opacity="0.32"/>
+    <text x="344" y="142" font-family="Inter, Arial, sans-serif" font-size="21" font-weight="850" fill="#3F5F8C">C-LEVEL</text>
+
+    <rect x="640" width="250" height="178" rx="22" fill="#F7EDF2"/>
+    <path d="M678 126 L724 72 L770 110 L820 48 L852 86" fill="none" stroke="#85547A" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="664" y="142" font-family="Inter, Arial, sans-serif" font-size="21" font-weight="850" fill="#85547A">OUTPUT</text>
+  </g>
+  <g transform="translate(184 538)">
+    <rect width="832" height="62" rx="31" fill="#151412"/>
+    <circle cx="48" cy="31" r="10" fill="#3D6F58"/>
+    <text x="74" y="39" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="750" fill="#FFFFFF">Decision gate: approve, revise, delegate, or hold</text>
   </g>
 </svg>`
 

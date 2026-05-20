@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { Check, ChevronRight, Edit3, Sparkles } from 'lucide-react'
@@ -11,7 +11,10 @@ import { GeneratedCover } from './GeneratedCover'
 import { CommentThread } from './CommentThread'
 import { AskRolePanel } from './AskRolePanel'
 import { BlockList } from '@/components/blocks/BlockRenderer'
-import { MarkdownBlock } from '@/components/blocks/MarkdownBlock'
+
+const MarkdownBlock = lazy(() =>
+  import('@/components/blocks/MarkdownBlock').then((module) => ({ default: module.MarkdownBlock })),
+)
 
 interface BriefDetailSheetProps {
   brief: Brief | null
@@ -162,10 +165,12 @@ export function BriefDetailSheet({
                       aria-hidden="true"
                       className="absolute left-0 top-0 bottom-0 w-1 bg-accent rounded-l-md"
                     />
-                    <MarkdownBlock
-                      content={brief.summary}
-                      className="[&_p]:mb-0 [&_p]:text-sm [&_p]:text-text-primary"
-                    />
+                    <Suspense fallback={<div className="h-12 rounded-md bg-white/40" aria-label="Memuat ringkasan" />}>
+                      <MarkdownBlock
+                        content={brief.summary}
+                        className="[&_p]:mb-0 [&_p]:text-sm [&_p]:text-text-primary"
+                      />
+                    </Suspense>
                   </section>
 
                   {/* Rich content blocks — primary detail surface */}

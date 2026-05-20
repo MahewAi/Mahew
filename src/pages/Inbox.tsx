@@ -40,6 +40,7 @@ import {
 import {
   fallbackAgentHealth,
   fetchAgentHealth,
+  isAgentBridgeEnabled,
   submitAgentBrief,
   type AgentHealth,
   type SubmitAgentBriefResult,
@@ -69,6 +70,8 @@ type DashboardView = 'today' | 'department' | 'sectors' | 'learning' | 'system'
 type CLevelWorkbenchMode = 'brief' | 'timeline' | 'visual' | 'data' | 'output'
 
 type StrengthIconKey = DepartmentStrengthArea['id']
+
+const AI_ARCHITECTURE_NODE_COUNT = 12
 
 const sectorMeta: Record<Role, { title: string; subtitle: string; specialists: string[] }> = {
   ceo: {
@@ -282,7 +285,9 @@ export default function Inbox() {
 
         {dashboardView === 'system' && (
           <>
+            <ImplementationStatusSection />
             <PlanningNorthStarSection />
+            <ToolingAutomationSection />
             <OperationalStrengthSection />
             <PlannerCouncilSection />
             <PlanningRitualSection />
@@ -308,6 +313,85 @@ export default function Inbox() {
     </div>
   )
 }
+
+const implementationUpdates: Array<{
+  icon: typeof Activity
+  title: string
+  status: string
+  body: string
+  metric: string
+  tone: SectionTone
+}> = [
+  {
+    icon: BarChart3,
+    title: 'Performance scan',
+    status: 'Split done',
+    body: 'Main bundle turun dari 1.74MB ke sekitar 560KB dengan lazy-load Markdown, Recharts, Mermaid, dan C-suite renderer.',
+    metric: '560KB',
+    tone: 'review',
+  },
+  {
+    icon: ImageIcon,
+    title: 'Generated image',
+    status: 'Renderer aktif',
+    body: 'Brief output sekarang bisa membawa block generated-image dan tampil sebagai visual result di detail brief.',
+    metric: 'ready',
+    tone: 'final',
+  },
+  {
+    icon: ListChecks,
+    title: 'Skill audit',
+    status: '23 OK',
+    body: 'Skill registry dicek secara struktural. Skill automation sudah ditambahkan untuk audit dan runbook berulang.',
+    metric: '23/23',
+    tone: 'final',
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Private sync',
+    status: 'Cloud gated',
+    body: 'Bridge agent dan telemetry default off. Data privat bisa diekspor ke vault untuk folder Syncthing.',
+    metric: 'local',
+    tone: 'doing',
+  },
+]
+
+const toolingSignals: Array<{
+  icon: typeof Activity
+  label: string
+  value: string
+  detail: string
+  tone: SectionTone
+}> = [
+  {
+    icon: Workflow,
+    label: 'Skill automation',
+    value: 'Installed',
+    detail: 'scripts/audit-skills.ps1 siap untuk audit; runbook automation tersimpan sebagai workflow lokal.',
+    tone: 'final',
+  },
+  {
+    icon: Timer,
+    label: 'Automation scope',
+    value: 'Manual gate',
+    detail: 'Recurring job tetap butuh approval; app menampilkan jalur dan statusnya dulu.',
+    tone: 'doing',
+  },
+  {
+    icon: ServerCog,
+    label: 'Bridge posture',
+    value: 'Off',
+    detail: 'VITE_GERAI_AGENT_BRIDGE harus on sebelum brief keluar ke backend.',
+    tone: 'decision',
+  },
+  {
+    icon: GitBranch,
+    label: 'Next perf move',
+    value: 'Manual chunks',
+    detail: 'Langkah lanjut: pisahkan Mermaid diagram family agar chunk visual berat lebih granular.',
+    tone: 'review',
+  },
+]
 
 function CLevelPlanSection({ plans, mode = 'overview' }: { plans: CLevelPlan[]; mode?: 'overview' | 'workbench' }) {
   const isWorkbench = mode === 'workbench'
@@ -342,13 +426,13 @@ function CLevelPlanSection({ plans, mode = 'overview' }: { plans: CLevelPlan[]; 
 
 function DepartmentArchitectureSection() {
   return (
-    <section className="mt-4 space-y-3" aria-label="Live Department architecture dashboard">
+    <section className="mt-4 space-y-3" aria-label="AI Department architecture dashboard">
       <div className="flex items-end justify-between gap-3">
         <div>
-          <p className="text-label-caps text-text-muted">Live Department</p>
-          <h1 className="mt-1 text-[24px] font-extrabold leading-7 text-text-primary">Peta arsitektur kerja</h1>
+          <p className="text-label-caps text-text-muted">AI Department</p>
+          <h1 className="mt-1 text-[24px] font-extrabold leading-7 text-text-primary">Struktur AI Atmaja</h1>
           <p className="mt-1 max-w-[360px] text-xs font-semibold leading-5 text-text-secondary">
-            Denah alur dashboard, riset, C-level workspace, brief detail, dan render output.
+            Denah otak Atmaja, C-level council, specialist lane, memory, automation, dan output contract.
           </p>
         </div>
         <span className="rounded-full border border-border-med bg-white px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.06em] text-text-muted shadow-soft">
@@ -375,29 +459,20 @@ function LiveDepartmentMap() {
     tone?: 'primary' | 'accent'
   }
   const mapNodes: MapNode[] = [
-    { id: 'main', label: 'Dashboard Utama', owner: 'Atmaja', status: 'Command intake', activity: 'Menggabungkan pending, running, confirmation, riset, dan workspace menjadi satu peta prioritas.', output: 'Antrian kerja harian dan arah distribusi ke agent.', x: 118, y: 18, w: 136, h: 40, tone: 'primary' },
-    { id: 'pending', label: 'Pending', owner: 'Atmaja', status: 'Menunggu input', activity: 'Menyimpan brief yang belum cukup jelas atau belum punya owner eksekusi.', output: 'Daftar brief yang perlu dipertegas.', x: 24, y: 92, w: 92, h: 38 },
-    { id: 'running', label: 'Running', owner: 'Agent runtime', status: 'Sedang jalan', activity: 'Menampilkan pekerjaan yang sedang diproses C-level atau specialist.', output: 'Progress kerja dan blocker awal.', x: 138, y: 92, w: 92, h: 38 },
-    { id: 'confirm', label: 'Need Confirmation', owner: 'Matthew', status: 'Butuh keputusan', activity: 'Menahan keputusan yang berisiko, mahal, atau mengubah arah strategi.', output: 'Approval, revisi, atau prioritas baru.', x: 256, y: 92, w: 148, h: 38 },
-    { id: 'alerts', label: 'Research Alerts', owner: 'Market Researcher', status: 'Radar sinyal', activity: 'Menangkap sinyal market, kompetitor, trend, dan perubahan yang perlu dicek.', output: 'Trigger riset untuk Tavily radar.', x: 438, y: 92, w: 124, h: 38 },
-    { id: 'radar', label: 'Tavily Research Radar', owner: 'Web Researcher', status: 'Source gathering', activity: 'Mencari bukti web, memisahkan fakta dari inferensi, dan mencatat keterbatasan data.', output: 'Evidence yang bisa dipakai C-level.', x: 420, y: 162, w: 160, h: 38, tone: 'accent' },
-    { id: 'competitor', label: 'Competitor Table', owner: 'Market Researcher', status: 'Landscape', activity: 'Merapikan nama kompetitor, positioning, pricing signal, channel, dan kelemahan.', output: 'Tabel kompetitor siap dibaca.', x: 170, y: 238, w: 136, h: 38 },
-    { id: 'market', label: 'Market Signal Map', owner: 'CMO', status: 'Signal mapping', activity: 'Menghubungkan trend, customer segment, demand, dan peluang produk.', output: 'Peta peluang market.', x: 334, y: 238, w: 148, h: 38 },
-    { id: 'source', label: 'Source Evidence', owner: 'CCO', status: 'Evidence check', activity: 'Menyimpan link, kutipan pendek, timestamp, dan confidence dari source.', output: 'Evidence block untuk brief detail.', x: 508, y: 238, w: 136, h: 38 },
-    { id: 'workspace', label: 'C-Level Workspaces', owner: 'Atmaja', status: 'Delegation hub', activity: 'Membagi mandat ke COO, CMO, CFO, dan CCO sesuai domain keputusan.', output: 'Pekerjaan C-level yang terstruktur.', x: 804, y: 92, w: 160, h: 38, tone: 'primary' },
-    { id: 'ceo', label: 'CEO / Atmaja', owner: 'Atmaja', status: 'Synthesis', activity: 'Menyatukan trade-off C-level, memberi push-back, lalu menyusun decision brief.', output: 'Synthesis dan rekomendasi keputusan.', x: 646, y: 162, w: 118, h: 38 },
-    { id: 'coo', label: 'COO', owner: 'COO', status: 'Ops planning', activity: 'Merancang sistem kerja, staffing, vendor, supply chain, fulfillment, dan SOP.', output: 'Timeline operasi dan blocker.', x: 786, y: 162, w: 76, h: 38 },
-    { id: 'cmo', label: 'CMO', owner: 'CMO', status: 'Market planning', activity: 'Merancang positioning, market thesis, channel, conversion, dan innovation scan.', output: 'Market map dan growth plan.', x: 888, y: 162, w: 76, h: 38 },
-    { id: 'cfo', label: 'CFO', owner: 'CFO', status: 'Financial frame', activity: 'Menghitung model bisnis, ROI, pricing, budget, dan batas aman eksekusi.', output: 'Financial decision frame.', x: 990, y: 162, w: 76, h: 38 },
-    { id: 'cco', label: 'CCO', owner: 'CCO', status: 'Narrative system', activity: 'Menjaga dokumen, source, brand voice, copy, dan format komunikasi.', output: 'Narrative dan document pack.', x: 1092, y: 162, w: 76, h: 38 },
-    { id: 'brief', label: 'Brief Detail', owner: 'Atmaja', status: 'Compilation', activity: 'Menggabungkan output C-level dan riset menjadi satu rich brief.', output: 'Brief final sebelum approval.', x: 774, y: 234, w: 128, h: 38, tone: 'accent' },
-    { id: 'markdown', label: 'Markdown', owner: 'CCO', status: 'Text render', activity: 'Menyusun narasi, memo, recommendation, dan reasoning dalam format terbaca.', output: 'Section naratif.', x: 508, y: 316, w: 98, h: 38 },
-    { id: 'table', label: 'Table', owner: 'Analyst agents', status: 'Structured data', activity: 'Merapikan perbandingan, scoring, budget, vendor, dan source list.', output: 'Tabel data.', x: 646, y: 316, w: 76, h: 38 },
-    { id: 'chart', label: 'Chart', owner: 'CFO / CMO', status: 'Visual metric', activity: 'Menampilkan ROI, funnel, market signal, forecast, atau score breakdown.', output: 'Grafik keputusan.', x: 782, y: 316, w: 76, h: 38 },
-    { id: 'mermaid', label: 'Mermaid Diagram', owner: 'Atmaja', status: 'Architecture visual', activity: 'Merender flow, dependency, stakeholder map, dan proses kerja.', output: 'Diagram arsitektural.', x: 914, y: 316, w: 138, h: 38 },
-    { id: 'decision', label: 'Decision Buttons', owner: 'Matthew', status: 'Approval gate', activity: 'Mengubah brief menjadi aksi: approve, revise, delegate, atau hold.', output: 'Keputusan masuk memory dan queue.', x: 1102, y: 316, w: 146, h: 38 },
+    { id: 'intake', label: 'Brief Intake', owner: 'Atmaja', status: 'Signal intake', activity: 'Membaca brief Matthew, konteks bisnis, constraint, dan tujuan keputusan sebelum dibagi ke council.', output: 'Problem frame dan planning question.', x: 38, y: 52, w: 118, h: 42, tone: 'accent' },
+    { id: 'atmaja', label: 'Atmaja CEO', owner: 'Atmaja', status: 'Chief planner', activity: 'Mengorkestrasi C-level, memberi push-back, menyatukan trade-off, dan menentukan kapan perlu approval Matthew.', output: 'Master planning frame dan decision gate.', x: 220, y: 46, w: 142, h: 50, tone: 'primary' },
+    { id: 'council', label: 'C-Level Council', owner: 'Atmaja', status: 'Delegation hub', activity: 'Membagi pekerjaan ke COO, CMO, CFO, dan CCO sesuai domain keputusan.', output: 'Lane kerja C-level yang siap dieksekusi agent.', x: 436, y: 52, w: 148, h: 42, tone: 'primary' },
+    { id: 'coo', label: 'COO', owner: 'Operations', status: 'Ops system', activity: 'Merancang SOP, staffing, vendor, fulfillment, timeline, dan dependency operasional.', output: 'Operating roadmap dan blocker list.', x: 654, y: 28, w: 82, h: 38 },
+    { id: 'cmo', label: 'CMO', owner: 'Marketing', status: 'Growth system', activity: 'Merancang positioning, market thesis, channel, funnel, dan innovation signal.', output: 'Market map dan growth plan.', x: 654, y: 86, w: 82, h: 38 },
+    { id: 'cfo', label: 'CFO', owner: 'Finance', status: 'Capital system', activity: 'Mengunci ROI, budget, pricing, margin, runway, dan scenario guardrail.', output: 'Financial decision frame.', x: 654, y: 144, w: 82, h: 38 },
+    { id: 'cco', label: 'CCO', owner: 'Creative', status: 'Narrative system', activity: 'Menjaga source, document pack, copy, brand voice, dan format komunikasi final.', output: 'Narrative dan evidence pack.', x: 654, y: 202, w: 82, h: 38 },
+    { id: 'specialists', label: 'Specialists', owner: 'C-level', status: 'Execution cells', activity: 'HR, production, curator, brand, market, sales, innovation, business design, finance, document, editorial, dan web researcher menjalankan subtask.', output: 'Specialist packets per domain.', x: 826, y: 66, w: 132, h: 44, tone: 'accent' },
+    { id: 'research', label: 'Research Tools', owner: 'Web Researcher', status: 'Evidence', activity: 'Mengambil sinyal web, Tavily/source evidence, kompetitor, market, dan fact-check untuk planning.', output: 'Evidence log dengan confidence.', x: 826, y: 142, w: 132, h: 44, tone: 'accent' },
+    { id: 'memory', label: 'Business Memory', owner: 'Atmaja', status: 'Learning layer', activity: 'Menyimpan keputusan, preferensi Matthew, business canon, source log, dan lesson penting di storage lokal.', output: 'Context privat untuk keputusan berikutnya.', x: 1002, y: 48, w: 132, h: 44 },
+    { id: 'automation', label: 'Skill Automation', owner: 'Atmaja', status: 'Trigger layer', activity: 'Menjalankan recurring scan, follow-up, queue routing, approval reminder, skill checklist, dan Private Sync Vault.', output: 'Automation runbook dan job trigger.', x: 1002, y: 124, w: 132, h: 44 },
+    { id: 'contract', label: 'Output Contract', owner: 'Agent runtime', status: 'Structured result', activity: 'Membungkus hasil agent menjadi AgentOutputEnvelope v1: summary, planning frame, visual map, blocks, gates, actions, dan memory policy.', output: 'Planning-grade output yang bisa dirender app.', x: 980, y: 218, w: 176, h: 48, tone: 'primary' },
   ]
-  const [selectedNodeId, setSelectedNodeId] = useState('ceo')
+  const [selectedNodeId, setSelectedNodeId] = useState('atmaja')
 
   const nodeById = new Map(mapNodes.map((node) => [node.id, node]))
   const selectedNode = nodeById.get(selectedNodeId) ?? mapNodes[0]
@@ -417,7 +492,7 @@ function LiveDepartmentMap() {
     <div className="rounded-lg border border-[#2b2926] bg-[#151412] p-2 shadow-card">
       <div className="overflow-x-auto rounded-md border border-white/8 bg-[#171614] [scrollbar-color:#6d6256_#171716]">
         <div
-          className="relative h-[396px] w-[1280px] overflow-hidden"
+          className="relative h-[332px] w-[1180px] overflow-hidden"
           style={{
             backgroundImage:
               'linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px)',
@@ -426,45 +501,37 @@ function LiveDepartmentMap() {
         >
           <div className="absolute left-4 top-3 z-10 flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-white/48">
             <span className="inline-flex size-2 rounded-full bg-status-final shadow-[0_0_16px_rgba(61,111,88,0.9)]" />
-            Architecture Flow
+            AI Architecture
           </div>
           <div className="absolute right-4 top-3 z-10 flex gap-2">
-            <span className="rounded-sm border border-white/10 bg-white/[0.03] px-2 py-1 text-[10px] font-bold text-white/48">AI Dept</span>
-            <span className="rounded-sm border border-white/10 bg-white/[0.03] px-2 py-1 text-[10px] font-bold text-white/48">Output Map</span>
+            <span className="rounded-sm border border-white/10 bg-white/[0.03] px-2 py-1 text-[10px] font-bold text-white/48">Atmaja</span>
+            <span className="rounded-sm border border-white/10 bg-white/[0.03] px-2 py-1 text-[10px] font-bold text-white/48">C-level</span>
           </div>
 
-          <svg className="absolute inset-0 size-full" viewBox="0 0 1280 396" aria-hidden="true">
+          <svg className="absolute inset-0 size-full" viewBox="0 0 1180 332" aria-hidden="true">
             <defs>
               <marker id="department-arrow" markerHeight="6" markerWidth="6" orient="auto" refX="5" refY="3">
                 <path d="M0,0 L6,3 L0,6 Z" fill="#8b8278" />
               </marker>
             </defs>
             <g fill="none" stroke="#7d766d" strokeLinecap="round" strokeWidth="1.15" opacity="0.78" markerEnd="url(#department-arrow)">
-              <path d={path('main', 'pending', 6)} />
-              <path d={path('main', 'running', 8)} />
-              <path d={path('main', 'confirm', 8)} />
-              <path d={path('main', 'alerts', 8)} />
-              <path d={path('alerts', 'radar', 4)} />
-              <path d={path('radar', 'competitor', 10)} />
-              <path d={path('radar', 'market', 8)} />
-              <path d={path('radar', 'source', 8)} />
-              <path d="M 254 38 C 530 50, 732 42, 884 92" />
-              <path d={path('workspace', 'ceo', 10)} />
-              <path d={path('workspace', 'coo', 10)} />
-              <path d={path('workspace', 'cmo', 10)} />
-              <path d={path('workspace', 'cfo', 10)} />
-              <path d={path('workspace', 'cco', 10)} />
-              <path d={path('ceo', 'brief', 6)} />
-              <path d={path('coo', 'brief', 8)} />
-              <path d={path('cmo', 'brief', 8)} />
-              <path d={path('cfo', 'brief', 8)} />
-              <path d={path('cco', 'brief', 8)} />
-              <path d={path('source', 'brief', 16)} />
-              <path d={path('brief', 'markdown', 10)} />
-              <path d={path('brief', 'table', 8)} />
-              <path d={path('brief', 'chart', 8)} />
-              <path d={path('brief', 'mermaid', 8)} />
-              <path d={path('brief', 'decision', 8)} />
+              <path d={path('intake', 'atmaja', 8)} />
+              <path d={path('atmaja', 'council', 8)} />
+              <path d={path('council', 'coo', 8)} />
+              <path d={path('council', 'cmo', 8)} />
+              <path d={path('council', 'cfo', 8)} />
+              <path d={path('council', 'cco', 8)} />
+              <path d={path('coo', 'specialists', 8)} />
+              <path d={path('cmo', 'specialists', 10)} />
+              <path d={path('cfo', 'specialists', 12)} />
+              <path d={path('cco', 'research', 10)} />
+              <path d={path('specialists', 'memory', 10)} />
+              <path d={path('research', 'memory', 10)} />
+              <path d={path('specialists', 'automation', 10)} />
+              <path d={path('research', 'automation', 10)} />
+              <path d={path('memory', 'contract', 10)} />
+              <path d={path('automation', 'contract', 10)} />
+              <path d={path('atmaja', 'contract', 44)} />
             </g>
           </svg>
 
@@ -532,6 +599,104 @@ const strengthIconMap: Record<StrengthIconKey, typeof Activity> = {
   memory: Database,
   automation: Workflow,
   security: ShieldCheck,
+}
+
+function ImplementationStatusSection() {
+  return (
+    <section className="mt-4 rounded-lg border border-text-primary bg-text-primary p-3.5 text-white shadow-card" aria-label="Update implementasi">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-white/58">Update implementasi</p>
+          <h2 className="mt-1 text-[20px] font-extrabold leading-6">Request Matthew sudah masuk cockpit</h2>
+          <p className="mt-2 max-w-[340px] text-xs font-semibold leading-5 text-white/70">
+            Panel ini merangkum perubahan yang tadi diminta: performa, image generation, skill audit, skill automation, dan security sync.
+          </p>
+        </div>
+        <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-md bg-white/10 text-white">
+          <CheckCircle2 className="size-4" />
+        </span>
+      </div>
+
+      <div className="mt-3 grid gap-2">
+        {implementationUpdates.map((item) => (
+          <ImplementationUpdateCard key={item.title} item={item} />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function ImplementationUpdateCard({ item }: { item: (typeof implementationUpdates)[number] }) {
+  const Icon = item.icon
+
+  return (
+    <article className="rounded-md border border-white/10 bg-white/[0.06] px-3 py-2.5">
+      <div className="flex items-start gap-3">
+        <span className={cn('inline-flex size-8 shrink-0 items-center justify-center rounded-md', getToneBg(item.tone), getToneText(item.tone))}>
+          <Icon className="size-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="truncate text-[12px] font-extrabold text-white">{item.title}</h3>
+            <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.04em] text-text-primary">
+              {item.metric}
+            </span>
+          </div>
+          <p className="mt-0.5 text-[10px] font-extrabold uppercase tracking-[0.06em] text-[#e6caa6]">{item.status}</p>
+          <p className="mt-1 text-[11px] font-semibold leading-4 text-white/68">{item.body}</p>
+        </div>
+      </div>
+    </article>
+  )
+}
+
+function ToolingAutomationSection() {
+  return (
+    <section className="mt-4 rounded-lg border border-border-med bg-white p-3.5 shadow-soft" aria-label="Tooling dan automation">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-label-caps text-accent-dark">Tooling & automation</p>
+          <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">Skill, tools, dan next automation terlihat</h2>
+          <p className="mt-1 text-xs leading-5 text-text-secondary">
+            Ini status operasional dari audit tadi: skill berjalan, automation skill dibuat, dan jalur tool berikutnya sudah jelas.
+          </p>
+        </div>
+        <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-md bg-accent-bg text-accent-dark">
+          <Workflow className="size-4" />
+        </span>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        {toolingSignals.map((signal) => (
+          <ToolingSignalCard key={signal.label} signal={signal} />
+        ))}
+      </div>
+
+      <div className="mt-3 rounded-md border border-border-soft bg-bg-surface px-3 py-2.5">
+        <p className="text-[11px] font-extrabold text-text-primary">Audit command</p>
+        <p className="mt-1 break-words text-[10px] font-semibold leading-4 text-text-muted">
+          powershell -ExecutionPolicy Bypass -File scripts/audit-skills.ps1
+        </p>
+      </div>
+    </section>
+  )
+}
+
+function ToolingSignalCard({ signal }: { signal: (typeof toolingSignals)[number] }) {
+  const Icon = signal.icon
+
+  return (
+    <article className="rounded-md border border-border-soft bg-bg-surface px-3 py-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className={cn('inline-flex size-7 shrink-0 items-center justify-center rounded-md', getToneBg(signal.tone), getToneText(signal.tone))}>
+          <Icon className="size-3.5" />
+        </span>
+        <span className={cn('truncate text-[11px] font-extrabold', getToneText(signal.tone))}>{signal.value}</span>
+      </div>
+      <p className="mt-2 text-[11px] font-extrabold text-text-primary">{signal.label}</p>
+      <p className="mt-1 line-clamp-3 text-[10px] font-semibold leading-4 text-text-muted">{signal.detail}</p>
+    </article>
+  )
 }
 
 function PlanningNorthStarSection() {
@@ -1421,16 +1586,21 @@ function IntegrationReadinessSection({
 }) {
   const readyAgents = agentRegistry.filter((agent) => agent.status === 'ready').length
   const missingAgents = agentRegistry.filter((agent) => agent.status === 'missing')
-  const bridgeOnline = health.bridge.mode !== 'offline'
+  const bridgeConfigured = isAgentBridgeEnabled()
+  const bridgeOnline = bridgeConfigured && health.bridge.mode !== 'offline'
 
   return (
     <section className="mt-4 rounded-lg border border-border-med bg-white p-3.5 shadow-soft" aria-label="Agent bridge">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-label-caps text-accent-dark">Agent bridge</p>
-          <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">App siap disambungkan</h2>
+          <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">
+            {bridgeConfigured ? 'App siap disambungkan' : 'Private mode aktif'}
+          </h2>
           <p className="mt-1 text-xs leading-5 text-text-secondary">
-            Brief sekarang masuk lewat API contract. Kalau webhook belum aktif, app tetap jalan di fallback lokal.
+            {bridgeConfigured
+              ? 'Brief masuk lewat API contract. Kalau webhook gagal, app tetap jalan di fallback lokal.'
+              : 'Brief tetap di device sampai bridge sengaja dinyalakan lewat environment.'}
           </p>
         </div>
         <span className={cn('inline-flex size-9 shrink-0 items-center justify-center rounded-md', bridgeOnline ? 'bg-status-final-bg text-status-final' : 'bg-status-review-bg text-status-review')}>
@@ -1454,8 +1624,8 @@ function IntegrationReadinessSection({
         <BridgeMetric
           icon={KeyRound}
           label="Token"
-          value={health.bridge.tokenConfigured ? 'ready' : 'needed'}
-          tone={health.bridge.tokenConfigured ? 'final' : 'decision'}
+          value={bridgeConfigured ? (health.bridge.tokenConfigured ? 'ready' : 'needed') : 'locked'}
+          tone={bridgeConfigured && health.bridge.tokenConfigured ? 'final' : 'decision'}
         />
       </div>
 
@@ -1487,7 +1657,14 @@ function IntegrationReadinessSection({
           title="Submit path"
           body={lastBridgeResult ? `${lastBridgeResult.status} lewat mode ${lastBridgeResult.mode}` : 'Menunggu brief baru dari app.'}
         />
-        <BridgeNote title="Security debt" body="Server masih perlu audit OpenClaw dan matikan insecure control UI sebelum target security dianggap tercapai." />
+        <BridgeNote
+          title="Security posture"
+          body={
+            bridgeConfigured
+              ? 'Bridge aktif: audit server, token, log, dan control UI sebelum dipakai untuk data sensitif.'
+              : 'Bridge off: gunakan Private Sync Vault + Syncthing untuk memindahkan data antar device milik sendiri.'
+          }
+        />
       </div>
     </section>
   )
@@ -1541,7 +1718,7 @@ function DashboardViewTabs({
 }) {
   const items: Array<{ value: DashboardView; label: string; helper: string; count: number }> = [
     { value: 'today', label: 'Hari ini', helper: 'prioritas', count: attentionCount + runningCount },
-    { value: 'department', label: 'Live', helper: 'map', count: agentRegistry.length },
+    { value: 'department', label: 'AI Dept', helper: 'struktur', count: AI_ARCHITECTURE_NODE_COUNT },
     { value: 'sectors', label: 'Sektor', helper: 'C-level', count: DEPARTMENT_ORDER.length },
     { value: 'learning', label: 'Otak', helper: 'learning', count: learningCount },
     { value: 'system', label: 'Sistem', helper: 'fondasi', count: systemCount },
@@ -2080,6 +2257,8 @@ function VisualSurfaceSection() {
     { icon: BarChart3, label: 'Chart', text: 'ROI, forecast, trend' },
     { icon: GitBranch, label: 'Diagram', text: 'flow, mermaid, process' },
     { icon: ImageIcon, label: 'Image', text: 'visual map, reference, mockup' },
+    { icon: ImageIcon, label: 'Generated image', text: 'generated-image block tampil di detail brief' },
+    { icon: CheckCircle2, label: 'Output contract', text: 'AgentOutputEnvelope siap membawa visual result' },
   ]
 
   return (
@@ -2087,9 +2266,9 @@ function VisualSurfaceSection() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-label-caps text-accent-dark">Visual output</p>
-          <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">App siap render data kaya</h2>
+          <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">Generated image sudah punya tempat</h2>
           <p className="mt-1 text-xs leading-5 text-text-secondary">
-            Brief detail bisa berisi grafik, tabel, gambar, diagram, callout, dan grid C-suite.
+            Brief detail bisa berisi grafik, tabel, gambar, diagram, callout, grid C-suite, dan hasil generate image dari agent.
           </p>
         </div>
       </div>
@@ -2319,9 +2498,9 @@ function getIntelligenceFlow(dimension: IntelligenceDimension) {
 function getSystemFlow(area: DepartmentStrengthArea) {
   if (area.id === 'integration') {
     return [
-      'Brief dibuat di app lalu masuk ke submit bridge.',
-      'Bridge mengirim job ke Atmaja atau fallback contract jika endpoint belum aktif.',
-      'Hasil agent dipolling kembali sebagai structured result.',
+      'Brief dibuat di app dan disimpan lokal lebih dulu.',
+      'Submit bridge hanya aktif jika VITE_GERAI_AGENT_BRIDGE=on.',
+      'Hasil agent nantinya dipolling kembali sebagai structured result.',
       'Matthew approve, revisi, atau arsipkan ke memory.',
     ]
   }
@@ -2338,18 +2517,18 @@ function getSystemFlow(area: DepartmentStrengthArea) {
   if (area.id === 'automation') {
     return [
       'Trigger berasal dari jadwal, dashboard pending, market alert, atau follow-up.',
-      'Queue menentukan owner dan prioritas.',
-      'Agent mengerjakan scan, draft, atau review.',
+      'Skill automation memberi checklist audit, runbook, dan approval gate.',
+      'Queue menentukan owner dan prioritas saat runtime sudah diaktifkan.',
       'Approval routing menentukan mana yang boleh lanjut dan mana yang harus ditahan.',
     ]
   }
 
   if (area.id === 'security') {
     return [
-      'Secret hanya hidup di server-side env.',
-      'Runtime flag dan plugin policy dicek sebelum fitur dianggap aman.',
-      'Tool berisiko diberi guardrail dan audit trail.',
-      'Rollback tersedia jika update membuat agent atau app bermasalah.',
+      'Bridge agent dan telemetry off by default.',
+      'Private Sync Vault memindahkan data lewat file yang bisa masuk folder Syncthing.',
+      'Secret tetap server-side dan tidak dibundle ke frontend.',
+      'Runtime server tetap perlu allowlist, audit log, dan backup rotation.',
     ]
   }
 

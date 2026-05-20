@@ -1,11 +1,12 @@
+import { useEffect, useState, type ComponentType } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Analytics } from '@vercel/analytics/react'
-import { SpeedInsights } from '@vercel/speed-insights/react'
 import { ToastProvider } from '@/components/shared/Toast'
 import { BottomNav } from '@/components/nav/BottomNav'
 import { PwaUpdatePrompt } from '@/components/shared/PwaUpdatePrompt'
 import { runAppMigrations } from '@/lib/appReset'
 import Routes from './routes'
+
+const telemetryEnabled = import.meta.env.VITE_GERAI_TELEMETRY === 'on'
 
 // Run once on module load (sebelum first render).
 // Clear stale state dari versi lama setiap APP_VERSION bump.
@@ -36,8 +37,44 @@ export default function App() {
         </div>
       </div>
       <PwaUpdatePrompt />
+      <OptionalTelemetry />
+    </ToastProvider>
+  )
+}
+
+function OptionalTelemetry() {
+  const [components, setComponents] = useState<{
+    Analytics: ComponentType
+    SpeedInsights: ComponentType
+  } | null>(null)
+
+  useEffect(() => {
+    if (!telemetryEnabled) return
+
+    let active = true
+    void Promise.all([import('@vercel/analytics/react'), import('@vercel/speed-insights/react')]).then(
+      ([analyticsModule, speedInsightsModule]) => {
+        if (!active) return
+        setComponents({
+          Analytics: analyticsModule.Analytics,
+          SpeedInsights: speedInsightsModule.SpeedInsights,
+        })
+      },
+    )
+
+    return () => {
+      active = false
+    }
+  }, [])
+
+  if (!telemetryEnabled || !components) return null
+
+  const { Analytics, SpeedInsights } = components
+
+  return (
+    <>
       <Analytics />
       <SpeedInsights />
-    </ToastProvider>
+    </>
   )
 }

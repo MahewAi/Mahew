@@ -172,6 +172,9 @@ export interface CSuiteVote {
   reasoning: string
 }
 
+export type GeneratedImageStatus = 'queued' | 'generating' | 'completed' | 'failed'
+export type GeneratedImageAspectRatio = '1:1' | '4:5' | '16:9' | '21:9'
+
 export type BriefBlock =
   | { type: 'markdown'; content: string }
   | { type: 'table'; headers: string[]; rows: string[][]; align?: CellAlign[]; caption?: string }
@@ -180,6 +183,18 @@ export type BriefBlock =
   | { type: 'callout'; variant: CalloutVariant; title?: string; content: string }
   | { type: 'grid'; columns: number; items: GridItem[] }
   | { type: 'image'; src: string; alt: string; caption?: string }
+  | {
+      type: 'generated-image'
+      title?: string
+      prompt: string
+      src?: string
+      alt: string
+      caption?: string
+      status?: GeneratedImageStatus
+      provider?: string
+      generatedAt?: string
+      aspectRatio?: GeneratedImageAspectRatio
+    }
   | { type: 'code'; language: string; content: string }
   | { type: 'csuite-vote'; votes: CSuiteVote[] }
 

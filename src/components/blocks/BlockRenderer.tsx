@@ -1,13 +1,16 @@
+import { lazy, Suspense, type ReactNode } from 'react'
 import type { BriefBlock } from '@/lib/types'
-import { MarkdownBlock } from './MarkdownBlock'
 import { TableBlock } from './TableBlock'
-import { ChartBlock } from './ChartBlock'
-import { MermaidBlock } from './MermaidBlock'
-import { CalloutBlock } from './CalloutBlock'
-import { GridBlock } from './GridBlock'
 import { ImageBlock } from './ImageBlock'
+import { GeneratedImageBlock } from './GeneratedImageBlock'
 import { CodeBlock } from './CodeBlock'
-import { CSuiteVoteBlock } from './CSuiteVoteBlock'
+
+const MarkdownBlock = lazy(() => import('./MarkdownBlock').then((module) => ({ default: module.MarkdownBlock })))
+const ChartBlock = lazy(() => import('./ChartBlock').then((module) => ({ default: module.ChartBlock })))
+const MermaidBlock = lazy(() => import('./MermaidBlock').then((module) => ({ default: module.MermaidBlock })))
+const CalloutBlock = lazy(() => import('./CalloutBlock').then((module) => ({ default: module.CalloutBlock })))
+const GridBlock = lazy(() => import('./GridBlock').then((module) => ({ default: module.GridBlock })))
+const CSuiteVoteBlock = lazy(() => import('./CSuiteVoteBlock').then((module) => ({ default: module.CSuiteVoteBlock })))
 
 interface BlockRendererProps {
   block: BriefBlock
@@ -17,7 +20,11 @@ interface BlockRendererProps {
 export function BlockRenderer({ block }: BlockRendererProps) {
   switch (block.type) {
     case 'markdown':
-      return <MarkdownBlock content={block.content} />
+      return (
+        <LazyBlock>
+          <MarkdownBlock content={block.content} />
+        </LazyBlock>
+      )
     case 'table':
       return (
         <TableBlock
@@ -29,26 +36,68 @@ export function BlockRenderer({ block }: BlockRendererProps) {
       )
     case 'chart':
       return (
-        <ChartBlock
-          kind={block.kind}
-          data={block.data}
-          options={block.options}
-          caption={block.caption}
-        />
+        <LazyBlock>
+          <ChartBlock
+            kind={block.kind}
+            data={block.data}
+            options={block.options}
+            caption={block.caption}
+          />
+        </LazyBlock>
       )
     case 'mermaid':
-      return <MermaidBlock code={block.code} caption={block.caption} />
+      return (
+        <LazyBlock>
+          <MermaidBlock code={block.code} caption={block.caption} />
+        </LazyBlock>
+      )
     case 'callout':
-      return <CalloutBlock variant={block.variant} title={block.title} content={block.content} />
+      return (
+        <LazyBlock>
+          <CalloutBlock variant={block.variant} title={block.title} content={block.content} />
+        </LazyBlock>
+      )
     case 'grid':
-      return <GridBlock columns={block.columns} items={block.items} />
+      return (
+        <LazyBlock>
+          <GridBlock columns={block.columns} items={block.items} />
+        </LazyBlock>
+      )
     case 'image':
       return <ImageBlock src={block.src} alt={block.alt} caption={block.caption} />
+    case 'generated-image':
+      return (
+        <GeneratedImageBlock
+          title={block.title}
+          prompt={block.prompt}
+          src={block.src}
+          alt={block.alt}
+          caption={block.caption}
+          status={block.status}
+          provider={block.provider}
+          generatedAt={block.generatedAt}
+          aspectRatio={block.aspectRatio}
+        />
+      )
     case 'code':
       return <CodeBlock language={block.language} content={block.content} />
     case 'csuite-vote':
-      return <CSuiteVoteBlock votes={block.votes} />
+      return (
+        <LazyBlock>
+          <CSuiteVoteBlock votes={block.votes} />
+        </LazyBlock>
+      )
   }
+}
+
+function LazyBlock({ children }: { children: ReactNode }) {
+  return <Suspense fallback={<BlockLoading />}>{children}</Suspense>
+}
+
+function BlockLoading() {
+  return (
+    <div className="my-4 h-24 rounded-md border border-border-soft bg-white/52 shadow-soft" aria-label="Memuat blok" />
+  )
 }
 
 interface BlockListProps {

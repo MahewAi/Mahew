@@ -2,6 +2,8 @@ import type { Brief } from '@/lib/types'
 
 export type BridgeMode = 'webhook' | 'contract' | 'offline'
 
+const AGENT_BRIDGE_ENABLED = import.meta.env.VITE_GERAI_AGENT_BRIDGE === 'on'
+
 export interface AgentHealth {
   ok: boolean
   checkedAt: string
@@ -25,13 +27,13 @@ export interface AgentHealth {
 
 export interface SubmitAgentBriefResult {
   mode: BridgeMode
-  status: 'accepted' | 'bridge_error' | 'upstream_error'
+  status: 'accepted' | 'local_only' | 'bridge_error' | 'upstream_error'
   jobId: string
   note?: string
 }
 
 export const fallbackAgentHealth: AgentHealth = {
-  ok: false,
+  ok: true,
   checkedAt: new Date(0).toISOString(),
   bridge: {
     mode: 'offline',
@@ -41,17 +43,23 @@ export const fallbackAgentHealth: AgentHealth = {
   },
   runtime: {
     engine: 'OpenClaw Atmaja',
-    status: 'external',
-    note: 'Belum bisa membaca health endpoint.',
+    status: 'offline',
+    note: 'Private mode aktif. App tidak mengirim brief ke backend sampai bridge dinyalakan.',
   },
   security: {
     appFirst: true,
     discordOptional: true,
-    requiresServerAudit: true,
+    requiresServerAudit: false,
   },
 }
 
+export function isAgentBridgeEnabled() {
+  return AGENT_BRIDGE_ENABLED
+}
+
 export async function fetchAgentHealth(): Promise<AgentHealth> {
+  if (!AGENT_BRIDGE_ENABLED) return fallbackAgentHealth
+
   try {
     const response = await fetch('/api/agent/health', {
       headers: { accept: 'application/json' },
@@ -65,6 +73,15 @@ export async function fetchAgentHealth(): Promise<AgentHealth> {
 }
 
 export async function submitAgentBrief(brief: Brief): Promise<SubmitAgentBriefResult> {
+  if (!AGENT_BRIDGE_ENABLED) {
+    return {
+      mode: 'offline',
+      status: 'local_only',
+      jobId: `local-${Date.now()}`,
+      note: 'Private mode aktif. Brief disimpan di device dan bisa diekspor ke Private Sync Vault.',
+    }
+  }
+
   try {
     const response = await fetch('/api/agent/briefs', {
       method: 'POST',

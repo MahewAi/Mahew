@@ -80,6 +80,13 @@ export function PwaUpdatePrompt() {
       // Cache API unavailable.
     }
 
+    try {
+      const registrations = await navigator.serviceWorker?.getRegistrations?.()
+      await Promise.all((registrations ?? []).map((registration) => registration.unregister()))
+    } catch {
+      // Service worker cleanup unavailable.
+    }
+
     const url = new URL(window.location.href)
     url.searchParams.set('refresh', `pwa-${Date.now()}`)
     window.location.replace(url.toString())
@@ -170,7 +177,7 @@ export function PwaUpdatePrompt() {
               'transition-colors duration-fast hover:bg-accent-dark',
             )}
           >
-            Update
+            Update sekarang
           </button>
         </motion.div>
       )}
