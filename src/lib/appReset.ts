@@ -2,17 +2,19 @@
  * App-level reset migration.
  *
  * Saat bundle version bump (lihat APP_VERSION), runs once on app init:
- * - Clear semua `gerai:*` keys di localStorage
+ * - Clear stale `gerai:*` keys di localStorage
+ * - Keep durable conversation/learning state
  * - Set new version key
  *
- * Sehingga user lama yang punya cached state (Atmaja thread, dll) otomatis
- * reset saat update tiba. Tidak perlu manual clear.
+ * Sehingga user lama yang punya cached state lama bisa disegarkan tanpa
+ * menghapus percakapan Atmaja yang masih berjalan.
  */
 
 // Bump ini setiap kali butuh force-reset state user.
 export const APP_VERSION = '2026-05-18-fresh-start-v2'
 
 const VERSION_KEY = 'gerai:app-version'
+const DURABLE_STATE_PREFIXES = ['gerai:learning-memory', 'gerai:atmaja-thread']
 
 export function runAppMigrations(): void {
   if (typeof window === 'undefined') return
@@ -25,7 +27,8 @@ export function runAppMigrations(): void {
     const keysToRemove: string[] = []
     for (let i = 0; i < localStorage.length; i += 1) {
       const key = localStorage.key(i)
-      if (key && key.startsWith('gerai:') && key !== VERSION_KEY && !key.startsWith('gerai:learning-memory')) {
+      const isDurableState = DURABLE_STATE_PREFIXES.some((prefix) => key?.startsWith(prefix))
+      if (key && key.startsWith('gerai:') && key !== VERSION_KEY && !isDurableState) {
         keysToRemove.push(key)
       }
     }

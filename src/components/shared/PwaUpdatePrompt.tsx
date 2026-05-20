@@ -112,7 +112,8 @@ export function PwaUpdatePrompt() {
     const onControllerChange = () => {
       if (hasReloadedRef.current) return
       hasReloadedRef.current = true
-      window.location.reload()
+      setServerUpdateAvailable(true)
+      setNeedRefresh(true)
     }
 
     document.addEventListener('visibilitychange', onVisibilityChange)

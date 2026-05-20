@@ -1,10 +1,11 @@
-import { useState, useMemo, useRef, useEffect, type DragEvent } from 'react'
+import { useState, useMemo, useRef, useEffect, useCallback, type DragEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { Send, Sunrise, ArrowUpRight, Trash2, ChevronDown, FileText, Image as ImageIcon, Loader2, Paperclip, UploadCloud, X } from 'lucide-react'
 import { loadStoredBriefs } from '@/lib/briefStore'
 import { recordInteractionLessons } from '@/lib/learningMemory'
 import { generateMockReply, type ChatMessage } from '@/lib/mockReplies'
+import { isAtmajaColorDecisionRequest, shouldRepairAtmajaReply } from '@/lib/atmajaSystem'
 import { cn } from '@/lib/utils'
 
 type AttachmentKind = 'image' | 'text' | 'document'
@@ -46,6 +47,7 @@ const STORAGE_KEY = 'gerai:atmaja-thread'
 const MAX_ATTACHMENTS = 5
 const MAX_FILE_BYTES = 10 * 1024 * 1024
 const MAX_TEXT_PREVIEW_CHARS = 6000
+const REPLY_DELAY_MS = 1100
 const textAttachmentExtensions = new Set(['txt', 'md', 'csv', 'json', 'log', 'xml', 'yaml', 'yml'])
 const visualKeywordsPattern = /gambar|image|visual|moodboard|preview|canvas|mapping|peta kerja|denah|rancangan|desain|design/
 const paletteVisualColors: AtmajaVisualColor[] = [
@@ -177,22 +179,6 @@ function buildAttachmentPrompt(text: string, attachments: AtmajaAttachment[]) {
   return `${text}\n\n[Lampiran lokal untuk Atmaja]\n${summaries}`
 }
 
-function isColorDecisionRequest(text: string) {
-  const lowerText = text.toLowerCase()
-  return /(warna|color|palette|palet|brand|branding)/.test(lowerText) && /(pilih|rekomendasi|terbaik|alasan|menurut)/.test(lowerText)
-}
-
-function isDirectVisualChoiceRequest(text: string) {
-  const lowerText = text.toLowerCase()
-  return (
-    (/(yang saya tanya|saya tanya|jawab langsung|jangan muter)/.test(lowerText) &&
-      /(foto|gambar|opsi|option|warna|color|palette|palet|pilihan|pilih)/.test(lowerText)) ||
-    (/(foto|gambar|opsi|option)/.test(lowerText) && /(mana|keberapa|ke berapa|suka|pilihan|prefer)/.test(lowerText)) ||
-    (/(mana|keberapa|ke berapa|pilihan)/.test(lowerText) && /(foto|gambar|opsi|option)/.test(lowerText)) ||
-    (/(warna|color|palette|palet)/.test(lowerText) && /(mana|suka|pilihan|prefer)/.test(lowerText))
-  )
-}
-
 function escapeSvgText(text: string) {
   return text.replace(/[&<>"']/g, (char) => {
     if (char === '&') return '&amp;'
@@ -282,7 +268,7 @@ function buildGeneratedVisual(prompt: string): AtmajaVisual {
 }
 
 function shouldBuildPaletteVisual(userText: string, replyText: string) {
-  return isColorDecisionRequest(userText) || /#B8956B|#1F1A14|#FAF8F4|brass gold|deep charcoal|warm ivory/i.test(replyText)
+  return isAtmajaColorDecisionRequest(userText) || /#B8956B|#1F1A14|#FAF8F4|brass gold|deep charcoal|warm ivory/i.test(replyText)
 }
 
 function shouldOfferVisual(userText: string, replyText: string) {
@@ -307,28 +293,6 @@ function withVisualFollowUp(text: string, userText: string, visuals: AtmajaVisua
   return text
 }
 
-function isGenericFileReply(text: string) {
-  return (
-    text.startsWith('Lampiran masuk. Jika ini dokumen non-teks') ||
-    text.startsWith('File sudah saya terima sebagai lampiran.')
-  )
-}
-
-function isGenericVisualReply(text: string) {
-  return (
-    text.startsWith('Bisa. Saya akan jawab dalam dua lapis') ||
-    text.startsWith('Bisa. Saya akan sertakan draft visual awal')
-  )
-}
-
-function isGenericBrandReply(text: string) {
-  return (
-    text.startsWith('Brand Gerai tetap saya pegang') ||
-    text.startsWith('Kalau mau mulai dari brand') ||
-    text.includes('brief pertamanya bisa berbentuk identity canon')
-  )
-}
-
 function upgradeActionableReplies(messages: AtmajaMessage[]) {
   let upgradedMessages = messages
 
@@ -339,31 +303,7 @@ function upgradeActionableReplies(messages: AtmajaMessage[]) {
     if (
       userMessage.author === 'matthew' &&
       replyMessage.author === 'ceo' &&
-      isColorDecisionRequest(userMessage.text) &&
-      (isGenericFileReply(replyMessage.text) || isGenericVisualReply(replyMessage.text) || !replyMessage.visuals?.length)
-    ) {
-      if (upgradedMessages === messages) upgradedMessages = [...messages]
-      const modelText = buildAttachmentPrompt(userMessage.text, userMessage.attachments ?? [])
-      const result = isGenericFileReply(replyMessage.text) || isGenericVisualReply(replyMessage.text)
-        ? generateMockReply({
-            userMessage: modelText,
-            history: upgradedMessages.slice(0, index),
-            speaker: 'atmaja',
-          })
-        : { text: replyMessage.text }
-      const visuals = buildVisualsForReply(modelText, result.text)
-      upgradedMessages[index + 1] = {
-        ...replyMessage,
-        text: withVisualFollowUp(result.text, modelText, visuals),
-        visuals,
-      }
-    }
-
-    if (
-      userMessage.author === 'matthew' &&
-      replyMessage.author === 'ceo' &&
-      isDirectVisualChoiceRequest(userMessage.text) &&
-      isGenericBrandReply(replyMessage.text)
+      shouldRepairAtmajaReply(userMessage.text, replyMessage.text, (replyMessage.visuals?.length ?? 0) > 0)
     ) {
       if (upgradedMessages === messages) upgradedMessages = [...messages]
       const modelText = buildAttachmentPrompt(userMessage.text, userMessage.attachments ?? [])
@@ -402,6 +342,7 @@ export default function Atmaja() {
   const listRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const dragDepthRef = useRef(0)
+  const pendingReplyTimerRef = useRef<number | null>(null)
 
   useEffect(() => {
     saveThread(messages)
@@ -411,6 +352,70 @@ export default function Atmaja() {
     const upgradedMessages = upgradeActionableReplies(messages)
     if (upgradedMessages !== messages) setMessages(upgradedMessages)
   }, [messages])
+
+  useEffect(() => {
+    return () => {
+      if (pendingReplyTimerRef.current !== null) {
+        window.clearTimeout(pendingReplyTimerRef.current)
+      }
+    }
+  }, [])
+
+  const scheduleAtmajaReply = useCallback((historySnapshot: AtmajaMessage[], userMsg: AtmajaMessage, delay = REPLY_DELAY_MS) => {
+    if (pendingReplyTimerRef.current !== null) {
+      window.clearTimeout(pendingReplyTimerRef.current)
+    }
+
+    setSending(true)
+    pendingReplyTimerRef.current = window.setTimeout(() => {
+      pendingReplyTimerRef.current = null
+      const modelText = buildAttachmentPrompt(userMsg.text, userMsg.attachments ?? [])
+      const result = generateMockReply({
+        userMessage: modelText,
+        history: historySnapshot,
+        speaker: 'atmaja',
+      })
+
+      if (result.resetThread) {
+        const resetMessages: AtmajaMessage[] = [
+          {
+            id: `m-${Date.now() + 1}`,
+            author: 'ceo',
+            text: result.text,
+            timeAgo: 'Baru saja',
+          },
+        ]
+        saveThread(resetMessages)
+        setMessages(resetMessages)
+        setSending(false)
+        return
+      }
+
+      const visuals = buildVisualsForReply(modelText, result.text)
+      const reply: AtmajaMessage = {
+        id: `m-${Date.now() + 1}`,
+        author: 'ceo',
+        text: withVisualFollowUp(result.text, modelText, visuals),
+        timeAgo: 'Baru saja',
+      }
+      if (visuals.length > 0) reply.visuals = visuals
+
+      setMessages((prev) => {
+        const userIndex = prev.findIndex((message) => message.id === userMsg.id)
+        if (userIndex >= 0 && prev[userIndex + 1]?.author === 'ceo') return prev
+        const nextMessages = [...prev, reply]
+        saveThread(nextMessages)
+        return nextMessages
+      })
+      setSending(false)
+    }, delay)
+  }, [])
+
+  useEffect(() => {
+    const lastMessage = messages[messages.length - 1]
+    if (!lastMessage || lastMessage.author !== 'matthew' || sending) return
+    scheduleAtmajaReply(messages.slice(0, -1), lastMessage, 350)
+  }, [messages, scheduleAtmajaReply, sending])
 
   const handleReset = () => {
     setMessages(initialThread)
@@ -501,7 +506,6 @@ export default function Atmaja() {
     const trimmed = msgText.trim()
     const outgoingAttachments = attachments
     const displayText = trimmed || buildDefaultAttachmentText(outgoingAttachments)
-    const modelText = buildAttachmentPrompt(displayText, outgoingAttachments)
     const userMsg: AtmajaMessage = {
       id: `m-${Date.now()}`,
       author: 'matthew',
@@ -511,42 +515,13 @@ export default function Atmaja() {
     }
     const historySnapshot = messages
     recordInteractionLessons(displayText, { type: 'atmaja-chat', author: 'matthew' })
-    setMessages((prev) => [...prev, userMsg])
+    const nextMessages = [...messages, userMsg]
+    saveThread(nextMessages)
+    setMessages(nextMessages)
     setText('')
     setAttachments([])
     setAttachmentError('')
-    setSending(true)
-    window.setTimeout(() => {
-      const result = generateMockReply({
-        userMessage: modelText,
-        history: historySnapshot,
-        speaker: 'atmaja',
-      })
-
-      if (result.resetThread) {
-        setMessages([
-          {
-            id: `m-${Date.now() + 1}`,
-            author: 'ceo',
-            text: result.text,
-            timeAgo: 'Baru saja',
-          },
-        ])
-        setSending(false)
-        return
-      }
-
-      const visuals = buildVisualsForReply(modelText, result.text)
-      const reply: AtmajaMessage = {
-        id: `m-${Date.now() + 1}`,
-        author: 'ceo',
-        text: withVisualFollowUp(result.text, modelText, visuals),
-        timeAgo: 'Baru saja',
-      }
-      if (visuals.length > 0) reply.visuals = visuals
-      setMessages((prev) => [...prev, reply])
-      setSending(false)
-    }, 1100)
+    scheduleAtmajaReply(historySnapshot, userMsg)
   }
 
   return (
