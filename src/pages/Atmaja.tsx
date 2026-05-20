@@ -1,7 +1,7 @@
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo, useRef, useEffect, type DragEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { Send, Sunrise, ArrowUpRight, Trash2, ChevronDown, FileText, Image as ImageIcon, Loader2, Paperclip, X } from 'lucide-react'
+import { Send, Sunrise, ArrowUpRight, Trash2, ChevronDown, FileText, Image as ImageIcon, Loader2, Paperclip, UploadCloud, X } from 'lucide-react'
 import { loadStoredBriefs } from '@/lib/briefStore'
 import { recordInteractionLessons } from '@/lib/learningMemory'
 import { generateMockReply, type ChatMessage } from '@/lib/mockReplies'
@@ -153,6 +153,10 @@ function buildAttachmentPrompt(text: string, attachments: AtmajaAttachment[]) {
   return `${text}\n\n[Lampiran lokal untuk Atmaja]\n${summaries}`
 }
 
+function hasDraggedFiles(dataTransfer: DataTransfer) {
+  return Array.from(dataTransfer.types).includes('Files')
+}
+
 export default function Atmaja() {
   const navigate = useNavigate()
   const reduceMotion = useReducedMotion()
@@ -161,10 +165,12 @@ export default function Atmaja() {
   const [attachments, setAttachments] = useState<AtmajaAttachment[]>([])
   const [attachmentError, setAttachmentError] = useState('')
   const [readingFiles, setReadingFiles] = useState(false)
+  const [draggingFiles, setDraggingFiles] = useState(false)
   const [sending, setSending] = useState(false)
   const [quickOpen, setQuickOpen] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const dragDepthRef = useRef(0)
 
   useEffect(() => {
     saveThread(messages)
@@ -174,6 +180,8 @@ export default function Atmaja() {
     setMessages(initialThread)
     setAttachments([])
     setAttachmentError('')
+    setDraggingFiles(false)
+    dragDepthRef.current = 0
     try {
       localStorage.removeItem(STORAGE_KEY)
     } catch {
@@ -216,6 +224,35 @@ export default function Atmaja() {
     } finally {
       setReadingFiles(false)
     }
+  }
+
+  const handleComposerDragEnter = (event: DragEvent<HTMLDivElement>) => {
+    if (!hasDraggedFiles(event.dataTransfer)) return
+    event.preventDefault()
+    dragDepthRef.current += 1
+    setDraggingFiles(true)
+  }
+
+  const handleComposerDragOver = (event: DragEvent<HTMLDivElement>) => {
+    if (!hasDraggedFiles(event.dataTransfer)) return
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'copy'
+    setDraggingFiles(true)
+  }
+
+  const handleComposerDragLeave = (event: DragEvent<HTMLDivElement>) => {
+    if (!hasDraggedFiles(event.dataTransfer)) return
+    event.preventDefault()
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1)
+    if (dragDepthRef.current === 0) setDraggingFiles(false)
+  }
+
+  const handleComposerDrop = (event: DragEvent<HTMLDivElement>) => {
+    if (!hasDraggedFiles(event.dataTransfer)) return
+    event.preventDefault()
+    dragDepthRef.current = 0
+    setDraggingFiles(false)
+    void handleFileSelect(event.dataTransfer.files)
   }
 
   const removeAttachment = (id: string) => {
@@ -441,7 +478,23 @@ export default function Atmaja() {
           </div>
         )}
 
-        <div className="sticky bottom-24 z-20 rounded-[22px] border border-white/75 bg-white/76 p-2 shadow-pop backdrop-blur-xl">
+        <div
+          className={cn(
+            'sticky bottom-24 z-20 rounded-[22px] border bg-white/76 p-2 shadow-pop backdrop-blur-xl transition-colors duration-fast',
+            draggingFiles ? 'border-accent bg-accent-bg/85 ring-2 ring-accent/25' : 'border-white/75',
+          )}
+          onDragEnter={handleComposerDragEnter}
+          onDragOver={handleComposerDragOver}
+          onDragLeave={handleComposerDragLeave}
+          onDrop={handleComposerDrop}
+        >
+          {draggingFiles && (
+            <div className="mb-2 flex min-h-12 items-center gap-2 rounded-md border border-dashed border-accent bg-white/72 px-3 text-xs font-extrabold text-accent-dark">
+              <UploadCloud className="size-4" />
+              Lepas file untuk lampirkan ke Atmaja
+            </div>
+          )}
+
           {attachments.length > 0 && (
             <div className="mb-2 grid gap-2 sm:grid-cols-2">
               {attachments.map((attachment) => (
