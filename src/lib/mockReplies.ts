@@ -158,6 +158,19 @@ const PATTERNS: Array<{
     ],
   },
   {
+    match: (q) =>
+      (/(yang saya tanya|saya tanya|jawab langsung|jangan muter)/.test(q) &&
+        /(foto|gambar|opsi|option|warna|color|palette|palet|pilihan|pilih)/.test(q)) ||
+      (/(foto|gambar|opsi|option)/.test(q) && /(mana|keberapa|ke berapa|suka|pilihan|prefer)/.test(q)) ||
+      (/(mana|keberapa|ke berapa|pilihan)/.test(q) && /(foto|gambar|opsi|option)/.test(q)) ||
+      (/(warna|color|palette|palet)/.test(q) && /(mana|suka|pilihan|prefer)/.test(q)),
+    intent: 'direct_visual_choice',
+    variants: () => [
+      `Jawaban langsung: saya pilih foto/opsi ke-2 kalau urutannya mengikuti pilihan yang paling premium dan tidak terlalu ramai.\n\nWarna yang saya suka: Brass gold #B8956B sebagai aksen utama, Deep charcoal #1F1A14 sebagai warna dasar/kontras, lalu Warm ivory #FAF8F4 sebagai ruang napas.\n\nAlasannya: satu logo memang tidak harus satu warna. Kombinasi brass + charcoal memberi rasa premium dan tegas, sementara ivory menjaga agar aplikasinya tetap bersih di app, packaging, dan materi presentasi.\n\nKalau urutan foto di layar Anda berbeda, pegang patokan ini: saya pilih foto yang paling banyak memakai brass/gold dengan kontras charcoal, bukan opsi yang terlalu terang atau terlalu banyak warna.`,
+      `Saya pilih arah visual/foto yang komposisinya Brass gold + Deep charcoal, dengan Warm ivory sebagai background support. Kalau harus saya sebut pilihan: foto/opsi ke-2.\n\nYang saya hindari: logo yang terlalu satu warna polos, gold yang terlalu kuning/mencolok, atau kombinasi yang terlalu ramai. Yang paling kuat untuk Gerai/GSP adalah kombinasi premium yang hangat, gelap, dan bersih.`,
+    ],
+  },
+  {
     match: (q) => /(warna|color|palette|palet|brand|branding)/.test(q) && /(pilih|rekomendasi|terbaik|alasan|menurut)/.test(q),
     intent: 'color_palette',
     variants: (ctx) => {

@@ -182,6 +182,17 @@ function isColorDecisionRequest(text: string) {
   return /(warna|color|palette|palet|brand|branding)/.test(lowerText) && /(pilih|rekomendasi|terbaik|alasan|menurut)/.test(lowerText)
 }
 
+function isDirectVisualChoiceRequest(text: string) {
+  const lowerText = text.toLowerCase()
+  return (
+    (/(yang saya tanya|saya tanya|jawab langsung|jangan muter)/.test(lowerText) &&
+      /(foto|gambar|opsi|option|warna|color|palette|palet|pilihan|pilih)/.test(lowerText)) ||
+    (/(foto|gambar|opsi|option)/.test(lowerText) && /(mana|keberapa|ke berapa|suka|pilihan|prefer)/.test(lowerText)) ||
+    (/(mana|keberapa|ke berapa|pilihan)/.test(lowerText) && /(foto|gambar|opsi|option)/.test(lowerText)) ||
+    (/(warna|color|palette|palet)/.test(lowerText) && /(mana|suka|pilihan|prefer)/.test(lowerText))
+  )
+}
+
 function escapeSvgText(text: string) {
   return text.replace(/[&<>"']/g, (char) => {
     if (char === '&') return '&amp;'
@@ -303,30 +314,64 @@ function isGenericFileReply(text: string) {
   )
 }
 
-function upgradeActionableFileReplies(messages: AtmajaMessage[]) {
+function isGenericVisualReply(text: string) {
+  return (
+    text.startsWith('Bisa. Saya akan jawab dalam dua lapis') ||
+    text.startsWith('Bisa. Saya akan sertakan draft visual awal')
+  )
+}
+
+function isGenericBrandReply(text: string) {
+  return (
+    text.startsWith('Brand Gerai tetap saya pegang') ||
+    text.startsWith('Kalau mau mulai dari brand') ||
+    text.includes('brief pertamanya bisa berbentuk identity canon')
+  )
+}
+
+function upgradeActionableReplies(messages: AtmajaMessage[]) {
   let upgradedMessages = messages
 
   for (let index = 0; index < messages.length - 1; index += 1) {
     const userMessage = messages[index]
     const replyMessage = messages[index + 1]
-    const hasAttachment = (userMessage.attachments?.length ?? 0) > 0
 
     if (
       userMessage.author === 'matthew' &&
       replyMessage.author === 'ceo' &&
-      hasAttachment &&
       isColorDecisionRequest(userMessage.text) &&
-      (isGenericFileReply(replyMessage.text) || !replyMessage.visuals?.length)
+      (isGenericFileReply(replyMessage.text) || isGenericVisualReply(replyMessage.text) || !replyMessage.visuals?.length)
     ) {
       if (upgradedMessages === messages) upgradedMessages = [...messages]
       const modelText = buildAttachmentPrompt(userMessage.text, userMessage.attachments ?? [])
-      const result = isGenericFileReply(replyMessage.text)
+      const result = isGenericFileReply(replyMessage.text) || isGenericVisualReply(replyMessage.text)
         ? generateMockReply({
             userMessage: modelText,
             history: upgradedMessages.slice(0, index),
             speaker: 'atmaja',
           })
         : { text: replyMessage.text }
+      const visuals = buildVisualsForReply(modelText, result.text)
+      upgradedMessages[index + 1] = {
+        ...replyMessage,
+        text: withVisualFollowUp(result.text, modelText, visuals),
+        visuals,
+      }
+    }
+
+    if (
+      userMessage.author === 'matthew' &&
+      replyMessage.author === 'ceo' &&
+      isDirectVisualChoiceRequest(userMessage.text) &&
+      isGenericBrandReply(replyMessage.text)
+    ) {
+      if (upgradedMessages === messages) upgradedMessages = [...messages]
+      const modelText = buildAttachmentPrompt(userMessage.text, userMessage.attachments ?? [])
+      const result = generateMockReply({
+        userMessage: modelText,
+        history: upgradedMessages.slice(0, index),
+        speaker: 'atmaja',
+      })
       const visuals = buildVisualsForReply(modelText, result.text)
       upgradedMessages[index + 1] = {
         ...replyMessage,
@@ -363,7 +408,7 @@ export default function Atmaja() {
   }, [messages])
 
   useEffect(() => {
-    const upgradedMessages = upgradeActionableFileReplies(messages)
+    const upgradedMessages = upgradeActionableReplies(messages)
     if (upgradedMessages !== messages) setMessages(upgradedMessages)
   }, [messages])
 
