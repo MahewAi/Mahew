@@ -8,7 +8,9 @@ import {
   CheckCircle2,
   ChevronRight,
   CircleDashed,
+  CreditCard,
   Database,
+  DollarSign,
   GitBranch,
   KeyRound,
   Image as ImageIcon,
@@ -21,6 +23,7 @@ import {
   ShieldCheck,
   Table2,
   Timer,
+  WalletCards,
   Workflow,
 } from 'lucide-react'
 import { BriefDetailSheet } from '@/components/brief/BriefDetailSheet'
@@ -46,6 +49,22 @@ import {
   type SubmitAgentBriefResult,
 } from '@/lib/agentApi'
 import { isPrivacyLockEnabled } from '@/lib/privacyGuard'
+import {
+  advanceCaseAutomationRuns,
+  createCaseAutomationRun,
+  getAutomationSummary,
+  loadStoredAutomationRuns,
+  reconcileCaseAutomationRuns,
+  saveStoredAutomationRuns,
+  type CaseAutomationRun,
+} from '@/lib/caseAutomation'
+import {
+  buildCostLedgerSummary,
+  fetchOpenRouterCredits,
+  getFallbackProviderCredit,
+  type CostLedgerSummary,
+  type ProviderCreditSnapshot,
+} from '@/lib/costLedger'
 import { loadStoredBriefs, saveStoredBriefs } from '@/lib/briefStore'
 import {
   getLearningSnapshot,
@@ -67,7 +86,7 @@ import { cn } from '@/lib/utils'
 
 type SectorValue = 'all' | Role
 type SectionTone = 'decision' | 'doing' | 'review' | 'final' | 'neutral'
-type DashboardView = 'today' | 'department' | 'sectors' | 'learning' | 'system'
+type DashboardView = 'today' | 'department' | 'sectors' | 'learning' | 'costs' | 'system'
 type CLevelWorkbenchMode = 'brief' | 'timeline' | 'visual' | 'data' | 'output'
 
 type StrengthIconKey = DepartmentStrengthArea['id']
@@ -129,15 +148,43 @@ export default function Inbox() {
   const [agentHealth, setAgentHealth] = useState<AgentHealth>(fallbackAgentHealth)
   const [lastBridgeResult, setLastBridgeResult] = useState<SubmitAgentBriefResult | null>(null)
   const [learningVersion, setLearningVersion] = useState(0)
+  const [automationRuns, setAutomationRuns] = useState<CaseAutomationRun[]>(() => loadStoredAutomationRuns())
+  const [providerCredit, setProviderCredit] = useState<ProviderCreditSnapshot>(() => getFallbackProviderCredit())
 
   useEffect(() => {
     saveStoredBriefs(briefs)
   }, [briefs])
 
   useEffect(() => {
+    saveStoredAutomationRuns(automationRuns)
+  }, [automationRuns])
+
+  useEffect(() => {
+    setAutomationRuns((runs) => reconcileCaseAutomationRuns(briefs, runs))
+  }, [briefs])
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setAutomationRuns((runs) => advanceCaseAutomationRuns(runs, briefs))
+    }, 1200)
+
+    return () => window.clearInterval(intervalId)
+  }, [briefs])
+
+  useEffect(() => {
     let cancelled = false
     void fetchAgentHealth().then((health) => {
       if (!cancelled) setAgentHealth(health)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    void fetchOpenRouterCredits().then((snapshot) => {
+      if (!cancelled) setProviderCredit(snapshot)
     })
     return () => {
       cancelled = true
@@ -171,6 +218,8 @@ export default function Inbox() {
     return cLevelPlans.filter((plan) => plan.role === sector)
   }, [sector])
   const learningSnapshot = useMemo(() => getLearningSnapshot(), [learningVersion])
+  const automationSummary = useMemo(() => getAutomationSummary(automationRuns), [automationRuns])
+  const costSummary = useMemo(() => buildCostLedgerSummary(briefs), [briefs])
 
   const attentionCount = confirmationBriefs.length + blockerBriefs.length
   const activeCount = briefs.filter((brief) => brief.status !== 'final').length
@@ -218,6 +267,7 @@ export default function Inbox() {
 
   const handleComposeSubmit = (newBrief: Brief) => {
     setBriefs((prev) => [newBrief, ...prev])
+    setAutomationRuns((prev) => [createCaseAutomationRun(newBrief), ...prev])
     void submitAgentBrief(newBrief).then((result) => {
       setLastBridgeResult(result)
     })
@@ -237,6 +287,7 @@ export default function Inbox() {
           attentionCount={attentionCount}
           runningCount={runningBriefs.length}
           learningCount={learningSnapshot.total}
+          costCount={costSummary.caseCount}
           systemCount={departmentStrengthAreas.length}
         />
 
@@ -278,10 +329,15 @@ export default function Inbox() {
         {dashboardView === 'learning' && (
           <>
             <IntelligenceOverviewSection snapshot={learningSnapshot} />
+            <IntelligenceAutomationSection summary={automationSummary} runs={automationRuns} />
             <IntelligenceDimensionSection />
             <LearningMemorySection snapshot={learningSnapshot} />
             <IntelligenceUpgradePathSection />
           </>
+        )}
+
+        {dashboardView === 'costs' && (
+          <CostDashboardSection summary={costSummary} providerCredit={providerCredit} />
         )}
 
         {dashboardView === 'system' && (
@@ -676,7 +732,7 @@ function ToolingAutomationSection() {
       <div className="mt-3 rounded-md border border-border-soft bg-bg-surface px-3 py-2.5">
         <p className="text-[11px] font-extrabold text-text-primary">Audit command</p>
         <p className="mt-1 break-words text-[10px] font-semibold leading-4 text-text-muted">
-          powershell -ExecutionPolicy Bypass -File scripts/audit-skills.ps1
+          powershell -ExecutionPolicy Bypass -File .agents/skills/skill-automation/scripts/audit-skills.ps1
         </p>
       </div>
     </section>
@@ -775,6 +831,223 @@ function IntelligenceOverviewSection({ snapshot }: { snapshot: LearningSnapshot 
       </div>
     </section>
   )
+}
+
+function IntelligenceAutomationSection({
+  summary,
+  runs,
+}: {
+  summary: ReturnType<typeof getAutomationSummary>
+  runs: CaseAutomationRun[]
+}) {
+  const visibleRuns = runs.slice(0, 4)
+  const latest = summary.latest
+
+  return (
+    <section className="mt-4 rounded-lg border border-border-med bg-white p-3.5 shadow-soft" aria-label="Live automation kecerdasan">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-label-caps text-accent-dark">Live automation</p>
+          <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">Case langsung masuk loop kecerdasan</h2>
+          <p className="mt-1 max-w-[330px] text-xs leading-5 text-text-secondary">
+            Tiap case baru membuat run otomatis: framing, routing C-level, reasoning, evidence check, lalu output contract.
+          </p>
+        </div>
+        <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-md bg-status-doing-bg text-status-doing">
+          <Activity className="size-4" />
+        </span>
+      </div>
+
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <MemoryMetric label="running" value={summary.running} />
+        <MemoryMetric label="done" value={summary.completed} />
+        <MemoryMetric label="blocked" value={summary.blocked} />
+      </div>
+
+      {latest && (
+        <div className="mt-3 rounded-md border border-border-soft bg-bg-surface px-3 py-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-[13px] font-extrabold text-text-primary">{latest.title}</p>
+              <p className="mt-1 text-[11px] font-semibold leading-4 text-text-muted">{latest.currentStage}</p>
+            </div>
+            <span className={cn('rounded-full px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.05em]', getAutomationStatusClass(latest.status))}>
+              {latest.status}
+            </span>
+          </div>
+          <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-white">
+            <span className="block h-full rounded-full bg-status-doing transition-all duration-base" style={{ width: `${latest.progress}%` }} />
+          </div>
+          <div className="mt-3 grid gap-1.5">
+            {latest.steps.map((step) => (
+              <div key={step.id} className="flex items-center gap-2 rounded-md bg-white px-2.5 py-2">
+                <span className={cn('inline-flex size-5 shrink-0 items-center justify-center rounded-full text-[9px] font-extrabold', getAutomationStepClass(step.status))}>
+                  {step.status === 'done' ? 'OK' : step.status === 'running' ? 'GO' : step.status === 'blocked' ? '!' : '...'}
+                </span>
+                <p className="min-w-0 flex-1 truncate text-[11px] font-extrabold text-text-primary">{step.label}</p>
+                <span className="shrink-0 text-[10px] font-semibold text-text-muted">{step.owner}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {visibleRuns.length > 1 && (
+        <div className="mt-3 grid gap-1.5">
+          {visibleRuns.slice(1).map((run) => (
+            <div key={run.id} className="flex items-center justify-between gap-3 rounded-md border border-border-soft bg-bg-surface px-3 py-2">
+              <div className="min-w-0">
+                <p className="truncate text-[11px] font-extrabold text-text-primary">{run.title}</p>
+                <p className="mt-0.5 text-[10px] font-semibold text-text-muted">{run.currentStage}</p>
+              </div>
+              <span className="shrink-0 text-[11px] font-extrabold text-accent-dark">{run.progress}%</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+function CostDashboardSection({
+  summary,
+  providerCredit,
+}: {
+  summary: CostLedgerSummary
+  providerCredit: ProviderCreditSnapshot
+}) {
+  const connected = providerCredit.status === 'connected'
+  const remaining = providerCredit.remainingCredits
+  const projectedRemaining = remaining === null ? null : Math.max(0, remaining - summary.estimatedSpendUsd)
+
+  return (
+    <>
+      <section className="mt-4 rounded-lg border border-text-primary bg-text-primary p-4 text-white shadow-card" aria-label="Kontrol biaya AI">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-white/62">AI cost control</p>
+            <h2 className="mt-1 text-[24px] font-extrabold leading-7">Biaya dan credits AI</h2>
+            <p className="mt-2 max-w-[340px] text-xs font-semibold leading-5 text-white/72">
+              Sektor ini menghitung estimasi biaya case lokal dan membaca credits provider lewat server-side endpoint.
+            </p>
+          </div>
+          <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-md bg-white/10 text-white">
+            <WalletCards className="size-4" />
+          </span>
+        </div>
+
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          <CostHeroMetric label="est spend" value={formatUsd(summary.estimatedSpendUsd)} />
+          <CostHeroMetric label="tokens" value={formatCompactNumber(summary.estimatedTotalTokens)} />
+          <CostHeroMetric label="cases" value={`${summary.caseCount}`} />
+        </div>
+      </section>
+
+      <section className="mt-4 rounded-lg border border-border-med bg-white p-3.5 shadow-soft" aria-label="Provider credits">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-label-caps text-accent-dark">Provider credits</p>
+            <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">OpenRouter balance</h2>
+            <p className="mt-1 text-xs leading-5 text-text-secondary">{providerCredit.note}</p>
+          </div>
+          <span className={cn('inline-flex size-10 shrink-0 items-center justify-center rounded-md', connected ? 'bg-status-final-bg text-status-final' : 'bg-status-review-bg text-status-review')}>
+            <CreditCard className="size-4" />
+          </span>
+        </div>
+
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          <CostMetric label="remaining" value={remaining === null ? '-' : formatUsd(remaining)} tone={connected ? 'final' : 'review'} />
+          <CostMetric label="used" value={providerCredit.totalUsage === null ? '-' : formatUsd(providerCredit.totalUsage)} tone="doing" />
+          <CostMetric label="after cases" value={projectedRemaining === null ? '-' : formatUsd(projectedRemaining)} tone={projectedRemaining !== null && projectedRemaining < 2 ? 'decision' : 'final'} />
+        </div>
+
+        <div className="mt-3 rounded-md border border-border-soft bg-bg-surface px-3 py-2.5">
+          <p className="text-[11px] font-extrabold text-text-primary">Server-only setup</p>
+          <p className="mt-1 text-[11px] leading-4 text-text-muted">
+            Set `OPENROUTER_MANAGEMENT_KEY` di Vercel untuk live balance. Endpoint app memakai `/api/openrouter/credits`; key tidak dibundle ke browser.
+          </p>
+        </div>
+      </section>
+
+      <section className="mt-4 rounded-lg border border-border-med bg-white p-3.5 shadow-soft" aria-label="Estimasi biaya per case">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-label-caps text-accent-dark">Case ledger</p>
+            <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">Estimasi biaya per case</h2>
+          </div>
+          <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-md bg-accent-bg text-accent-dark">
+            <DollarSign className="size-4" />
+          </span>
+        </div>
+
+        <div className="mt-3 grid gap-2">
+          {summary.recent.length === 0 ? (
+            <p className="rounded-md border border-border-soft bg-bg-surface px-3 py-3 text-xs font-semibold text-text-muted">
+              Belum ada case yang dihitung.
+            </p>
+          ) : (
+            summary.recent.map((item) => (
+              <div key={item.briefId} className="rounded-md border border-border-soft bg-bg-surface px-3 py-2.5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-[12px] font-extrabold text-text-primary">{item.title}</p>
+                    <p className="mt-1 text-[10px] font-semibold text-text-muted">
+                      {formatCompactNumber(item.inputTokens + item.outputTokens)} tokens / {DEPARTMENT_LABEL_SHORT[item.owner]}
+                    </p>
+                  </div>
+                  <span className="shrink-0 rounded-full bg-white px-2 py-1 text-[11px] font-extrabold text-accent-dark">
+                    {formatUsd(item.estimatedCostUsd)}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+    </>
+  )
+}
+
+function CostHeroMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md bg-white px-2.5 py-2 text-text-primary">
+      <p className="truncate text-[15px] font-extrabold leading-none">{value}</p>
+      <p className="mt-1 truncate text-[9px] font-bold uppercase tracking-[0.06em] text-text-muted">{label}</p>
+    </div>
+  )
+}
+
+function CostMetric({ label, value, tone }: { label: string; value: string; tone: SectionTone }) {
+  return (
+    <div className="min-h-[78px] rounded-md border border-border-soft bg-bg-surface px-2.5 py-2.5">
+      <span className={cn('inline-flex size-7 items-center justify-center rounded-md', getToneBg(tone), getToneText(tone))}>
+        <DollarSign className="size-3.5" />
+      </span>
+      <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.06em] text-text-faint">{label}</p>
+      <p className="mt-0.5 truncate text-[12px] font-extrabold text-text-primary">{value}</p>
+    </div>
+  )
+}
+
+function getAutomationStatusClass(status: CaseAutomationRun['status']) {
+  if (status === 'completed') return 'bg-status-final-bg text-status-final'
+  if (status === 'blocked') return 'bg-status-decision-bg text-status-decision'
+  return 'bg-status-doing-bg text-status-doing'
+}
+
+function getAutomationStepClass(status: CaseAutomationRun['steps'][number]['status']) {
+  if (status === 'done') return 'bg-status-final-bg text-status-final'
+  if (status === 'blocked') return 'bg-status-decision-bg text-status-decision'
+  if (status === 'running') return 'bg-status-doing-bg text-status-doing'
+  return 'bg-bg-soft text-text-muted'
+}
+
+function formatUsd(value: number) {
+  return `$${value.toFixed(value >= 10 ? 2 : 4)}`
+}
+
+function formatCompactNumber(value: number) {
+  return new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value)
 }
 
 function IntelligenceDimensionSection() {
@@ -1713,6 +1986,7 @@ function DashboardViewTabs({
   attentionCount,
   runningCount,
   learningCount,
+  costCount,
   systemCount,
 }: {
   active: DashboardView
@@ -1720,6 +1994,7 @@ function DashboardViewTabs({
   attentionCount: number
   runningCount: number
   learningCount: number
+  costCount: number
   systemCount: number
 }) {
   const items: Array<{ value: DashboardView; label: string; helper: string; count: number }> = [
@@ -1727,6 +2002,7 @@ function DashboardViewTabs({
     { value: 'department', label: 'AI Dept', helper: 'struktur', count: AI_ARCHITECTURE_NODE_COUNT },
     { value: 'sectors', label: 'Sektor', helper: 'C-level', count: DEPARTMENT_ORDER.length },
     { value: 'learning', label: 'Otak', helper: 'learning', count: learningCount },
+    { value: 'costs', label: 'Biaya', helper: 'credits', count: costCount },
     { value: 'system', label: 'Sistem', helper: 'fondasi', count: systemCount },
   ]
 

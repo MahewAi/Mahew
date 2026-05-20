@@ -5,6 +5,7 @@ const PRIVATE_SYNC_KEYS = [
   { key: 'gerai:briefs:v1', label: 'Brief inbox' },
   { key: 'gerai:learning-memory:v1', label: 'Learning memory' },
   { key: 'gerai:atmaja-thread', label: 'Atmaja thread' },
+  { key: 'gerai:automation-runs:v1', label: 'Automation runs' },
 ] as const
 
 type PrivateSyncKey = (typeof PRIVATE_SYNC_KEYS)[number]['key']
