@@ -8,6 +8,23 @@ import { generateMockReply, type ChatMessage } from '@/lib/mockReplies'
 import { cn } from '@/lib/utils'
 
 type AttachmentKind = 'image' | 'text' | 'document'
+type AtmajaVisualKind = 'palette' | 'generated-image'
+
+interface AtmajaVisualColor {
+  name: string
+  hex: string
+  role: string
+}
+
+interface AtmajaVisual {
+  id: string
+  kind: AtmajaVisualKind
+  title: string
+  caption: string
+  imageDataUri: string
+  prompt?: string
+  colors?: AtmajaVisualColor[]
+}
 
 interface AtmajaAttachment {
   id: string
@@ -22,6 +39,7 @@ interface AtmajaAttachment {
 interface AtmajaMessage extends ChatMessage {
   timeAgo: string
   attachments?: AtmajaAttachment[]
+  visuals?: AtmajaVisual[]
 }
 
 const STORAGE_KEY = 'gerai:atmaja-thread'
@@ -29,6 +47,12 @@ const MAX_ATTACHMENTS = 5
 const MAX_FILE_BYTES = 10 * 1024 * 1024
 const MAX_TEXT_PREVIEW_CHARS = 6000
 const textAttachmentExtensions = new Set(['txt', 'md', 'csv', 'json', 'log', 'xml', 'yaml', 'yml'])
+const visualKeywordsPattern = /gambar|image|visual|moodboard|preview|canvas|mapping|peta kerja|denah|rancangan|desain|design/
+const paletteVisualColors: AtmajaVisualColor[] = [
+  { name: 'Brass gold', hex: '#B8956B', role: 'Signature accent' },
+  { name: 'Deep charcoal', hex: '#1F1A14', role: 'Authority base' },
+  { name: 'Warm ivory', hex: '#FAF8F4', role: 'Clean support' },
+]
 
 const initialThread: AtmajaMessage[] = [
   {
@@ -158,6 +182,120 @@ function isColorDecisionRequest(text: string) {
   return /(warna|color|palette|palet|brand|branding)/.test(lowerText) && /(pilih|rekomendasi|terbaik|alasan|menurut)/.test(lowerText)
 }
 
+function escapeSvgText(text: string) {
+  return text.replace(/[&<>"']/g, (char) => {
+    if (char === '&') return '&amp;'
+    if (char === '<') return '&lt;'
+    if (char === '>') return '&gt;'
+    if (char === '"') return '&quot;'
+    return '&apos;'
+  })
+}
+
+function svgDataUri(svg: string) {
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+}
+
+function buildPaletteImageDataUri(colors: AtmajaVisualColor[]) {
+  const swatches = colors
+    .map((color, index) => {
+      const x = 46 + index * 184
+      const labelFill = color.hex.toLowerCase() === '#faf8f4' ? '#1F1A14' : '#FAF8F4'
+      return `
+        <rect x="${x}" y="96" width="150" height="138" rx="22" fill="${color.hex}" />
+        <text x="${x + 18}" y="158" fill="${labelFill}" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800">${escapeSvgText(color.name)}</text>
+        <text x="${x + 18}" y="184" fill="${labelFill}" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700">${escapeSvgText(color.hex)}</text>
+        <text x="${x + 18}" y="210" fill="${labelFill}" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="700" opacity="0.82">${escapeSvgText(color.role)}</text>
+      `
+    })
+    .join('')
+
+  return svgDataUri(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img" aria-label="Gerai premium palette preview">
+      <rect width="640" height="360" rx="34" fill="#FAF8F4" />
+      <rect x="24" y="24" width="592" height="312" rx="28" fill="#1F1A14" />
+      <text x="46" y="62" fill="#FAF8F4" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="800" letter-spacing="2">ATMAJA VISUAL PREVIEW</text>
+      <text x="46" y="86" fill="#B8956B" font-family="Georgia, serif" font-size="27" font-weight="800">Premium Gerai/GSP palette</text>
+      ${swatches}
+      <path d="M46 278 H594" stroke="#B8956B" stroke-width="2" opacity="0.5" />
+      <text x="46" y="310" fill="#FAF8F4" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700">Core pairing: Brass gold + Deep charcoal. Ivory stays as breathable support.</text>
+    </svg>
+  `)
+}
+
+function buildGeneratedImageDataUri(title: string, prompt: string) {
+  const safeTitle = escapeSvgText(title)
+  const safePrompt = escapeSvgText(prompt.slice(0, 112))
+
+  return svgDataUri(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img" aria-label="Atmaja visual draft">
+      <rect width="640" height="360" rx="34" fill="#F7F2EA" />
+      <rect x="28" y="28" width="584" height="304" rx="28" fill="#1F1A14" />
+      <text x="54" y="68" fill="#FAF8F4" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="800" letter-spacing="2">AI DEPARTMENT VISUAL</text>
+      <text x="54" y="102" fill="#B8956B" font-family="Georgia, serif" font-size="29" font-weight="800">${safeTitle}</text>
+      <text x="54" y="132" fill="#FAF8F4" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" opacity="0.78">${safePrompt}</text>
+      <rect x="58" y="176" width="116" height="74" rx="18" fill="#FAF8F4" />
+      <rect x="208" y="176" width="116" height="74" rx="18" fill="#B8956B" />
+      <rect x="358" y="176" width="116" height="74" rx="18" fill="#5C8A83" />
+      <path d="M174 213 H208 M324 213 H358 M474 213 H542" stroke="#FAF8F4" stroke-width="4" stroke-linecap="round" opacity="0.75" />
+      <circle cx="556" cy="213" r="20" fill="#FAF8F4" />
+      <text x="80" y="219" fill="#1F1A14" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="900">INPUT</text>
+      <text x="236" y="219" fill="#1F1A14" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="900">ATMAJA</text>
+      <text x="382" y="219" fill="#FAF8F4" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="900">C-LEVEL</text>
+      <text x="541" y="218" fill="#1F1A14" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="900">OUT</text>
+      <text x="54" y="295" fill="#FAF8F4" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700">Draft visual lokal untuk membantu Matthew melihat arah rancangan sebelum dibuat versi final.</text>
+    </svg>
+  `)
+}
+
+function buildPaletteVisual(): AtmajaVisual {
+  return {
+    id: `vis-palette-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    kind: 'palette',
+    title: 'Premium palette preview',
+    caption: 'Visual awal dari 3 warna pilihan Atmaja untuk arah brand Gerai/GSP.',
+    imageDataUri: buildPaletteImageDataUri(paletteVisualColors),
+    colors: paletteVisualColors,
+  }
+}
+
+function buildGeneratedVisual(prompt: string): AtmajaVisual {
+  return {
+    id: `vis-image-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    kind: 'generated-image',
+    title: 'Draft visual Atmaja',
+    caption: 'Gambar rancangan awal. Bisa dilanjutkan menjadi moodboard, canvas mapping, atau visual final.',
+    prompt,
+    imageDataUri: buildGeneratedImageDataUri('Draft visual Atmaja', prompt),
+  }
+}
+
+function shouldBuildPaletteVisual(userText: string, replyText: string) {
+  return isColorDecisionRequest(userText) || /#B8956B|#1F1A14|#FAF8F4|brass gold|deep charcoal|warm ivory/i.test(replyText)
+}
+
+function shouldOfferVisual(userText: string, replyText: string) {
+  const combined = `${userText}\n${replyText}`.toLowerCase()
+  return visualKeywordsPattern.test(combined) || /(warna|color|palette|palet|brand|branding)/.test(combined)
+}
+
+function buildVisualsForReply(userText: string, replyText: string): AtmajaVisual[] {
+  if (shouldBuildPaletteVisual(userText, replyText)) return [buildPaletteVisual()]
+  if (visualKeywordsPattern.test(userText.toLowerCase())) return [buildGeneratedVisual(userText)]
+  return []
+}
+
+function withVisualFollowUp(text: string, userText: string, visuals: AtmajaVisual[]) {
+  if (/preview visual|versi gambar|moodboard/i.test(text)) return text
+  if (visuals.length > 0) {
+    return `${text}\n\nSaya sertakan preview visual awal di bawah. Kalau Anda mau, saya bisa buatkan 2-3 versi gambar atau board alternatifnya.`
+  }
+  if (shouldOfferVisual(userText, text)) {
+    return `${text}\n\nSaya juga bisa berikan versi gambarnya: palette preview, moodboard, atau mapping kerja. Mau saya tampilkan sebagai visual?`
+  }
+  return text
+}
+
 function isGenericFileReply(text: string) {
   return (
     text.startsWith('Lampiran masuk. Jika ini dokumen non-teks') ||
@@ -178,17 +316,22 @@ function upgradeActionableFileReplies(messages: AtmajaMessage[]) {
       replyMessage.author === 'ceo' &&
       hasAttachment &&
       isColorDecisionRequest(userMessage.text) &&
-      isGenericFileReply(replyMessage.text)
+      (isGenericFileReply(replyMessage.text) || !replyMessage.visuals?.length)
     ) {
       if (upgradedMessages === messages) upgradedMessages = [...messages]
-      const result = generateMockReply({
-        userMessage: buildAttachmentPrompt(userMessage.text, userMessage.attachments ?? []),
-        history: upgradedMessages.slice(0, index),
-        speaker: 'atmaja',
-      })
+      const modelText = buildAttachmentPrompt(userMessage.text, userMessage.attachments ?? [])
+      const result = isGenericFileReply(replyMessage.text)
+        ? generateMockReply({
+            userMessage: modelText,
+            history: upgradedMessages.slice(0, index),
+            speaker: 'atmaja',
+          })
+        : { text: replyMessage.text }
+      const visuals = buildVisualsForReply(modelText, result.text)
       upgradedMessages[index + 1] = {
         ...replyMessage,
-        text: result.text,
+        text: withVisualFollowUp(result.text, modelText, visuals),
+        visuals,
       }
     }
   }
@@ -348,12 +491,14 @@ export default function Atmaja() {
         return
       }
 
+      const visuals = buildVisualsForReply(modelText, result.text)
       const reply: AtmajaMessage = {
         id: `m-${Date.now() + 1}`,
         author: 'ceo',
-        text: result.text,
+        text: withVisualFollowUp(result.text, modelText, visuals),
         timeAgo: 'Baru saja',
       }
+      if (visuals.length > 0) reply.visuals = visuals
       setMessages((prev) => [...prev, reply])
       setSending(false)
     }, 1100)
@@ -657,6 +802,7 @@ function MessageBubble({ message, reduceMotion }: { message: AtmajaMessage; redu
         <div
           className={cn(
             'px-4 py-3 text-[15px] leading-relaxed shadow-card',
+            'whitespace-pre-line',
             isMatthew
               ? 'rounded-[18px] rounded-br-md bg-accent text-white'
               : 'rounded-[18px] rounded-bl-md bg-white/82 text-text-primary',
@@ -671,11 +817,60 @@ function MessageBubble({ message, reduceMotion }: { message: AtmajaMessage; redu
             </div>
           )}
         </div>
+        {message.visuals && message.visuals.length > 0 && (
+          <div className="mt-2 grid gap-2">
+            {message.visuals.map((visual) => (
+              <AtmajaVisualCard key={visual.id} visual={visual} />
+            ))}
+          </div>
+        )}
         <p className={cn('mt-1 px-1 text-[10px] text-text-faint', isMatthew && 'text-right')}>
           {message.timeAgo}
         </p>
       </div>
     </motion.div>
+  )
+}
+
+function AtmajaVisualCard({ visual }: { visual: AtmajaVisual }) {
+  return (
+    <figure className="overflow-hidden rounded-lg border border-border-soft bg-white/86 text-text-primary shadow-card">
+      <div className="flex items-center gap-2 border-b border-border-soft px-3 py-2">
+        <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-accent-bg text-accent-dark">
+          <ImageIcon className="size-4" />
+        </span>
+        <div className="min-w-0">
+          <p className="truncate text-[12px] font-black">{visual.title}</p>
+          <p className="truncate text-[10px] font-bold text-text-muted">
+            {visual.kind === 'palette' ? 'Palette image' : 'Generated visual draft'}
+          </p>
+        </div>
+      </div>
+      <img
+        src={visual.imageDataUri}
+        alt={visual.caption}
+        loading="lazy"
+        className="block aspect-video w-full bg-bg-soft object-cover"
+      />
+      <figcaption className="px-3 py-2 text-xs font-semibold leading-relaxed text-text-secondary">
+        {visual.caption}
+      </figcaption>
+      {visual.colors && visual.colors.length > 0 && (
+        <div className="grid grid-cols-3 gap-px border-t border-border-soft bg-border-soft">
+          {visual.colors.map((color) => (
+            <div key={color.hex} className="min-w-0 bg-white px-2 py-2">
+              <span
+                aria-hidden="true"
+                className="mb-1.5 block h-6 rounded-md border border-black/5"
+                style={{ backgroundColor: color.hex }}
+              />
+              <p className="truncate text-[10px] font-black text-text-primary">{color.name}</p>
+              <p className="truncate text-[9px] font-bold text-text-muted">{color.hex}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </figure>
   )
 }
 

@@ -158,7 +158,32 @@ const PATTERNS: Array<{
     ],
   },
   {
-    match: (q) => /file|lampir|attachment|dokumen|pdf|csv|excel|xlsx|gambar|image/.test(q),
+    match: (q) => /(warna|color|palette|palet|brand|branding)/.test(q) && /(pilih|rekomendasi|terbaik|alasan|menurut)/.test(q),
+    intent: 'color_palette',
+    variants: (ctx) => {
+      const hasLocalAttachment = ctx.userMessage.toLowerCase().includes('[lampiran lokal untuk atmaja]')
+      const note = hasLocalAttachment
+        ? `\n\nCatatan: kalau file lampiran terlalu besar atau non-teks, saya belum bisa membedah isi visualnya langsung di app. Untuk final choice yang presisi, kirim screenshot palette atau 2-3 gambar opsi warna yang sudah diekstrak.`
+        : ''
+
+      return [
+        `Jawaban langsung: saya pilih 3 warna terbaik untuk arah brand premium Gerai/GSP.\n\n1. Brass gold #B8956B\nAlasan: paling kuat sebagai warna signature. Rasanya premium, hangat, dan cukup berbeda dari gold yang terlalu mencolok. Ini cocok untuk tombol utama, aksen logo, line divider, dan highlight decision.\n\n2. Deep charcoal #1F1A14\nAlasan: memberi bobot, kontras, dan rasa mahal. Brass akan terlihat lebih elegan kalau ditemani charcoal. Ini cocok untuk header, canvas mapping, packaging gelap, dan background konten hero.\n\n3. Warm ivory #FAF8F4\nAlasan: menjaga brand tetap bersih dan breathable. Ivory membuat brass dan charcoal tidak terasa berat, cocok untuk background app, katalog, dokumen, dan materi presentasi.\n\nKalau harus dipersempit jadi 2 warna inti: pilih Brass gold + Deep charcoal. Ivory tetap dipakai sebagai warna dasar/support.${note}`,
+        `Saya langsung pilih: kombinasi terbaik adalah Brass gold #B8956B, Deep charcoal #1F1A14, dan Warm ivory #FAF8F4.\n\nBrass gold jadi identitas utama karena terasa premium dan hangat. Deep charcoal membuat brand terlihat tegas, mature, dan tidak terlalu manis. Warm ivory menjadi ruang napas agar visual tetap bersih di app, katalog, dan presentasi.\n\nJika hanya boleh 2: Brass gold + Deep charcoal. Itu pasangan paling kuat untuk brand yang ingin terlihat premium, curated, dan punya authority.${note}`,
+      ]
+    },
+  },
+  {
+    match: (q) =>
+      /(buat|bikin|generate|tampilkan|kasih|berikan|minta|mau).*(gambar|visual|image|moodboard|preview|canvas|mapping)/.test(q) ||
+      /(gambar|visual|image|moodboard|preview|canvas|mapping).*(brand|warna|palette|palet|rancangan|workmap|peta kerja)/.test(q),
+    intent: 'visual_request',
+    variants: () => [
+      `Bisa. Saya akan jawab dalam dua lapis: keputusan singkat dulu, lalu preview visual agar arah gambarnya langsung kebaca. Untuk visual yang lebih final, saya bisa lanjutkan menjadi moodboard, palette board, atau canvas mapping.`,
+      `Bisa. Saya akan sertakan draft visual awal ketika konteksnya cocok, lalu Anda bisa minta versi alternatifnya. Formatnya bisa gambar palette, moodboard brand, atau mapping kerja.`,
+    ],
+  },
+  {
+    match: (q) => /file|lampir|attachment|dokumen|pdf|csv|excel|xlsx/.test(q) || (q.includes('[lampiran lokal untuk atmaja]') && /gambar|image/.test(q)),
     intent: 'file_context',
     variants: (ctx) => {
       const q = ctx.userMessage.toLowerCase()
