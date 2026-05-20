@@ -16,7 +16,7 @@ runAppMigrations()
 
 export default function App() {
   const location = useLocation()
-  const hideNav = location.pathname.startsWith('/preview-')
+  const hideNav = location.pathname.startsWith('/preview-') || location.pathname.startsWith('/workmap/')
 
   return (
     <ToastProvider>

@@ -11,6 +11,7 @@ import {
   CreditCard,
   Database,
   DollarSign,
+  ExternalLink,
   GitBranch,
   KeyRound,
   Image as ImageIcon,
@@ -2532,30 +2533,40 @@ function CLevelWorkMapCard({ role, map }: { role: Exclude<Role, 'ceo'>; map: CLe
       <div className="bg-bg-surface px-3 py-3">
         <div className="grid gap-2">
           {map.lanes.map((lane, index) => (
-            <div key={lane.label} className="relative rounded-md border border-border-soft bg-white px-3 py-2.5">
-              <div className="flex items-start gap-2.5">
-                <span className={cn('inline-flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-extrabold text-white', roleAccent[role])}>
-                  {index + 1}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="truncate text-[12px] font-extrabold text-text-primary">{lane.label}</p>
-                      <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.05em] text-text-faint">{lane.owner}</p>
+            <form key={lane.label} action={`/workmap/${role}/${index + 1}`} target="_blank">
+              <button
+                type="submit"
+                formMethod="get"
+                formTarget="_blank"
+                data-workmap-url={`/workmap/${role}/${index + 1}`}
+                aria-label={`Buka canvas mapping ${lane.label} ${DEPARTMENT_LABEL_SHORT[role]} di tab baru`}
+                className="relative block min-h-[112px] w-full cursor-pointer rounded-md border border-border-soft bg-white px-3 py-2.5 text-left transition hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+              >
+                <div className="flex items-start gap-2.5">
+                  <span className={cn('inline-flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-extrabold text-white', roleAccent[role])}>
+                    {index + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-[12px] font-extrabold text-text-primary">{lane.label}</p>
+                        <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.05em] text-text-faint">{lane.owner}</p>
+                      </div>
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-bg-surface px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.04em] text-text-muted">
+                        map
+                        <ExternalLink className="size-3" />
+                      </span>
                     </div>
-                    <span className="shrink-0 rounded-full bg-bg-surface px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.04em] text-text-muted">
-                      map
-                    </span>
-                  </div>
-                  <p className="mt-2 text-[11px] font-semibold leading-4 text-text-secondary">{lane.action}</p>
-                  <div className="mt-2 grid grid-cols-2 gap-1.5">
-                    <CLevelMapChip label="Input" value={lane.input} />
-                    <CLevelMapChip label="Output" value={lane.output} />
-                    <CLevelMapChip label="Need" value={lane.dependency} wide />
+                    <p className="mt-2 text-[11px] font-semibold leading-4 text-text-secondary">{lane.action}</p>
+                    <div className="mt-2 grid grid-cols-2 gap-1.5">
+                      <CLevelMapChip label="Input" value={lane.input} />
+                      <CLevelMapChip label="Output" value={lane.output} />
+                      <CLevelMapChip label="Need" value={lane.dependency} wide />
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
+              </button>
+            </form>
           ))}
         </div>
 
