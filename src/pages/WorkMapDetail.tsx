@@ -1,5 +1,16 @@
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, CheckCircle2, GitBranch, Layers3, Network, ShieldCheck, Workflow } from 'lucide-react'
+import {
+  ArrowLeft,
+  CheckCircle2,
+  GitBranch,
+  Image as ImageIcon,
+  Layers3,
+  Network,
+  Route,
+  ShieldCheck,
+  Table2,
+  Workflow,
+} from 'lucide-react'
 import { cLevelPlans, type CLevelPlan, type CLevelWorkLane } from '@/data/cLevelPlans'
 import { DEPARTMENT_LABEL_SHORT, type Role } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -78,6 +89,8 @@ export default function WorkMapDetail() {
           </div>
         </section>
 
+        <WorkMapVisualImage role={role} plan={plan} lane={lane} laneIndex={laneIndex} />
+
         <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_320px]">
           <section className="overflow-hidden rounded-lg border border-border-med bg-white shadow-soft" aria-label="Canvas mapping alur kerja">
             <div className="flex items-start justify-between gap-3 border-b border-border-soft px-4 py-3">
@@ -137,6 +150,104 @@ export default function WorkMapDetail() {
         </section>
       </div>
     </main>
+  )
+}
+
+function WorkMapVisualImage({
+  role,
+  plan,
+  lane,
+  laneIndex,
+}: {
+  role: Exclude<Role, 'ceo'>
+  plan: CLevelPlan
+  lane: CLevelWorkLane
+  laneIndex: number
+}) {
+  const visualPanel = plan.visualPanels[laneIndex % Math.max(1, plan.visualPanels.length)]
+  const visualNodes = visualPanel?.nodes.slice(0, 5) ?? plan.workMap.lanes.map((item) => item.label)
+  const nextLane = plan.workMap.lanes[laneIndex + 1] ?? plan.workMap.lanes[0]
+
+  return (
+    <section className="mt-4 grid gap-4 lg:grid-cols-[1.35fr_0.65fr]" aria-label="Visual image dan mapping workmap">
+      <div className="overflow-hidden rounded-lg border border-border-med bg-white shadow-soft">
+        <div className="flex items-start justify-between gap-3 border-b border-border-soft px-4 py-3">
+          <div>
+            <p className="text-label-caps text-accent-dark">Visual image</p>
+            <h2 className="mt-1 text-[18px] font-extrabold leading-6 text-text-primary">Blueprint gambar kerja</h2>
+          </div>
+          <span className={cn('inline-flex size-10 shrink-0 items-center justify-center rounded-md text-white', roleAccent[role])}>
+            <ImageIcon className="size-4" />
+          </span>
+        </div>
+
+        <div className="overflow-x-auto bg-bg-surface p-3 [scrollbar-width:thin]">
+          <div
+            className="relative h-[360px] w-[780px] overflow-hidden rounded-md border border-[#2b2926] bg-[#151412]"
+            data-testid="workmap-visual-image"
+            role="img"
+            aria-label={`Visual blueprint ${lane.label} ${DEPARTMENT_LABEL_SHORT[role]}`}
+            style={{
+              backgroundImage:
+                'linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px)',
+              backgroundSize: '28px 28px',
+            }}
+          >
+            <div className="absolute left-4 top-3 z-10 flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-white/48">
+              <span className={cn('inline-flex size-2 rounded-full shadow-[0_0_16px_rgba(255,255,255,0.35)]', roleAccent[role])} />
+              {visualPanel?.type ?? 'map'} blueprint
+            </div>
+
+            <svg className="absolute inset-0 size-full" viewBox="0 0 780 360" aria-hidden="true">
+              <defs>
+                <marker id="visual-arrow" markerHeight="8" markerWidth="8" orient="auto" refX="7" refY="4">
+                  <path d="M0,0 L8,4 L0,8 Z" fill="#b8a98f" />
+                </marker>
+              </defs>
+              <g fill="none" stroke="#b8a98f" strokeLinecap="round" strokeWidth="1.4" opacity="0.82" markerEnd="url(#visual-arrow)">
+                <path d="M 116 118 C 170 70, 254 68, 326 118" />
+                <path d="M 326 118 C 408 168, 486 164, 566 112" />
+                <path d="M 566 112 C 612 154, 634 206, 604 262" />
+                <path d="M 604 262 C 480 306, 318 300, 184 256" />
+                <path d="M 184 256 C 126 222, 94 172, 116 118" />
+              </g>
+              <g>
+                <rect x="48" y="76" width="136" height="84" rx="10" fill="#2d2c2b" stroke="#746b61" />
+                <rect x="258" y="78" width="136" height="84" rx="10" fill="#40372f" stroke="#b8956b" />
+                <rect x="498" y="70" width="136" height="84" rx="10" fill="#2d2c2b" stroke="#746b61" />
+                <rect x="502" y="230" width="204" height="74" rx="10" fill="#262524" stroke="#746b61" />
+                <rect x="78" y="218" width="212" height="80" rx="10" fill="#262524" stroke="#746b61" />
+                <text x="68" y="104" fill="#f6efe7" fontSize="12" fontWeight="800">INPUT</text>
+                <text x="68" y="126" fill="#d6c8b8" fontSize="11">{shortenForSvg(lane.input, 22)}</text>
+                <text x="278" y="106" fill="#f6efe7" fontSize="12" fontWeight="800">ACTION</text>
+                <text x="278" y="128" fill="#d6c8b8" fontSize="11">{shortenForSvg(lane.label, 24)}</text>
+                <text x="518" y="98" fill="#f6efe7" fontSize="12" fontWeight="800">OUTPUT</text>
+                <text x="518" y="120" fill="#d6c8b8" fontSize="11">{shortenForSvg(lane.output, 24)}</text>
+                <text x="522" y="258" fill="#f6efe7" fontSize="12" fontWeight="800">NEXT MAP</text>
+                <text x="522" y="280" fill="#d6c8b8" fontSize="11">{shortenForSvg(nextLane.label, 28)}</text>
+                <text x="98" y="246" fill="#f6efe7" fontSize="12" fontWeight="800">DECISION GATE</text>
+                <text x="98" y="268" fill="#d6c8b8" fontSize="11">{shortenForSvg(lane.dependency, 30)}</text>
+              </g>
+            </svg>
+
+            <div className="absolute bottom-4 left-4 right-4 grid grid-cols-5 gap-2">
+              {visualNodes.map((node, index) => (
+                <div key={node} className="rounded-md border border-white/10 bg-white/[0.06] px-2 py-2 text-white">
+                  <p className="text-[9px] font-extrabold uppercase tracking-[0.08em] text-white/42">node {index + 1}</p>
+                  <p className="mt-1 truncate text-[11px] font-extrabold">{node}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-3">
+        <VisualBriefPanel icon={Route} title={visualPanel?.title ?? plan.workMap.title} body={visualPanel?.description ?? plan.workMap.summary} />
+        <VisualBriefPanel icon={Table2} title="Mapping output" body={`${lane.output} dikaitkan ke ${nextLane.label} agar alur lanjutnya terlihat.`} />
+        <VisualBriefPanel icon={ShieldCheck} title="Decision guard" body={plan.workMap.decisionGate} />
+      </div>
+    </section>
   )
 }
 
@@ -211,6 +322,22 @@ function WorkMapCanvas({
   )
 }
 
+function VisualBriefPanel({ icon: Icon, title, body }: { icon: typeof Route; title: string; body: string }) {
+  return (
+    <section className="rounded-lg border border-border-med bg-white p-3.5 shadow-soft">
+      <div className="flex items-start gap-3">
+        <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-md bg-accent-bg text-accent-dark">
+          <Icon className="size-4" />
+        </span>
+        <div>
+          <p className="text-[12px] font-extrabold text-text-primary">{title}</p>
+          <p className="mt-1 text-[11px] font-semibold leading-5 text-text-muted">{body}</p>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 function HeroMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-h-[58px] rounded-md bg-white px-3 py-2 text-text-primary">
@@ -218,6 +345,10 @@ function HeroMetric({ label, value }: { label: string; value: string }) {
       <p className="mt-1 text-[9px] font-extrabold uppercase tracking-[0.06em] text-text-faint">{label}</p>
     </div>
   )
+}
+
+function shortenForSvg(value: string, maxLength: number) {
+  return value.length > maxLength ? `${value.slice(0, maxLength - 1)}...` : value
 }
 
 function InfoPanel({ icon: Icon, title, value }: { icon: typeof Layers3; title: string; value: string }) {

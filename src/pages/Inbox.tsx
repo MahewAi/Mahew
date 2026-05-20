@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type MouseEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
@@ -2512,6 +2512,19 @@ function CLevelVisualBoard({ plan }: { plan: CLevelPlan }) {
 }
 
 function CLevelWorkMapCard({ role, map }: { role: Exclude<Role, 'ceo'>; map: CLevelWorkMap }) {
+  const openLaneMap = (event: MouseEvent<HTMLAnchorElement>, detailUrl: string) => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+      return
+    }
+
+    const opened = window.open(detailUrl, '_blank')
+    if (!opened) return
+
+    event.preventDefault()
+    opened.opener = null
+    opened.focus()
+  }
+
   return (
     <article className="overflow-hidden rounded-md border border-border-med bg-white shadow-soft">
       <div className="relative border-b border-border-soft bg-text-primary px-3 py-3 text-white">
@@ -2533,40 +2546,40 @@ function CLevelWorkMapCard({ role, map }: { role: Exclude<Role, 'ceo'>; map: CLe
       <div className="bg-bg-surface px-3 py-3">
         <div className="grid gap-2">
           {map.lanes.map((lane, index) => (
-            <form key={lane.label} action={`/workmap/${role}/${index + 1}`} target="_blank">
-              <button
-                type="submit"
-                formMethod="get"
-                formTarget="_blank"
-                data-workmap-url={`/workmap/${role}/${index + 1}`}
-                aria-label={`Buka canvas mapping ${lane.label} ${DEPARTMENT_LABEL_SHORT[role]} di tab baru`}
-                className="relative block min-h-[112px] w-full cursor-pointer rounded-md border border-border-soft bg-white px-3 py-2.5 text-left transition hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
-              >
-                <div className="flex items-start gap-2.5">
-                  <span className={cn('inline-flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-extrabold text-white', roleAccent[role])}>
-                    {index + 1}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="truncate text-[12px] font-extrabold text-text-primary">{lane.label}</p>
-                        <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.05em] text-text-faint">{lane.owner}</p>
-                      </div>
-                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-bg-surface px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.04em] text-text-muted">
-                        map
-                        <ExternalLink className="size-3" />
-                      </span>
+            <a
+              key={lane.label}
+              href={`/workmap/${role}/${index + 1}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-workmap-url={`/workmap/${role}/${index + 1}`}
+              onClick={(event) => openLaneMap(event, `/workmap/${role}/${index + 1}`)}
+              aria-label={`Buka canvas mapping ${lane.label} ${DEPARTMENT_LABEL_SHORT[role]} di tab baru`}
+              className="relative block min-h-[112px] w-full cursor-pointer rounded-md border border-border-soft bg-white px-3 py-2.5 text-left transition hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+            >
+              <div className="flex items-start gap-2.5">
+                <span className={cn('inline-flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-extrabold text-white', roleAccent[role])}>
+                  {index + 1}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-[12px] font-extrabold text-text-primary">{lane.label}</p>
+                      <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.05em] text-text-faint">{lane.owner}</p>
                     </div>
-                    <p className="mt-2 text-[11px] font-semibold leading-4 text-text-secondary">{lane.action}</p>
-                    <div className="mt-2 grid grid-cols-2 gap-1.5">
-                      <CLevelMapChip label="Input" value={lane.input} />
-                      <CLevelMapChip label="Output" value={lane.output} />
-                      <CLevelMapChip label="Need" value={lane.dependency} wide />
-                    </div>
+                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-bg-surface px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.04em] text-text-muted">
+                      buka tab
+                      <ExternalLink className="size-3" />
+                    </span>
+                  </div>
+                  <p className="mt-2 text-[11px] font-semibold leading-4 text-text-secondary">{lane.action}</p>
+                  <div className="mt-2 grid grid-cols-2 gap-1.5">
+                    <CLevelMapChip label="Input" value={lane.input} />
+                    <CLevelMapChip label="Output" value={lane.output} />
+                    <CLevelMapChip label="Need" value={lane.dependency} wide />
                   </div>
                 </div>
-              </button>
-            </form>
+              </div>
+            </a>
           ))}
         </div>
 
