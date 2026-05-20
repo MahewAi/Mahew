@@ -6,6 +6,9 @@ const jsonHeaders = {
 export default function handler(_req, res) {
   const hasWebhook = Boolean(process.env.ATMAJA_BRIEF_WEBHOOK_URL)
   const hasToken = Boolean(process.env.ATMAJA_BRIDGE_TOKEN)
+  const openRouterChatEnabled = process.env.ATMAJA_OPENROUTER_ENABLED === 'true'
+  const openRouterKeyConfigured = Boolean(process.env.OPENROUTER_API_KEY)
+  const openRouterModel = process.env.ATMAJA_OPENROUTER_MODEL ?? process.env.OPENROUTER_CHAT_MODEL ?? null
   const allowedHosts = String(process.env.ATMAJA_WEBHOOK_ALLOWED_HOSTS ?? '')
     .split(',')
     .map((host) => host.trim())
@@ -23,6 +26,14 @@ export default function handler(_req, res) {
         tokenConfigured: hasToken,
         tokenRequired: hasWebhook,
         webhookHostAllowlistConfigured: allowedHosts.length > 0,
+      },
+      chat: {
+        provider: 'OpenRouter',
+        endpoint: '/api/atmaja/chat',
+        enabled: openRouterChatEnabled && openRouterKeyConfigured,
+        keyConfigured: openRouterKeyConfigured,
+        model: openRouterModel,
+        attachmentsPolicy: 'metadata_only',
       },
       runtime: {
         engine: 'OpenClaw Atmaja',

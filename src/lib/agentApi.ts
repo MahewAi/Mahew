@@ -14,6 +14,14 @@ export interface AgentHealth {
     tokenRequired: boolean
     webhookHostAllowlistConfigured: boolean
   }
+  chat: {
+    provider: 'OpenRouter'
+    endpoint: string
+    enabled: boolean
+    keyConfigured: boolean
+    model: string | null
+    attachmentsPolicy: 'metadata_only'
+  }
   runtime: {
     engine: string
     status: 'external' | 'active' | 'degraded' | 'offline'
@@ -46,6 +54,14 @@ export const fallbackAgentHealth: AgentHealth = {
     tokenConfigured: false,
     tokenRequired: false,
     webhookHostAllowlistConfigured: false,
+  },
+  chat: {
+    provider: 'OpenRouter',
+    endpoint: '/api/atmaja/chat',
+    enabled: false,
+    keyConfigured: false,
+    model: null,
+    attachmentsPolicy: 'metadata_only',
   },
   runtime: {
     engine: 'OpenClaw Atmaja',

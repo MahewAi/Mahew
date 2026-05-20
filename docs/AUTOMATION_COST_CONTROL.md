@@ -65,6 +65,18 @@ Returned fields:
 
 If the key is missing, the dashboard shows local estimates and a not-configured provider status.
 
+## Atmaja Chat Bridge
+
+Current chat behavior is intentionally gated:
+
+- Default: Atmaja answers through the local fallback engine, so OpenRouter credits do not move.
+- Remote mode: the app calls `POST /api/atmaja/chat`, and that server endpoint calls OpenRouter chat completions.
+- Required client gates: `VITE_GERAI_PRIVACY_LOCK=off` and `VITE_GERAI_AGENT_BRIDGE=on`.
+- Required server gates: `ATMAJA_OPENROUTER_ENABLED=true` and `OPENROUTER_API_KEY`.
+- File policy: raw file contents and local previews are not sent to OpenRouter by default; only attachment metadata is forwarded.
+
+This means Matthew must explicitly enable remote AI before any Atmaja chat data leaves the browser.
+
 ## Verification
 
 Skill health:
@@ -85,3 +97,4 @@ Provider setup:
 1. Add `OPENROUTER_MANAGEMENT_KEY` to Vercel as a server-side environment variable.
 2. Do not create a `VITE_` version of the key.
 3. Keep `VITE_GERAI_PRIVACY_LOCK=on` unless the runtime has passed security review.
+4. For live Atmaja chat, add `OPENROUTER_API_KEY`, set `ATMAJA_OPENROUTER_ENABLED=true`, then set `VITE_GERAI_PRIVACY_LOCK=off` and `VITE_GERAI_AGENT_BRIDGE=on` only after approval.

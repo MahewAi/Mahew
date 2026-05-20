@@ -30,6 +30,7 @@ This keeps the browser app from controlling Syncthing directly while still using
 - The runtime privacy guard blocks external `fetch`, `/api/agent/*`, `/api/telemetry`, `sendBeacon`, `WebSocket`, and `EventSource` while privacy lock is on.
 - Settings includes Private Sync Vault export/import for localStorage-backed Gerai data.
 - OpenRouter credit checks use a server-only `/api/openrouter/credits` endpoint. The browser never receives the provider key, and the endpoint sends no Gerai brief, memory, or case payload to OpenRouter.
+- Atmaja chat can use a server-only `/api/atmaja/chat` OpenRouter bridge, but only when `VITE_GERAI_PRIVACY_LOCK=off`, `VITE_GERAI_AGENT_BRIDGE=on`, `ATMAJA_OPENROUTER_ENABLED=true`, and `OPENROUTER_API_KEY` are set deliberately. File contents are not sent to OpenRouter by default; attachments are forwarded as metadata only.
 - Agent bridge forwarding now requires HTTPS webhook, `ATMAJA_BRIDGE_TOKEN`, JSON content type, same-origin or configured origin, request size limit, and a light per-IP rate limit before a brief can leave the app server.
 - Mermaid diagrams render with strict security mode and a final SVG sanitizer before insertion into the DOM.
 - The AI Department map now labels Business Memory as local/private memory and routes sync through Skill Automation.

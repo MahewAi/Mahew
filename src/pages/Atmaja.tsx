@@ -4,6 +4,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { Send, Sunrise, ArrowUpRight, Trash2, ChevronDown, FileText, Image as ImageIcon, Loader2, Paperclip, UploadCloud, X } from 'lucide-react'
 import { loadStoredBriefs } from '@/lib/briefStore'
 import { recordInteractionLessons } from '@/lib/learningMemory'
+import { isAtmajaRemoteBridgeAllowed, requestAtmajaReply } from '@/lib/atmajaClient'
 import { generateMockReply, type ChatMessage } from '@/lib/mockReplies'
 import { isAtmajaColorDecisionRequest, shouldRepairAtmajaReply } from '@/lib/atmajaSystem'
 import { cn } from '@/lib/utils'
@@ -368,46 +369,61 @@ export default function Atmaja() {
 
     setSending(true)
     pendingReplyTimerRef.current = window.setTimeout(() => {
-      pendingReplyTimerRef.current = null
-      const modelText = buildAttachmentPrompt(userMsg.text, userMsg.attachments ?? [])
-      const result = generateMockReply({
-        userMessage: modelText,
-        history: historySnapshot,
-        speaker: 'atmaja',
-      })
+      void (async () => {
+        pendingReplyTimerRef.current = null
+        const modelText = buildAttachmentPrompt(userMsg.text, userMsg.attachments ?? [])
+        const remoteResult = await requestAtmajaReply({
+          userMessage: userMsg.text,
+          history: historySnapshot,
+          attachments: userMsg.attachments?.map((attachment) => ({
+            name: attachment.name,
+            type: attachment.type,
+            size: attachment.size,
+            kind: attachment.kind,
+            note: attachment.note,
+          })),
+        })
+        const result =
+          remoteResult ??
+          generateMockReply({
+            userMessage: modelText,
+            history: historySnapshot,
+            speaker: 'atmaja',
+          })
 
-      if (result.resetThread) {
-        const resetMessages: AtmajaMessage[] = [
-          {
-            id: `m-${Date.now() + 1}`,
-            author: 'ceo',
-            text: result.text,
-            timeAgo: 'Baru saja',
-          },
-        ]
-        saveThread(resetMessages)
-        setMessages(resetMessages)
+        if ('resetThread' in result && result.resetThread) {
+          const resetMessages: AtmajaMessage[] = [
+            {
+              id: `m-${Date.now() + 1}`,
+              author: 'ceo',
+              text: result.text,
+              timeAgo: 'Baru saja',
+            },
+          ]
+          saveThread(resetMessages)
+          setMessages(resetMessages)
+          setSending(false)
+          return
+        }
+
+        const visuals = buildVisualsForReply(modelText, result.text)
+        const reply: AtmajaMessage = {
+          id: `m-${Date.now() + 1}`,
+          author: 'ceo',
+          text: withVisualFollowUp(result.text, modelText, visuals),
+          timeAgo: 'Baru saja',
+        }
+        if (visuals.length > 0) reply.visuals = visuals
+
+        setMessages((prev) => {
+          const userIndex = prev.findIndex((message) => message.id === userMsg.id)
+          if (userIndex >= 0 && prev[userIndex + 1]?.author === 'ceo') return prev
+          const nextMessages = [...prev, reply]
+          saveThread(nextMessages)
+          return nextMessages
+        })
         setSending(false)
-        return
-      }
-
-      const visuals = buildVisualsForReply(modelText, result.text)
-      const reply: AtmajaMessage = {
-        id: `m-${Date.now() + 1}`,
-        author: 'ceo',
-        text: withVisualFollowUp(result.text, modelText, visuals),
-        timeAgo: 'Baru saja',
-      }
-      if (visuals.length > 0) reply.visuals = visuals
-
-      setMessages((prev) => {
-        const userIndex = prev.findIndex((message) => message.id === userMsg.id)
-        if (userIndex >= 0 && prev[userIndex + 1]?.author === 'ceo') return prev
-        const nextMessages = [...prev, reply]
-        saveThread(nextMessages)
-        return nextMessages
-      })
-      setSending(false)
+      })()
     }, delay)
   }, [])
 
@@ -438,6 +454,7 @@ export default function Atmaja() {
         .slice(0, 4),
     [],
   )
+  const remoteBridgeAllowed = isAtmajaRemoteBridgeAllowed()
 
   useEffect(() => {
     if (listRef.current) {
@@ -567,7 +584,9 @@ export default function Atmaja() {
               <h1 className="text-[40px] font-black leading-[42px] tracking-[-0.03em] text-text-primary sm:text-[48px] sm:leading-[50px]">
                 Atmaja
               </h1>
-              <p className="mt-1 text-sm font-semibold text-text-secondary">Sintesis kepemimpinan · Aktif sekarang</p>
+              <p className="mt-1 text-sm font-semibold text-text-secondary">
+                Sintesis kepemimpinan - {remoteBridgeAllowed ? 'OpenRouter bridge diizinkan' : 'Mode lokal aman'}
+              </p>
             </div>
           </div>
         </div>

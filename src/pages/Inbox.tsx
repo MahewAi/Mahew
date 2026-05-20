@@ -2009,6 +2009,14 @@ function IntegrationReadinessSection({
           body={lastBridgeResult ? `${lastBridgeResult.status} lewat mode ${lastBridgeResult.mode}` : 'Menunggu brief baru dari app.'}
         />
         <BridgeNote
+          title="Atmaja chat"
+          body={
+            health.chat.enabled
+              ? `OpenRouter aktif lewat ${health.chat.model ?? 'server default'}; lampiran hanya dikirim sebagai metadata.`
+              : 'Chat Atmaja memakai fallback lokal sampai privacy lock dimatikan, bridge diizinkan, dan OPENROUTER_API_KEY diset di server.'
+          }
+        />
+        <BridgeNote
           title="Security posture"
           body={
             bridgeConfigured

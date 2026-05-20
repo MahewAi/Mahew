@@ -30,7 +30,10 @@ export function installPrivacyRuntimeGuard() {
   window.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
     const rawUrl = typeof input === 'string' || input instanceof URL ? input.toString() : input.url
     const url = new URL(rawUrl, window.location.href)
-    const blockedLocalPath = url.pathname.startsWith('/api/agent') || url.pathname.startsWith('/api/telemetry')
+    const blockedLocalPath =
+      url.pathname.startsWith('/api/agent') ||
+      url.pathname.startsWith('/api/atmaja') ||
+      url.pathname.startsWith('/api/telemetry')
 
     if (url.origin !== window.location.origin || blockedLocalPath) {
       return Promise.reject(new Error(`Gerai privacy lock blocked outbound request to ${url.origin}${url.pathname}`))
