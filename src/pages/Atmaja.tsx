@@ -1,17 +1,34 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { Send, Sunrise, ArrowUpRight, Trash2, ChevronDown } from 'lucide-react'
+import { Send, Sunrise, ArrowUpRight, Trash2, ChevronDown, FileText, Image as ImageIcon, Loader2, Paperclip, X } from 'lucide-react'
 import { loadStoredBriefs } from '@/lib/briefStore'
 import { recordInteractionLessons } from '@/lib/learningMemory'
 import { generateMockReply, type ChatMessage } from '@/lib/mockReplies'
 import { cn } from '@/lib/utils'
 
+type AttachmentKind = 'image' | 'text' | 'document'
+
+interface AtmajaAttachment {
+  id: string
+  name: string
+  type: string
+  size: number
+  kind: AttachmentKind
+  previewText?: string
+  note?: string
+}
+
 interface AtmajaMessage extends ChatMessage {
   timeAgo: string
+  attachments?: AtmajaAttachment[]
 }
 
 const STORAGE_KEY = 'gerai:atmaja-thread'
+const MAX_ATTACHMENTS = 5
+const MAX_FILE_BYTES = 10 * 1024 * 1024
+const MAX_TEXT_PREVIEW_CHARS = 6000
+const textAttachmentExtensions = new Set(['txt', 'md', 'csv', 'json', 'log', 'xml', 'yaml', 'yml'])
 
 const initialThread: AtmajaMessage[] = [
   {
@@ -36,10 +53,23 @@ function loadThread(): AtmajaMessage[] {
 
 function saveThread(messages: AtmajaMessage[]) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-50)))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-50).map(stripMessageForStorage)))
   } catch {
     // ignore (quota or disabled)
   }
+}
+
+function stripMessageForStorage(message: AtmajaMessage): AtmajaMessage {
+  return {
+    ...message,
+    attachments: message.attachments?.map(stripAttachmentForStorage),
+  }
+}
+
+function stripAttachmentForStorage(attachment: AtmajaAttachment): AtmajaAttachment {
+  const stored = { ...attachment }
+  delete stored.previewText
+  return stored
 }
 
 const quickPrompts = [
@@ -49,14 +79,92 @@ const quickPrompts = [
   'Skenario terburuk yang harus saya antisipasi?',
 ]
 
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function getFileExtension(name: string) {
+  return name.split('.').pop()?.toLowerCase() ?? ''
+}
+
+function getAttachmentKind(file: File): AttachmentKind {
+  if (file.type.startsWith('image/')) return 'image'
+  if (file.type.startsWith('text/') || textAttachmentExtensions.has(getFileExtension(file.name))) return 'text'
+  return 'document'
+}
+
+async function buildAttachment(file: File): Promise<AtmajaAttachment> {
+  const kind = getAttachmentKind(file)
+  const base: AtmajaAttachment = {
+    id: `att-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    name: file.name,
+    type: file.type || getFileExtension(file.name).toUpperCase() || 'file',
+    size: file.size,
+    kind,
+  }
+
+  if (file.size > MAX_FILE_BYTES) {
+    return {
+      ...base,
+      note: `File terlalu besar untuk dibaca lokal (${formatFileSize(file.size)}). Maks ${formatFileSize(MAX_FILE_BYTES)}.`,
+    }
+  }
+
+  if (kind !== 'text') {
+    return {
+      ...base,
+      note: kind === 'image' ? 'Gambar diterima sebagai lampiran visual.' : 'Dokumen diterima sebagai metadata lampiran.',
+    }
+  }
+
+  try {
+    const previewText = await file.slice(0, MAX_TEXT_PREVIEW_CHARS).text()
+    return {
+      ...base,
+      previewText,
+      note: previewText.length > 0 ? 'Cuplikan isi dibaca lokal untuk jawaban ini.' : 'File teks kosong.',
+    }
+  } catch {
+    return {
+      ...base,
+      note: 'File diterima, tapi cuplikan teks tidak bisa dibaca.',
+    }
+  }
+}
+
+function buildDefaultAttachmentText(attachments: AtmajaAttachment[]) {
+  const names = attachments.map((attachment) => attachment.name).join(', ')
+  return `Saya kirim file ke Atmaja: ${names}`
+}
+
+function buildAttachmentPrompt(text: string, attachments: AtmajaAttachment[]) {
+  if (attachments.length === 0) return text
+
+  const summaries = attachments
+    .map((attachment) => {
+      const header = `- ${attachment.name} (${formatFileSize(attachment.size)}, ${attachment.type})`
+      if (!attachment.previewText) return `${header}\n  Catatan: ${attachment.note ?? 'Isi file belum diekstrak.'}`
+      return `${header}\n  [Cuplikan isi file]\n  ${attachment.previewText}`
+    })
+    .join('\n')
+
+  return `${text}\n\n[Lampiran lokal untuk Atmaja]\n${summaries}`
+}
+
 export default function Atmaja() {
   const navigate = useNavigate()
   const reduceMotion = useReducedMotion()
   const [messages, setMessages] = useState<AtmajaMessage[]>(() => loadThread())
   const [text, setText] = useState('')
+  const [attachments, setAttachments] = useState<AtmajaAttachment[]>([])
+  const [attachmentError, setAttachmentError] = useState('')
+  const [readingFiles, setReadingFiles] = useState(false)
   const [sending, setSending] = useState(false)
   const [quickOpen, setQuickOpen] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     saveThread(messages)
@@ -64,6 +172,8 @@ export default function Atmaja() {
 
   const handleReset = () => {
     setMessages(initialThread)
+    setAttachments([])
+    setAttachmentError('')
     try {
       localStorage.removeItem(STORAGE_KEY)
     } catch {
@@ -86,23 +196,56 @@ export default function Atmaja() {
     }
   }, [messages.length])
 
+  const handleFileSelect = async (files: FileList | null) => {
+    const selectedFiles = Array.from(files ?? [])
+    if (fileInputRef.current) fileInputRef.current.value = ''
+    if (selectedFiles.length === 0 || readingFiles) return
+
+    const remainingSlots = MAX_ATTACHMENTS - attachments.length
+    if (remainingSlots <= 0) {
+      setAttachmentError(`Maksimal ${MAX_ATTACHMENTS} file per pesan.`)
+      return
+    }
+
+    setReadingFiles(true)
+    setAttachmentError(selectedFiles.length > remainingSlots ? `Hanya ${remainingSlots} file pertama yang ditambahkan.` : '')
+
+    try {
+      const nextAttachments = await Promise.all(selectedFiles.slice(0, remainingSlots).map(buildAttachment))
+      setAttachments((current) => [...current, ...nextAttachments])
+    } finally {
+      setReadingFiles(false)
+    }
+  }
+
+  const removeAttachment = (id: string) => {
+    setAttachments((current) => current.filter((attachment) => attachment.id !== id))
+    setAttachmentError('')
+  }
+
   const send = (msgText: string) => {
-    if (!msgText.trim() || sending) return
+    if ((!msgText.trim() && attachments.length === 0) || sending || readingFiles) return
     const trimmed = msgText.trim()
+    const outgoingAttachments = attachments
+    const displayText = trimmed || buildDefaultAttachmentText(outgoingAttachments)
+    const modelText = buildAttachmentPrompt(displayText, outgoingAttachments)
     const userMsg: AtmajaMessage = {
       id: `m-${Date.now()}`,
       author: 'matthew',
-      text: trimmed,
+      text: displayText,
       timeAgo: 'Baru saja',
+      attachments: outgoingAttachments,
     }
     const historySnapshot = messages
-    recordInteractionLessons(trimmed, { type: 'atmaja-chat', author: 'matthew' })
+    recordInteractionLessons(displayText, { type: 'atmaja-chat', author: 'matthew' })
     setMessages((prev) => [...prev, userMsg])
     setText('')
+    setAttachments([])
+    setAttachmentError('')
     setSending(true)
     window.setTimeout(() => {
       const result = generateMockReply({
-        userMessage: trimmed,
+        userMessage: modelText,
         history: historySnapshot,
         speaker: 'atmaja',
       })
@@ -298,38 +441,80 @@ export default function Atmaja() {
           </div>
         )}
 
-        <div className="sticky bottom-24 z-20 flex items-end gap-2 rounded-[22px] border border-white/75 bg-white/76 p-2 shadow-pop backdrop-blur-xl">
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                e.preventDefault()
-                send(text)
-              }
-            }}
-            placeholder="Tanya Atmaja... (Cmd+Enter kirim)"
-            rows={1}
-            className={cn(
-              'max-h-32 flex-1 resize-none bg-transparent px-3 py-2.5 text-base leading-relaxed text-text-primary placeholder:text-text-faint',
-              'focus:outline-none',
-            )}
-            style={{ minHeight: '44px' }}
-          />
-          <button
-            type="button"
-            onClick={() => send(text)}
-            disabled={!text.trim() || sending}
-            aria-label="Kirim ke Atmaja"
-            className={cn(
-              'inline-flex size-11 shrink-0 items-center justify-center rounded-full transition-colors duration-fast',
-              text.trim() && !sending
-                ? 'bg-accent text-white shadow-glow-accent hover:bg-accent-dark'
-                : 'bg-bg-soft text-text-faint cursor-not-allowed',
-            )}
-          >
-            <Send className="size-4" />
-          </button>
+        <div className="sticky bottom-24 z-20 rounded-[22px] border border-white/75 bg-white/76 p-2 shadow-pop backdrop-blur-xl">
+          {attachments.length > 0 && (
+            <div className="mb-2 grid gap-2 sm:grid-cols-2">
+              {attachments.map((attachment) => (
+                <AttachmentChip
+                  key={attachment.id}
+                  attachment={attachment}
+                  removable
+                  onRemove={() => removeAttachment(attachment.id)}
+                />
+              ))}
+            </div>
+          )}
+
+          {attachmentError && <p className="mb-2 px-2 text-[11px] font-bold text-status-review">{attachmentError}</p>}
+
+          <div className="flex items-end gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="sr-only"
+              accept=".txt,.md,.csv,.json,.log,.xml,.yaml,.yml,.pdf,.doc,.docx,.xls,.xlsx,image/*"
+              onChange={(event) => {
+                void handleFileSelect(event.target.files)
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={sending || readingFiles}
+              aria-label="Lampirkan file untuk Atmaja"
+              className={cn(
+                'inline-flex size-11 shrink-0 items-center justify-center rounded-full transition-colors duration-fast',
+                sending || readingFiles
+                  ? 'bg-bg-soft text-text-faint cursor-not-allowed'
+                  : 'bg-white text-text-secondary shadow-soft hover:text-text-primary',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+              )}
+            >
+              {readingFiles ? <Loader2 className="size-4 animate-spin" /> : <Paperclip className="size-4" />}
+            </button>
+            <textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                  e.preventDefault()
+                  send(text)
+                }
+              }}
+              placeholder={attachments.length > 0 ? 'Tambah catatan untuk file...' : 'Tanya Atmaja... (Cmd+Enter kirim)'}
+              rows={1}
+              className={cn(
+                'max-h-32 flex-1 resize-none bg-transparent px-3 py-2.5 text-base leading-relaxed text-text-primary placeholder:text-text-faint',
+                'focus:outline-none',
+              )}
+              style={{ minHeight: '44px' }}
+            />
+            <button
+              type="button"
+              onClick={() => send(text)}
+              disabled={(!text.trim() && attachments.length === 0) || sending || readingFiles}
+              aria-label="Kirim ke Atmaja"
+              className={cn(
+                'inline-flex size-11 shrink-0 items-center justify-center rounded-full transition-colors duration-fast',
+                (text.trim() || attachments.length > 0) && !sending && !readingFiles
+                  ? 'bg-accent text-white shadow-glow-accent hover:bg-accent-dark'
+                  : 'bg-bg-soft text-text-faint cursor-not-allowed',
+              )}
+            >
+              <Send className="size-4" />
+            </button>
+          </div>
         </div>
       </section>
     </main>
@@ -377,11 +562,68 @@ function MessageBubble({ message, reduceMotion }: { message: AtmajaMessage; redu
           )}
         >
           {message.text}
+          {message.attachments && message.attachments.length > 0 && (
+            <div className="mt-3 grid gap-2">
+              {message.attachments.map((attachment) => (
+                <AttachmentChip key={attachment.id} attachment={attachment} compact />
+              ))}
+            </div>
+          )}
         </div>
         <p className={cn('mt-1 px-1 text-[10px] text-text-faint', isMatthew && 'text-right')}>
           {message.timeAgo}
         </p>
       </div>
     </motion.div>
+  )
+}
+
+function AttachmentChip({
+  attachment,
+  removable = false,
+  compact = false,
+  onRemove,
+}: {
+  attachment: AtmajaAttachment
+  removable?: boolean
+  compact?: boolean
+  onRemove?: () => void
+}) {
+  const Icon = attachment.kind === 'image' ? ImageIcon : FileText
+
+  return (
+    <div
+      className={cn(
+        'flex min-w-0 items-center gap-2 rounded-md border px-2.5 py-2 text-left',
+        compact ? 'border-white/25 bg-white/15 text-white' : 'border-border-soft bg-white/82 text-text-primary shadow-soft',
+      )}
+    >
+      <span
+        className={cn(
+          'inline-flex size-8 shrink-0 items-center justify-center rounded-md',
+          compact ? 'bg-white/18 text-white' : 'bg-accent-bg text-accent-dark',
+        )}
+      >
+        <Icon className="size-4" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className={cn('truncate text-[12px] font-extrabold', compact ? 'text-white' : 'text-text-primary')}>
+          {attachment.name}
+        </p>
+        <p className={cn('truncate text-[10px] font-semibold', compact ? 'text-white/72' : 'text-text-muted')}>
+          {formatFileSize(attachment.size)} / {attachment.note ?? attachment.type}
+        </p>
+      </div>
+      {removable && (
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label={`Hapus ${attachment.name}`}
+          className="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-text-muted hover:bg-bg-surface hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+          <X className="size-4" />
+        </button>
+      )}
+    </div>
   )
 }

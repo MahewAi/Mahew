@@ -158,6 +158,23 @@ const PATTERNS: Array<{
     ],
   },
   {
+    match: (q) => /file|lampir|attachment|dokumen|pdf|csv|excel|xlsx|gambar|image/.test(q),
+    intent: 'file_context',
+    variants: (ctx) => {
+      if (ctx.userMessage.includes('[Cuplikan isi file]')) {
+        return [
+          `File sudah saya terima dan cuplikan isinya sudah masuk sebagai konteks lokal. Saya akan baca dengan urutan: ringkasan isi, bagian yang perlu keputusan Matthew, risiko, lalu next action untuk C-level.`,
+          `Saya sudah dapat lampiran beserta cuplikannya. Langkah kerja saya: ambil inti dokumen, pisahkan fakta dan asumsi, lalu ubah menjadi brief atau workmap jika Anda mau.`,
+        ]
+      }
+
+      return [
+        `File sudah saya terima sebagai lampiran. Untuk file teks saya bisa membaca cuplikan lokal; untuk PDF, Office, atau gambar, saat ini saya pakai metadata lampiran dulu dan Anda bisa beri instruksi bagian mana yang perlu saya analisis.`,
+        `Lampiran masuk. Jika ini dokumen non-teks, saya akan perlakukan sebagai konteks file yang menunggu arahan Anda. Kalau Anda ingin analisis cepat, sebutkan targetnya: ringkasan, risiko, biaya, atau workmap.`,
+      ]
+    },
+  },
+  {
     match: (q) => /bisnis|business|usaha|operasi|operations|jualan/.test(q),
     intent: 'business',
     variants: () => [
