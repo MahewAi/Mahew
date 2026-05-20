@@ -11,6 +11,8 @@ export interface AgentHealth {
     submitEndpoint: string
     webhookConfigured: boolean
     tokenConfigured: boolean
+    tokenRequired: boolean
+    webhookHostAllowlistConfigured: boolean
   }
   runtime: {
     engine: string
@@ -21,6 +23,8 @@ export interface AgentHealth {
     appFirst: boolean
     discordOptional: boolean
     privacyLock: boolean
+    bridgeRequiresHttps: boolean
+    bridgeRequiresBearerToken: boolean
     requiresServerAudit: boolean
   }
 }
@@ -40,6 +44,8 @@ export const fallbackAgentHealth: AgentHealth = {
     submitEndpoint: '/api/agent/briefs',
     webhookConfigured: false,
     tokenConfigured: false,
+    tokenRequired: false,
+    webhookHostAllowlistConfigured: false,
   },
   runtime: {
     engine: 'OpenClaw Atmaja',
@@ -50,6 +56,8 @@ export const fallbackAgentHealth: AgentHealth = {
     appFirst: true,
     discordOptional: true,
     privacyLock: isPrivacyLockEnabled(),
+    bridgeRequiresHttps: true,
+    bridgeRequiresBearerToken: true,
     requiresServerAudit: false,
   },
 }

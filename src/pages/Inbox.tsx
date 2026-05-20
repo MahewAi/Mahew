@@ -276,10 +276,12 @@ export default function Inbox() {
     setAutomationRuns((prev) => [createCaseAutomationRun(newBrief), ...prev])
     void submitAgentBrief(newBrief).then((result) => {
       setLastBridgeResult(result)
+      if (shouldUseLocalSimulation(result)) {
+        window.setTimeout(() => {
+          setBriefs((prev) => prev.map((brief) => (brief.id === newBrief.id ? simulateAiResponse(brief) : brief)))
+        }, 2500)
+      }
     })
-    window.setTimeout(() => {
-      setBriefs((prev) => prev.map((brief) => (brief.id === newBrief.id ? simulateAiResponse(brief) : brief)))
-    }, 2500)
   }
 
   return (
@@ -379,6 +381,10 @@ export default function Inbox() {
       <ComposeSheet open={composeOpen} onOpenChange={setComposeOpen} onSubmit={handleComposeSubmit} />
     </div>
   )
+}
+
+function shouldUseLocalSimulation(result: SubmitAgentBriefResult) {
+  return result.mode !== 'webhook' || result.status !== 'accepted'
 }
 
 const implementationUpdates: Array<{

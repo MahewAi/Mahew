@@ -28,10 +28,10 @@ function ensureInit() {
     },
     flowchart: {
       curve: 'basis',
-      htmlLabels: true,
+      htmlLabels: false,
       padding: 12,
     },
-    securityLevel: 'loose',
+    securityLevel: 'strict',
   })
   initialized = true
 }
@@ -50,7 +50,7 @@ export function MermaidBlock({ code, caption }: MermaidBlockProps) {
       try {
         const { svg } = await mermaid.render(id, code)
         if (!cancelled && ref.current) {
-          ref.current.innerHTML = svg
+          ref.current.innerHTML = sanitizeMermaidSvg(svg)
         }
       } catch (e) {
         if (!cancelled) {
@@ -79,4 +79,27 @@ export function MermaidBlock({ code, caption }: MermaidBlockProps) {
       )}
     </figure>
   )
+}
+
+const blockedSvgElements = 'script, foreignObject, iframe, embed, object'
+
+function sanitizeMermaidSvg(svg: string) {
+  const document = new DOMParser().parseFromString(svg, 'image/svg+xml')
+  const parserError = document.querySelector('parsererror')
+  if (parserError) throw new Error('Invalid Mermaid SVG')
+
+  document.querySelectorAll(blockedSvgElements).forEach((element) => element.remove())
+  document.querySelectorAll('*').forEach((element) => {
+    Array.from(element.attributes).forEach((attribute) => {
+      const name = attribute.name.toLowerCase()
+      const value = attribute.value.trim().toLowerCase()
+      const unsafeUrl = value.startsWith('javascript:') || value.includes('data:text/html')
+
+      if (name.startsWith('on') || unsafeUrl) {
+        element.removeAttribute(attribute.name)
+      }
+    })
+  })
+
+  return document.documentElement.outerHTML
 }

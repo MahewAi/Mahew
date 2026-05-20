@@ -55,14 +55,18 @@ Environment variables for production:
 
 - `VITE_GERAI_PRIVACY_LOCK`: keep `on` while AI Department data must stay local-only.
 - `ATMAJA_BRIEF_WEBHOOK_URL`: webhook target for Atmaja, n8n, or a custom backend.
-- `ATMAJA_BRIDGE_TOKEN`: optional bearer token sent from the bridge to the webhook.
+- `ATMAJA_BRIDGE_TOKEN`: required bearer token sent from the bridge to the webhook when webhook mode is enabled.
+- `ATMAJA_WEBHOOK_ALLOWED_HOSTS`: optional comma-separated hostname allowlist for webhook targets.
+- `GERAI_ALLOWED_ORIGINS`: optional comma-separated same-site origin allowlist for bridge callers.
+- `ATMAJA_BRIEF_MAX_BYTES`: max JSON payload size for bridge requests.
+- `ATMAJA_BRIDGE_RATE_LIMIT`: light per-IP request cap per minute.
 
 If privacy lock is on, the browser does not post brief data to the bridge even if endpoint variables exist. This is intentional: Matthew can keep using the app while the runtime integration is being audited.
 
 ## Next Engineering Milestones
 
 1. Configure production bridge:
-   Only after a security review, set `VITE_GERAI_PRIVACY_LOCK=off`, `ATMAJA_BRIEF_WEBHOOK_URL`, and `ATMAJA_BRIDGE_TOKEN` in Vercel.
+   Only after a security review, set `VITE_GERAI_PRIVACY_LOCK=off`, `ATMAJA_BRIEF_WEBHOOK_URL`, `ATMAJA_BRIDGE_TOKEN`, and the webhook host allowlist in Vercel.
 
 2. Job polling:
    `GET /api/agent/jobs/:id` returns job status and final `AgentOutputEnvelope`.
