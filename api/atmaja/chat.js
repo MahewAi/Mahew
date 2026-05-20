@@ -213,7 +213,7 @@ export default async function handler(req, res) {
   }
 
   const attachments = normalizeAttachments(payload?.attachments)
-  const model = process.env.ATMAJA_OPENROUTER_MODEL ?? process.env.OPENROUTER_CHAT_MODEL ?? ''
+  const model = process.env.ATMAJA_OPENROUTER_MODEL ?? process.env.OPENROUTER_CHAT_MODEL ?? 'openrouter/auto'
   const referer = process.env.ATMAJA_OPENROUTER_REFERER ?? process.env.PUBLIC_APP_URL ?? 'https://gerai.mahewwork.com'
 
   try {
@@ -227,7 +227,7 @@ export default async function handler(req, res) {
         'x-openrouter-title': 'Gerai 1000 Pintu Atmaja',
       },
       body: JSON.stringify({
-        ...(model ? { model } : {}),
+        model,
         messages: [
           { role: 'system', content: buildSystemPrompt() },
           ...normalizeHistory(payload?.history),
