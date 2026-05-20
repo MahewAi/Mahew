@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { RefreshCw } from 'lucide-react'
-import { useRegisterSW } from 'virtual:pwa-register/react'
 import { cn } from '@/lib/utils'
 
 export function PwaUpdatePrompt() {
@@ -9,6 +8,7 @@ export function PwaUpdatePrompt() {
   const hasReloadedRef = useRef(false)
   const intervalRef = useRef<number | null>(null)
   const dismissedUntilRef = useRef(0)
+  const [needRefresh, setNeedRefresh] = useState(false)
   const [serverUpdateAvailable, setServerUpdateAvailable] = useState(false)
 
   const checkServerBundle = useCallback(async () => {
@@ -38,37 +38,75 @@ export function PwaUpdatePrompt() {
     }
   }, [])
 
-  const {
-    needRefresh: [needRefresh, setNeedRefresh],
-    updateServiceWorker,
-  } = useRegisterSW({
-    immediate: true,
-    onRegisteredSW(_swUrl, registration) {
-      if (!registration) return
-      registrationRef.current = registration
-      registration.update().catch(() => {
-        // Ignore transient update failures.
-      })
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) {
       void checkServerBundle()
+      return
+    }
 
-      if (intervalRef.current !== null) {
-        window.clearInterval(intervalRef.current)
-      }
-      intervalRef.current = window.setInterval(() => {
+    let active = true
+
+    const markRefreshNeeded = () => {
+      if (!active) return
+      setNeedRefresh(true)
+      setServerUpdateAvailable(true)
+    }
+
+    const watchWorker = (worker: ServiceWorker | null) => {
+      if (!worker) return
+      worker.addEventListener('statechange', () => {
+        if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+          markRefreshNeeded()
+        }
+      })
+    }
+
+    navigator.serviceWorker
+      .register('/sw.js')
+      .then((registration) => {
+        if (!active) return
+        registrationRef.current = registration
+        watchWorker(registration.installing)
+
+        registration.addEventListener('updatefound', () => {
+          watchWorker(registration.installing)
+        })
+
+        if (registration.waiting && navigator.serviceWorker.controller) {
+          markRefreshNeeded()
+        }
+
         registration.update().catch(() => {
-          // Offline or transient network failure.
+          // Ignore transient update failures.
         })
         void checkServerBundle()
-      }, 20 * 1000)
-    },
-    onRegisterError(error) {
-      console.error('SW registration error', error)
-    },
-  })
+
+        if (intervalRef.current !== null) {
+          window.clearInterval(intervalRef.current)
+        }
+        intervalRef.current = window.setInterval(() => {
+          registration.update().catch(() => {
+            // Offline or transient network failure.
+          })
+          void checkServerBundle()
+        }, 20 * 1000)
+      })
+      .catch((error) => {
+        console.error('SW registration error', error)
+      })
+
+    return () => {
+      active = false
+      if (intervalRef.current !== null) {
+        window.clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+    }
+  }, [checkServerBundle])
 
   const hardRefreshApp = useCallback(async () => {
     try {
-      await updateServiceWorker(true)
+      registrationRef.current?.waiting?.postMessage({ type: 'SKIP_WAITING' })
     } catch {
       // Continue with cache-busting fallback.
     }
@@ -90,7 +128,7 @@ export function PwaUpdatePrompt() {
     const url = new URL(window.location.href)
     url.searchParams.set('refresh', `pwa-${Date.now()}`)
     window.location.replace(url.toString())
-  }, [updateServiceWorker])
+  }, [])
 
   useEffect(() => {
     const checkForUpdate = () => {
@@ -128,10 +166,6 @@ export function PwaUpdatePrompt() {
       window.removeEventListener('online', onOnline)
       window.removeEventListener('focus', onFocus)
       navigator.serviceWorker?.removeEventListener('controllerchange', onControllerChange)
-      if (intervalRef.current !== null) {
-        window.clearInterval(intervalRef.current)
-        intervalRef.current = null
-      }
     }
   }, [checkServerBundle])
 
