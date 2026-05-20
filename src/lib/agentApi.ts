@@ -1,8 +1,7 @@
 import type { Brief } from '@/lib/types'
+import { AGENT_BRIDGE_ALLOWED, isPrivacyLockEnabled } from '@/lib/privacyGuard'
 
 export type BridgeMode = 'webhook' | 'contract' | 'offline'
-
-const AGENT_BRIDGE_ENABLED = import.meta.env.VITE_GERAI_AGENT_BRIDGE === 'on'
 
 export interface AgentHealth {
   ok: boolean
@@ -21,6 +20,7 @@ export interface AgentHealth {
   security: {
     appFirst: boolean
     discordOptional: boolean
+    privacyLock: boolean
     requiresServerAudit: boolean
   }
 }
@@ -49,16 +49,17 @@ export const fallbackAgentHealth: AgentHealth = {
   security: {
     appFirst: true,
     discordOptional: true,
+    privacyLock: isPrivacyLockEnabled(),
     requiresServerAudit: false,
   },
 }
 
 export function isAgentBridgeEnabled() {
-  return AGENT_BRIDGE_ENABLED
+  return AGENT_BRIDGE_ALLOWED
 }
 
 export async function fetchAgentHealth(): Promise<AgentHealth> {
-  if (!AGENT_BRIDGE_ENABLED) return fallbackAgentHealth
+  if (!AGENT_BRIDGE_ALLOWED) return fallbackAgentHealth
 
   try {
     const response = await fetch('/api/agent/health', {
@@ -73,12 +74,12 @@ export async function fetchAgentHealth(): Promise<AgentHealth> {
 }
 
 export async function submitAgentBrief(brief: Brief): Promise<SubmitAgentBriefResult> {
-  if (!AGENT_BRIDGE_ENABLED) {
+  if (!AGENT_BRIDGE_ALLOWED) {
     return {
       mode: 'offline',
       status: 'local_only',
       jobId: `local-${Date.now()}`,
-      note: 'Private mode aktif. Brief disimpan di device dan bisa diekspor ke Private Sync Vault.',
+      note: 'Privacy lock aktif. Brief tidak dikirim keluar dan hanya disimpan di device.',
     }
   }
 

@@ -21,6 +21,7 @@ import {
   getPrivateSyncSnapshotStatus,
   restorePrivateSyncVault,
 } from '@/lib/privateSync'
+import { getPrivacyPosture } from '@/lib/privacyGuard'
 import { cn } from '@/lib/utils'
 
 export default function Settings() {
@@ -29,6 +30,7 @@ export default function Settings() {
   const importInputRef = useRef<HTMLInputElement>(null)
   const [syncBusy, setSyncBusy] = useState(false)
   const [syncStatus, setSyncStatus] = useState(() => getPrivateSyncSnapshotStatus())
+  const privacyPosture = getPrivacyPosture()
 
   const syncSummary = syncStatus.labels.length > 0 ? syncStatus.labels.join(', ') : 'Belum ada data privat'
 
@@ -136,7 +138,9 @@ export default function Settings() {
           </h2>
           <div className="rounded-[16px] glass-soft shadow-glass divide-y divide-white/30">
             <Row icon={ShieldCheck} label="Mode data" value="Local-first" />
-            <Row icon={CloudOff} label="Cloud telemetry" value="Off by default" />
+            <Row icon={LockKeyhole} label="Privacy lock" value={privacyPosture.privacyLockEnabled ? 'Aktif' : 'Off'} />
+            <Row icon={CloudOff} label="AI egress" value={privacyPosture.agentBridgeAllowed ? 'Bridge on' : 'Blocked'} />
+            <Row icon={CloudOff} label="Cloud telemetry" value={privacyPosture.telemetryAllowed ? 'On' : 'Blocked'} />
             <Row icon={HardDrive} label="Private vault" value={`${syncStatus.recordCount} area · ${formatBytes(syncStatus.sizeInBytes)}`} />
             <Row icon={LockKeyhole} label="Sync target" value="Syncthing folder" />
             <div className="px-4 py-3">

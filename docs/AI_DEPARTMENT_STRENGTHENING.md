@@ -45,22 +45,23 @@ North Star: 100% planning system, where every brief becomes a plan, every plan h
 
 ## Bridge Foundation
 
-The app now has two serverless bridge endpoints:
+The app can be wired to serverless bridge endpoints later, but production privacy lock keeps them blocked by default:
 
 - `POST /api/agent/briefs`
 - `GET /api/agent/health`
 
 Environment variables for production:
 
+- `VITE_GERAI_PRIVACY_LOCK`: keep `on` while AI Department data must stay local-only.
 - `ATMAJA_BRIEF_WEBHOOK_URL`: webhook target for Atmaja, n8n, or a custom backend.
 - `ATMAJA_BRIDGE_TOKEN`: optional bearer token sent from the bridge to the webhook.
 
-If the webhook is not configured, the app uses `contract` mode. This is intentional: Matthew can keep using the app while the runtime integration is being wired.
+If privacy lock is on, the browser does not post brief data to the bridge even if endpoint variables exist. This is intentional: Matthew can keep using the app while the runtime integration is being audited.
 
 ## Next Engineering Milestones
 
 1. Configure production bridge:
-   Set `ATMAJA_BRIEF_WEBHOOK_URL` and `ATMAJA_BRIDGE_TOKEN` in Vercel.
+   Only after a security review, set `VITE_GERAI_PRIVACY_LOCK=off`, `ATMAJA_BRIEF_WEBHOOK_URL`, and `ATMAJA_BRIDGE_TOKEN` in Vercel.
 
 2. Job polling:
    `GET /api/agent/jobs/:id` returns job status and final `AgentOutputEnvelope`.

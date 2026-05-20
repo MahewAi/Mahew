@@ -4,12 +4,14 @@ import { ToastProvider } from '@/components/shared/Toast'
 import { BottomNav } from '@/components/nav/BottomNav'
 import { PwaUpdatePrompt } from '@/components/shared/PwaUpdatePrompt'
 import { runAppMigrations } from '@/lib/appReset'
+import { installPrivacyRuntimeGuard, TELEMETRY_ALLOWED } from '@/lib/privacyGuard'
 import Routes from './routes'
 
-const telemetryEnabled = import.meta.env.VITE_GERAI_TELEMETRY === 'on'
+const telemetryEnabled = TELEMETRY_ALLOWED
 
 // Run once on module load (sebelum first render).
 // Clear stale state dari versi lama setiap APP_VERSION bump.
+installPrivacyRuntimeGuard()
 runAppMigrations()
 
 export default function App() {

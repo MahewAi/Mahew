@@ -24,10 +24,13 @@ This keeps the browser app from controlling Syncthing directly while still using
 
 ## App Guardrails Implemented
 
+- `VITE_GERAI_PRIVACY_LOCK=on` by default, so AI Department data egress stays blocked even if bridge or telemetry flags are accidentally enabled.
 - `VITE_GERAI_AGENT_BRIDGE=off` by default, so new briefs are not posted to `/api/agent/briefs`.
 - `VITE_GERAI_TELEMETRY=off` by default, so Vercel Analytics and Speed Insights do not run unless explicitly enabled.
+- The runtime privacy guard blocks external `fetch`, `/api/agent/*`, `/api/telemetry`, `sendBeacon`, `WebSocket`, and `EventSource` while privacy lock is on.
 - Settings includes Private Sync Vault export/import for localStorage-backed Gerai data.
 - The AI Department map now labels Business Memory as local/private memory and routes sync through Skill Automation.
+- Production headers set a strict CSP: scripts, connections, images, and fonts are limited to this app origin plus `data:`/`blob:` where needed. External image/font loads are blocked by the browser.
 - The vault checksum detects accidental corruption, not malicious tampering. Device trust and encrypted disks still matter.
 
 ## Sources

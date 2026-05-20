@@ -45,6 +45,7 @@ import {
   type AgentHealth,
   type SubmitAgentBriefResult,
 } from '@/lib/agentApi'
+import { isPrivacyLockEnabled } from '@/lib/privacyGuard'
 import { loadStoredBriefs, saveStoredBriefs } from '@/lib/briefStore'
 import {
   getLearningSnapshot,
@@ -349,8 +350,8 @@ const implementationUpdates: Array<{
   {
     icon: ShieldCheck,
     title: 'Private sync',
-    status: 'Cloud gated',
-    body: 'Bridge agent dan telemetry default off. Data privat bisa diekspor ke vault untuk folder Syncthing.',
+    status: 'Privacy lock',
+    body: 'Privacy lock aktif: bridge agent dan telemetry tidak boleh jalan walau env keliru dinyalakan.',
     metric: 'local',
     tone: 'doing',
   },
@@ -380,8 +381,8 @@ const toolingSignals: Array<{
   {
     icon: ServerCog,
     label: 'Bridge posture',
-    value: 'Off',
-    detail: 'VITE_GERAI_AGENT_BRIDGE harus on sebelum brief keluar ke backend.',
+    value: 'Locked',
+    detail: 'VITE_GERAI_PRIVACY_LOCK=on memblokir brief keluar ke backend.',
     tone: 'decision',
   },
   {
@@ -1587,6 +1588,7 @@ function IntegrationReadinessSection({
   const readyAgents = agentRegistry.filter((agent) => agent.status === 'ready').length
   const missingAgents = agentRegistry.filter((agent) => agent.status === 'missing')
   const bridgeConfigured = isAgentBridgeEnabled()
+  const privacyLocked = isPrivacyLockEnabled()
   const bridgeOnline = bridgeConfigured && health.bridge.mode !== 'offline'
 
   return (
@@ -1595,12 +1597,14 @@ function IntegrationReadinessSection({
         <div>
           <p className="text-label-caps text-accent-dark">Agent bridge</p>
           <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">
-            {bridgeConfigured ? 'App siap disambungkan' : 'Private mode aktif'}
+            {privacyLocked ? 'Privacy lock aktif' : bridgeConfigured ? 'App siap disambungkan' : 'Private mode aktif'}
           </h2>
           <p className="mt-1 text-xs leading-5 text-text-secondary">
-            {bridgeConfigured
-              ? 'Brief masuk lewat API contract. Kalau webhook gagal, app tetap jalan di fallback lokal.'
-              : 'Brief tetap di device sampai bridge sengaja dinyalakan lewat environment.'}
+            {privacyLocked
+              ? 'Data AI Department tidak keluar dari device. Bridge dan telemetry diblokir dari kode.'
+              : bridgeConfigured
+                ? 'Brief masuk lewat API contract. Kalau webhook gagal, app tetap jalan di fallback lokal.'
+                : 'Brief tetap di device sampai bridge sengaja dinyalakan lewat environment.'}
           </p>
         </div>
         <span className={cn('inline-flex size-9 shrink-0 items-center justify-center rounded-md', bridgeOnline ? 'bg-status-final-bg text-status-final' : 'bg-status-review-bg text-status-review')}>
@@ -1662,7 +1666,9 @@ function IntegrationReadinessSection({
           body={
             bridgeConfigured
               ? 'Bridge aktif: audit server, token, log, dan control UI sebelum dipakai untuk data sensitif.'
-              : 'Bridge off: gunakan Private Sync Vault + Syncthing untuk memindahkan data antar device milik sendiri.'
+              : privacyLocked
+                ? 'Privacy lock on: gunakan Private Sync Vault + Syncthing antar device milik sendiri.'
+                : 'Bridge off: gunakan Private Sync Vault + Syncthing untuk memindahkan data antar device milik sendiri.'
           }
         />
       </div>
