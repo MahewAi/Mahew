@@ -92,7 +92,7 @@ import { cn } from '@/lib/utils'
 
 type SectorValue = 'all' | Role
 type SectionTone = 'decision' | 'doing' | 'review' | 'final' | 'neutral'
-type DashboardView = 'today' | 'department' | 'sectors' | 'learning' | 'costs' | 'system'
+type DashboardView = 'today' | 'department' | 'workmap' | 'sectors' | 'learning' | 'costs' | 'system'
 type CLevelWorkbenchMode = 'brief' | 'timeline' | 'visual' | 'data' | 'output'
 
 type StrengthIconKey = DepartmentStrengthArea['id']
@@ -315,6 +315,10 @@ export default function Inbox() {
           <DepartmentArchitectureSection />
         )}
 
+        {dashboardView === 'workmap' && (
+          <WorkMapDashboardSection plans={cLevelPlans} />
+        )}
+
         {dashboardView === 'sectors' && (
           <>
             <SectorTabs active={sector} onChange={setSector} />
@@ -503,6 +507,41 @@ function DepartmentArchitectureSection() {
         </span>
       </div>
       <LiveDepartmentMap />
+    </section>
+  )
+}
+
+function WorkMapDashboardSection({ plans }: { plans: CLevelPlan[] }) {
+  return (
+    <section className="mt-4 space-y-3" aria-label="Workmap C-level dashboard">
+      <div className="rounded-lg border border-text-primary bg-text-primary p-4 text-white shadow-card">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-white/62">C-level workmap</p>
+            <h1 className="mt-1 text-[24px] font-extrabold leading-7">Rancangan kerja langsung terlihat</h1>
+            <p className="mt-2 max-w-[360px] text-xs font-semibold leading-5 text-white/72">
+              Ini peta kerja COO, CMO, CFO, dan CCO: lane, input, action, output, dependency, dan gate keputusan Matthew.
+            </p>
+          </div>
+          <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-md bg-white/10 text-white">
+            <GitBranch className="size-4" />
+          </span>
+        </div>
+        <div className="mt-3 grid grid-cols-4 gap-2">
+          {plans.map((plan) => (
+            <div key={plan.role} className="rounded-md bg-white px-2 py-2 text-center text-text-primary">
+              <p className="text-[13px] font-extrabold leading-none">{DEPARTMENT_LABEL_SHORT[plan.role]}</p>
+              <p className="mt-1 truncate text-[9px] font-bold uppercase tracking-[0.05em] text-text-muted">
+                {plan.workMap.lanes.length} lane
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {plans.map((plan) => (
+        <CLevelWorkMapCard key={plan.role} role={plan.role} map={plan.workMap} />
+      ))}
     </section>
   )
 }
@@ -2006,6 +2045,7 @@ function DashboardViewTabs({
   const items: Array<{ value: DashboardView; label: string; helper: string; count: number }> = [
     { value: 'today', label: 'Hari ini', helper: 'prioritas', count: attentionCount + runningCount },
     { value: 'department', label: 'AI Dept', helper: 'struktur', count: AI_ARCHITECTURE_NODE_COUNT },
+    { value: 'workmap', label: 'Workmap', helper: 'rancangan', count: cLevelPlans.length },
     { value: 'sectors', label: 'Sektor', helper: 'C-level', count: DEPARTMENT_ORDER.length },
     { value: 'learning', label: 'Otak', helper: 'learning', count: learningCount },
     { value: 'costs', label: 'Biaya', helper: 'credits', count: costCount },
@@ -2252,7 +2292,7 @@ function QueueMiniRow({ brief, tone, onClick }: { brief: Brief; tone: SectionTon
 }
 
 function CLevelPlanCard({ plan, interactive = false }: { plan: CLevelPlan; interactive?: boolean }) {
-  const [activeMode, setActiveMode] = useState<CLevelWorkbenchMode>('brief')
+  const [activeMode, setActiveMode] = useState<CLevelWorkbenchMode>(interactive ? 'visual' : 'brief')
 
   return (
     <article className="rounded-lg border border-border-med bg-white p-3.5 shadow-soft">
