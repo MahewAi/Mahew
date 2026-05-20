@@ -161,6 +161,14 @@ const PATTERNS: Array<{
     match: (q) => /file|lampir|attachment|dokumen|pdf|csv|excel|xlsx|gambar|image/.test(q),
     intent: 'file_context',
     variants: (ctx) => {
+      const q = ctx.userMessage.toLowerCase()
+      if (/(warna|color|palette|palet|brand|branding)/.test(q) && /(pilih|rekomendasi|terbaik|alasan|menurut)/.test(q)) {
+        return [
+          `Jawaban langsung: saya pilih 3 warna terbaik untuk arah brand premium Gerai/GSP.\n\n1. Brass gold #B8956B\nAlasan: paling kuat sebagai warna signature. Rasanya premium, hangat, dan cukup berbeda dari gold yang terlalu mencolok. Ini cocok untuk tombol utama, aksen logo, line divider, dan highlight decision.\n\n2. Deep charcoal #1F1A14\nAlasan: memberi bobot, kontras, dan rasa mahal. Brass akan terlihat lebih elegan kalau ditemani charcoal, bukan putih polos terus-menerus. Ini cocok untuk header, canvas mapping, packaging gelap, dan background konten hero.\n\n3. Warm ivory #FAF8F4\nAlasan: menjaga brand tetap bersih dan breathable. Ivory membuat brass dan charcoal tidak terasa berat, cocok untuk background app, katalog, dokumen, dan materi presentasi.\n\nKalau harus dipersempit jadi 2 warna inti: pilih Brass gold + Deep charcoal. Ivory tetap dipakai sebagai warna dasar/support.\n\nCatatan: file ZIP besar belum bisa saya baca isi visualnya langsung di app, jadi ini rekomendasi cepat dari arah brand premium Gerai/GSP dan konteks warna yang sudah ada. Untuk final choice yang presisi, kirim screenshot palette atau 2-3 gambar opsi warna yang sudah diekstrak.`,
+          `Saya langsung pilih: kombinasi terbaik adalah Brass gold #B8956B, Deep charcoal #1F1A14, dan Warm ivory #FAF8F4.\n\nBrass gold jadi identitas utama karena terasa premium dan hangat. Deep charcoal membuat brand terlihat tegas, mature, dan tidak terlalu manis. Warm ivory menjadi ruang napas agar visual tetap bersih di app, katalog, dan presentasi.\n\nJika hanya boleh 2: Brass gold + Deep charcoal. Itu pasangan paling kuat untuk brand yang ingin terlihat premium, curated, dan punya authority.\n\nSaya belum bisa membedah isi ZIP besar langsung dari app, jadi rekomendasi ini saya berikan sebagai keputusan awal yang bisa dipakai sekarang. Kalau Anda kirim gambar palette hasil ekstrak, saya bisa ranking ulang lebih akurat.`,
+        ]
+      }
+
       if (ctx.userMessage.includes('[Cuplikan isi file]')) {
         return [
           `File sudah saya terima dan cuplikan isinya sudah masuk sebagai konteks lokal. Saya akan baca dengan urutan: ringkasan isi, bagian yang perlu keputusan Matthew, risiko, lalu next action untuk C-level.`,

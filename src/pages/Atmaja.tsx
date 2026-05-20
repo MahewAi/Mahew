@@ -153,6 +153,49 @@ function buildAttachmentPrompt(text: string, attachments: AtmajaAttachment[]) {
   return `${text}\n\n[Lampiran lokal untuk Atmaja]\n${summaries}`
 }
 
+function isColorDecisionRequest(text: string) {
+  const lowerText = text.toLowerCase()
+  return /(warna|color|palette|palet|brand|branding)/.test(lowerText) && /(pilih|rekomendasi|terbaik|alasan|menurut)/.test(lowerText)
+}
+
+function isGenericFileReply(text: string) {
+  return (
+    text.startsWith('Lampiran masuk. Jika ini dokumen non-teks') ||
+    text.startsWith('File sudah saya terima sebagai lampiran.')
+  )
+}
+
+function upgradeActionableFileReplies(messages: AtmajaMessage[]) {
+  let upgradedMessages = messages
+
+  for (let index = 0; index < messages.length - 1; index += 1) {
+    const userMessage = messages[index]
+    const replyMessage = messages[index + 1]
+    const hasAttachment = (userMessage.attachments?.length ?? 0) > 0
+
+    if (
+      userMessage.author === 'matthew' &&
+      replyMessage.author === 'ceo' &&
+      hasAttachment &&
+      isColorDecisionRequest(userMessage.text) &&
+      isGenericFileReply(replyMessage.text)
+    ) {
+      if (upgradedMessages === messages) upgradedMessages = [...messages]
+      const result = generateMockReply({
+        userMessage: buildAttachmentPrompt(userMessage.text, userMessage.attachments ?? []),
+        history: upgradedMessages.slice(0, index),
+        speaker: 'atmaja',
+      })
+      upgradedMessages[index + 1] = {
+        ...replyMessage,
+        text: result.text,
+      }
+    }
+  }
+
+  return upgradedMessages
+}
+
 function hasDraggedFiles(dataTransfer: DataTransfer) {
   return Array.from(dataTransfer.types).includes('Files')
 }
@@ -174,6 +217,11 @@ export default function Atmaja() {
 
   useEffect(() => {
     saveThread(messages)
+  }, [messages])
+
+  useEffect(() => {
+    const upgradedMessages = upgradeActionableFileReplies(messages)
+    if (upgradedMessages !== messages) setMessages(upgradedMessages)
   }, [messages])
 
   const handleReset = () => {
