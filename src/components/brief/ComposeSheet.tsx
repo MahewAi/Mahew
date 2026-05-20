@@ -11,6 +11,7 @@ import {
   type BriefBlock,
   type Role,
 } from '@/lib/types'
+import { cLevelPlans, type CLevelPlan } from '@/data/cLevelPlans'
 import { createAgentOutputEnvelope } from '@/lib/agentContracts'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/shared/Toast'
@@ -299,7 +300,7 @@ export function simulateAiResponse(brief: Brief): Brief {
         subtitle: `Planning output ${targetName}`,
         bullets: [
           'Objective, current state, opsi, risiko, dan decision gate sudah dipisahkan.',
-          'Output utama memakai visual blocks agar rencana mudah dibandingkan.',
+          'Output utama membawa work map, table, diagram, dan visual draft agar rencana mudah dibandingkan.',
           'Matthew perlu memilih lanjut, revisi data, atau tahan sebelum masuk eksekusi.',
         ],
       },
@@ -308,6 +309,10 @@ export function simulateAiResponse(brief: Brief): Brief {
 }
 
 function buildVisualBlocks(brief: Brief, targetRole: Role, targetName: string): BriefBlock[] {
+  const plan = targetRole === 'ceo' ? null : cLevelPlans.find((item) => item.role === targetRole) ?? null
+  const visualWorkRows = getVisualWorkRows(plan)
+  const visualMapTitle = plan?.workMap.title ?? 'Atmaja council work map'
+
   return [
     {
       type: 'callout',
@@ -317,7 +322,13 @@ function buildVisualBlocks(brief: Brief, targetRole: Role, targetName: string): 
     },
     {
       type: 'markdown',
-      content: `## Executive planning frame\n\n${targetName} membaca brief ini sebagai pekerjaan planning. Output wajibnya: **objective**, **current state**, **2 opsi tindakan**, **risiko**, **decision needed**, dan **next action**. Kalau data belum cukup, agent wajib push-back dan meminta input spesifik.`,
+      content: `## Executive planning frame\n\n${targetName} membaca brief ini sebagai pekerjaan planning. Output wajibnya: **objective**, **current state**, **visual work map**, **2 opsi tindakan**, **risiko**, **decision needed**, dan **next action**. Kalau data belum cukup, agent wajib push-back dan meminta input spesifik.`,
+    },
+    {
+      type: 'table',
+      headers: ['Visual Lane', 'Owner', 'Input', 'Output'],
+      rows: visualWorkRows,
+      caption: `${visualMapTitle}: rancangan kerja visual yang wajib muncul sebelum detail panjang.`,
     },
     {
       type: 'table',
@@ -358,15 +369,8 @@ function buildVisualBlocks(brief: Brief, targetRole: Role, targetName: string): 
     },
     {
       type: 'mermaid',
-      caption: 'Alur planning dari brief sampai keputusan Matthew.',
-      code: `flowchart TD
-  A[Input Matthew] --> B[Atmaja framing]
-  B --> C[${targetName} planning]
-  C --> D[Plan A / Plan B]
-  D --> E{Decision gate}
-  E -->|Approve| F[Execution queue]
-  E -->|Revise| G[Ask precise data]
-  E -->|Hold| H[Archive assumption]`,
+      caption: `${targetName} work map dari case sampai decision gate.`,
+      code: buildRoleWorkMapMermaid(plan, targetName),
     },
     {
       type: 'grid',
@@ -380,8 +384,8 @@ function buildVisualBlocks(brief: Brief, targetRole: Role, targetName: string): 
     },
     {
       type: 'generated-image',
-      title: 'Generated visual draft',
-      prompt: `Premium planning visual untuk "${brief.title}". Tampilkan denah keputusan, lane C-level, dan output artifact dalam gaya Gerai 1000 Pintu yang bersih dan editorial.`,
+      title: 'Generated work map draft',
+      prompt: `Premium planning visual untuk "${brief.title}". Tampilkan ${visualMapTitle}, lane kerja, dependency, output artifact, dan decision gate dalam gaya Gerai 1000 Pintu yang bersih dan editorial.`,
       src: buildGeneratedImage(brief.title, targetName),
       alt: `Generated visual draft untuk ${brief.title}`,
       caption: 'Hasil image generator bisa masuk sebagai URL, data image, atau asset CDN dari backend agent.',
@@ -421,6 +425,61 @@ function buildVisualBlocks(brief: Brief, targetRole: Role, targetName: string): 
       ],
     },
   ]
+}
+
+function getVisualWorkRows(plan: CLevelPlan | null): string[][] {
+  if (!plan) {
+    return [
+      ['Framing', 'Atmaja', 'Brief Matthew', 'Master planning frame'],
+      ['COO lane', 'COO', 'Feasibility, SOP, vendor', 'Ops roadmap'],
+      ['CMO lane', 'CMO', 'Segment, positioning, channel', 'Growth map'],
+      ['CFO lane', 'CFO', 'Cost, margin, ROI', 'Scenario table'],
+      ['CCO lane', 'CCO', 'Evidence, memo, narrative', 'Visual brief'],
+    ]
+  }
+
+  return plan.workMap.lanes.map((lane) => [lane.label, lane.owner, lane.input, lane.output])
+}
+
+function buildRoleWorkMapMermaid(plan: CLevelPlan | null, targetName: string): string {
+  if (!plan) {
+    return `flowchart TD
+  A["Matthew case"] --> B["Atmaja framing"]
+  B --> C1["COO ops map"]
+  B --> C2["CMO growth map"]
+  B --> C3["CFO capital map"]
+  B --> C4["CCO narrative map"]
+  C1 --> D["Master decision brief"]
+  C2 --> D
+  C3 --> D
+  C4 --> D
+  D --> E{"Decision gate"}
+  E -->|Approve| F["Execution queue"]
+  E -->|Revise| G["Ask precise data"]
+  E -->|Hold| H["Archive assumption"]`
+  }
+
+  const laneLines = plan.workMap.lanes
+    .map((lane, index) => {
+      const laneId = `L${index + 1}`
+      const outputId = `O${index + 1}`
+      return `  B --> ${laneId}["${escapeMermaidLabel(lane.label)}"]\n  ${laneId} --> ${outputId}["${escapeMermaidLabel(lane.output)}"]`
+    })
+    .join('\n')
+  const outputJoins = plan.workMap.lanes.map((_, index) => `  O${index + 1} --> G`).join('\n')
+
+  return `flowchart TD
+  A["Matthew case"] --> B["${escapeMermaidLabel(targetName)} visual framing"]
+${laneLines}
+${outputJoins}
+  G{"Decision gate Matthew"}
+  G -->|Approve| H["Execution queue"]
+  G -->|Revise| I["Ask missing data"]
+  G -->|Hold| J["Park risk"]`
+}
+
+function escapeMermaidLabel(value: string) {
+  return value.replace(/["[\]{}|]/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
 function buildGeneratedImage(title: string, owner: string): string {

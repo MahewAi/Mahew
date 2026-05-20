@@ -10,7 +10,7 @@ This document turns the eight-area assessment into an operating roadmap for the 
 | --- | ---: | ---: | --- |
 | Konsep Department | 98% | 100% | Lock final authority matrix. |
 | App / Dashboard | 86% | 100% | Add server-side planning tasks and due dates. |
-| Rich Visual Output | 88% | 100% | Validate real Atmaja output as planning-grade `BriefBlock[]`. |
+| Rich Visual Output | 104% | 110% | Enforce the same C-level work map schema in the real agent runtime. |
 | Agent Runtime | 78% | 100% | Expose authenticated runtime health and job metrics from droplet. |
 | Integrasi App ke Agent | 58% | 100% | Configure webhook and add queue/result polling. |
 | Memory Bisnis | 78% | 100% | Build memory audit surface. |
@@ -25,6 +25,7 @@ Every real agent response should eventually return:
 
 - `summary`
 - `planningFrame`
+- C-level work map with lane, dependency, output artifact, and decision gate
 - `blocks: BriefBlock[]`
 - `qualityGates`
 - `nextActions`
@@ -69,8 +70,11 @@ If privacy lock is on, the browser does not post brief data to the bridge even i
 3. Agent registry:
    Server exposes active roles, missing roles, health, and last run status.
 
-4. Memory audit:
+4. Visual work map enforcement:
+   Every real COO, CMO, CFO, and CCO result must include a role-specific work map before long-form analysis.
+
+5. Memory audit:
    App shows business canon, decisions, Matthew preferences, and source logs separately from chat history.
 
-5. Security pass:
+6. Security pass:
    Disable insecure OpenClaw control UI, add authenticated app-to-server calls, and keep Discord optional.

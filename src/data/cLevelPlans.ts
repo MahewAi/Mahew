@@ -10,6 +10,7 @@ export interface CLevelPlan {
   planningQuestions: string[]
   needsFromMatthew: string[]
   outputFormats: string[]
+  workMap: CLevelWorkMap
   timeline: CLevelTimelineItem[]
   visualPanels: CLevelVisualPanel[]
   dataSignals: CLevelDataSignal[]
@@ -30,6 +31,22 @@ export interface CLevelVisualPanel {
   type: 'map' | 'image' | 'chart' | 'grid'
   description: string
   nodes: string[]
+}
+
+export interface CLevelWorkMap {
+  title: string
+  summary: string
+  lanes: CLevelWorkLane[]
+  decisionGate: string
+}
+
+export interface CLevelWorkLane {
+  label: string
+  owner: string
+  input: string
+  action: string
+  output: string
+  dependency: string
 }
 
 export interface CLevelDataSignal {
@@ -65,7 +82,46 @@ export const cLevelPlans: CLevelPlan[] = [
       'Vendor atau proses mana yang perlu fallback plan?',
     ],
     needsFromMatthew: ['Prioritas proses pertama', 'Batas toleransi lead time', 'Standar quality control'],
-    outputFormats: ['flowchart', 'table', 'checklist'],
+    outputFormats: ['operating map', 'flowchart', 'vendor matrix', 'risk checklist'],
+    workMap: {
+      title: 'COO operating work map',
+      summary: 'COO mengubah case menjadi peta operasi: scope, SOP, vendor, fulfillment, blocker, dan gate feasibility.',
+      decisionGate: 'Matthew memilih proses mana yang masuk eksekusi, proses mana yang perlu redesign, dan vendor mana yang boleh diuji.',
+      lanes: [
+        {
+          label: 'Operating scope',
+          owner: 'COO',
+          input: 'Tujuan case dan batas deadline',
+          action: 'Memecah pekerjaan menjadi SOP, owner, dan dependency',
+          output: 'Operating architecture',
+          dependency: 'Prioritas proses dari Matthew',
+        },
+        {
+          label: 'Vendor and production',
+          owner: 'Production Planner',
+          input: 'Daftar supplier, lead time, dan capacity',
+          action: 'Membuat vendor readiness matrix dan fallback plan',
+          output: 'Vendor map',
+          dependency: 'Supplier list aktual',
+        },
+        {
+          label: 'Fulfillment flow',
+          owner: 'HR and Systems',
+          input: 'Order path, QC rule, dan handover standard',
+          action: 'Menggambar flow order sampai customer handover',
+          output: 'Order-to-handover flow',
+          dependency: 'Standar quality control',
+        },
+        {
+          label: 'Blocker gate',
+          owner: 'COO',
+          input: 'Risk, missing owner, dan bottleneck',
+          action: 'Menentukan stop rule dan next action owner',
+          output: 'Ops risk map',
+          dependency: 'Toleransi risiko Matthew',
+        },
+      ],
+    },
     timeline: [
       { phase: 'Map SOP inti', window: 'Minggu ini', progress: 72, owner: 'HR & Systems', output: 'SOP backlog + owner' },
       { phase: 'Vendor readiness', window: '7 hari', progress: 58, owner: 'Production', output: 'Vendor matrix' },
@@ -114,7 +170,46 @@ export const cLevelPlans: CLevelPlan[] = [
       'Apa pesan yang harus dikunci agar brand tidak terdengar generik?',
     ],
     needsFromMatthew: ['Target segmen awal', 'Batas tone brand', 'Channel yang ingin diuji dulu'],
-    outputFormats: ['market map', 'chart', 'campaign grid'],
+    outputFormats: ['market map', 'positioning map', 'funnel map', 'campaign grid'],
+    workMap: {
+      title: 'CMO growth work map',
+      summary: 'CMO mengubah case menjadi peta market: segment, positioning, channel, funnel, campaign, dan proof signal.',
+      decisionGate: 'Matthew memilih segmen utama, channel test pertama, dan batas pesan brand yang tidak boleh dilanggar.',
+      lanes: [
+        {
+          label: 'Segment thesis',
+          owner: 'Market Researcher',
+          input: 'Target customer dan konteks market',
+          action: 'Membuat segment map dan competitor contrast',
+          output: 'Market landscape',
+          dependency: 'Segmen awal yang ingin diuji',
+        },
+        {
+          label: 'Positioning lock',
+          owner: 'Brand Strategist',
+          input: 'Brand canon dan batas tone',
+          action: 'Menyusun message hierarchy dan proof points',
+          output: 'Positioning map',
+          dependency: 'Tone yang Matthew setujui',
+        },
+        {
+          label: 'Channel sprint',
+          owner: 'Sales Strategist',
+          input: 'Budget, channel, dan conversion goal',
+          action: 'Menggambar funnel dari awareness sampai inquiry',
+          output: 'Funnel map',
+          dependency: 'Channel prioritas',
+        },
+        {
+          label: 'Innovation signal',
+          owner: 'Innovation Scout',
+          input: 'Trend dan contoh campaign luar',
+          action: 'Menandai ide yang layak diuji dan yang harus ditolak',
+          output: 'Campaign experiment grid',
+          dependency: 'Batas eksperimen brand',
+        },
+      ],
+    },
     timeline: [
       { phase: 'Competitor radar', window: 'Minggu ini', progress: 64, owner: 'Market Researcher', output: 'Competitor landscape' },
       { phase: 'Positioning lock', window: '7 hari', progress: 78, owner: 'Brand Strategist', output: 'Message hierarchy' },
@@ -163,7 +258,46 @@ export const cLevelPlans: CLevelPlan[] = [
       'Keputusan apa yang harus ditolak kalau ROI tidak tembus guardrail?',
     ],
     needsFromMatthew: ['Modal awal', 'Target margin', 'Biaya tetap yang sudah diketahui'],
-    outputFormats: ['projection chart', 'sensitivity table', 'scenario grid'],
+    outputFormats: ['capital map', 'projection chart', 'sensitivity table', 'scenario grid'],
+    workMap: {
+      title: 'CFO capital work map',
+      summary: 'CFO mengubah case menjadi peta uang: assumption, pricing, margin, runway, ROI, dan stop rule.',
+      decisionGate: 'Matthew memilih budget boleh dibuka, perlu data tambahan, atau harus ditahan karena guardrail tidak tembus.',
+      lanes: [
+        {
+          label: 'Assumption ledger',
+          owner: 'Financial Analyst',
+          input: 'COGS, fixed cost, target revenue',
+          action: 'Memisahkan angka diketahui, asumsi, dan angka kosong',
+          output: 'Assumption map',
+          dependency: 'Baseline biaya aktual',
+        },
+        {
+          label: 'Revenue model',
+          owner: 'Business Designer',
+          input: 'Produk, pricing, volume, dan margin target',
+          action: 'Menggambar revenue stream dan margin driver',
+          output: 'Business model map',
+          dependency: 'Target margin Matthew',
+        },
+        {
+          label: 'Scenario control',
+          owner: 'CFO',
+          input: 'Konservatif, base, agresif, worst case',
+          action: 'Membuat scenario grid dan sensitivity table',
+          output: 'Scenario grid',
+          dependency: 'Range penjualan realistis',
+        },
+        {
+          label: 'Budget gate',
+          owner: 'CFO',
+          input: 'Upside, downside, runway impact',
+          action: 'Menentukan approve, revise, atau hold',
+          output: 'Capital decision gate',
+          dependency: 'Batas rugi yang Matthew terima',
+        },
+      ],
+    },
     timeline: [
       { phase: 'Assumption lock', window: 'Minggu ini', progress: 38, owner: 'Financial Analyst', output: 'Assumption ledger' },
       { phase: 'Pricing guardrail', window: '7 hari', progress: 52, owner: 'CFO', output: 'Margin threshold' },
@@ -212,7 +346,46 @@ export const cLevelPlans: CLevelPlan[] = [
       'Bagian mana yang harus divisualkan agar mudah diputuskan?',
     ],
     needsFromMatthew: ['Urutan dokumen prioritas', 'Contoh tone yang disukai', 'Format output final'],
-    outputFormats: ['memo', 'document', 'source table'],
+    outputFormats: ['document map', 'source table', 'visual brief', 'decision memo'],
+    workMap: {
+      title: 'CCO narrative work map',
+      summary: 'CCO mengubah case menjadi peta komunikasi: memo, source log, narrative, visual brief, dan archive.',
+      decisionGate: 'Matthew memilih format final, source yang boleh dipakai, dan apakah output sudah layak dibagikan.',
+      lanes: [
+        {
+          label: 'Decision memo',
+          owner: 'Document Architect',
+          input: 'Keputusan yang perlu dijelaskan',
+          action: 'Menyusun memo dengan konteks, opsi, risiko, dan next action',
+          output: 'Decision memo',
+          dependency: 'Keputusan final dari Matthew',
+        },
+        {
+          label: 'Source proof',
+          owner: 'Web Researcher',
+          input: 'Claim, data, dan sumber yang perlu dipercaya',
+          action: 'Membuat source log dan confidence note',
+          output: 'Evidence table',
+          dependency: 'Source yang bisa diverifikasi',
+        },
+        {
+          label: 'Narrative design',
+          owner: 'Editorial Reviewer',
+          input: 'Audience, tone, dan brand boundary',
+          action: 'Mengunci bahasa, struktur cerita, dan forbidden language',
+          output: 'Narrative map',
+          dependency: 'Contoh tone yang Matthew suka',
+        },
+        {
+          label: 'Visual brief',
+          owner: 'CCO',
+          input: 'Insight, table, chart, dan diagram',
+          action: 'Membungkus output menjadi visual brief yang bisa dibaca ulang',
+          output: 'Visual brief deck',
+          dependency: 'Format output final',
+        },
+      ],
+    },
     timeline: [
       { phase: 'Document architecture', window: 'Minggu ini', progress: 70, owner: 'Document Writer', output: 'Business plan outline' },
       { phase: 'Source audit', window: '7 hari', progress: 62, owner: 'Web Researcher', output: 'Evidence log' },

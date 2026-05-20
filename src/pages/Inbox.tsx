@@ -29,7 +29,13 @@ import {
 import { BriefDetailSheet } from '@/components/brief/BriefDetailSheet'
 import { ComposeSheet, simulateAiResponse } from '@/components/brief/ComposeSheet'
 import { agentRegistry } from '@/data/agentRegistry'
-import { cLevelPlans, type CLevelOutputItem, type CLevelPlan, type CLevelTimelineItem, type CLevelVisualPanel } from '@/data/cLevelPlans'
+import {
+  cLevelPlans,
+  type CLevelOutputItem,
+  type CLevelPlan,
+  type CLevelTimelineItem,
+  type CLevelWorkMap,
+} from '@/data/cLevelPlans'
 import { departmentStrengthAreas, workflowStages, type DepartmentStrengthArea } from '@/data/departmentStrength'
 import { intelligenceDimensions, intelligenceStages, type IntelligenceDimension } from '@/data/intelligenceMaturity'
 import {
@@ -2287,7 +2293,7 @@ function CLevelOverviewPreview({ plan }: { plan: CLevelPlan }) {
         <div className="min-w-0">
           <p className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-text-muted">Ringkasan sektor</p>
           <p className="mt-1 text-xs font-semibold leading-5 text-text-secondary">
-            {plan.timeline.length} timeline, {plan.visualPanels.length} visual, {plan.dataSignals.length} data signal.
+            1 work map, {plan.timeline.length} timeline, {plan.visualPanels.length} visual, {plan.dataSignals.length} data signal.
           </p>
         </div>
         <span className="shrink-0 rounded-md bg-white px-2.5 py-2 text-right">
@@ -2348,7 +2354,7 @@ function CLevelWorkbenchTabs({
 function CLevelWorkbenchPanel({ mode, plan }: { mode: CLevelWorkbenchMode; plan: CLevelPlan }) {
   if (mode === 'brief') return <CLevelBriefPanel plan={plan} />
   if (mode === 'timeline') return <CLevelTimeline items={plan.timeline} />
-  if (mode === 'visual') return <CLevelVisualBoard role={plan.role} panels={plan.visualPanels} />
+  if (mode === 'visual') return <CLevelVisualBoard plan={plan} />
   if (mode === 'data') return <CLevelDataSignals plan={plan} />
   return <CLevelOutputList outputs={plan.latestOutputs} />
 }
@@ -2423,10 +2429,13 @@ function CLevelTimeline({ items }: { items: CLevelTimelineItem[] }) {
   )
 }
 
-function CLevelVisualBoard({ role, panels }: { role: Exclude<Role, 'ceo'>; panels: CLevelVisualPanel[] }) {
+function CLevelVisualBoard({ plan }: { plan: CLevelPlan }) {
+  const { role, visualPanels, workMap } = plan
+
   return (
     <div className="mt-3 grid gap-2" aria-label="C-level visual board">
-      {panels.map((panel) => (
+      <CLevelWorkMapCard role={role} map={workMap} />
+      {visualPanels.map((panel) => (
         <article key={panel.title} className="overflow-hidden rounded-md border border-border-soft bg-bg-surface">
           <div className={cn('relative min-h-[118px] p-3 text-white', roleAccent[role])}>
             <div className="absolute inset-0 opacity-[0.18] [background-image:linear-gradient(90deg,rgba(255,255,255,.36)_1px,transparent_1px),linear-gradient(rgba(255,255,255,.32)_1px,transparent_1px)] [background-size:22px_22px]" />
@@ -2451,6 +2460,78 @@ function CLevelVisualBoard({ role, panels }: { role: Exclude<Role, 'ceo'>; panel
           </div>
         </article>
       ))}
+    </div>
+  )
+}
+
+function CLevelWorkMapCard({ role, map }: { role: Exclude<Role, 'ceo'>; map: CLevelWorkMap }) {
+  return (
+    <article className="overflow-hidden rounded-md border border-border-med bg-white shadow-soft">
+      <div className="relative border-b border-border-soft bg-text-primary px-3 py-3 text-white">
+        <div className="absolute inset-0 opacity-[0.12] [background-image:linear-gradient(90deg,rgba(255,255,255,.34)_1px,transparent_1px),linear-gradient(rgba(255,255,255,.32)_1px,transparent_1px)] [background-size:18px_18px]" />
+        <div className="relative flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-white/62">
+              Rancangan kerja / {DEPARTMENT_LABEL_SHORT[role]}
+            </p>
+            <h3 className="mt-1 text-[16px] font-extrabold leading-5">{map.title}</h3>
+            <p className="mt-1 max-w-[340px] text-[11px] font-semibold leading-4 text-white/72">{map.summary}</p>
+          </div>
+          <span className={cn('inline-flex size-9 shrink-0 items-center justify-center rounded-md text-white', roleAccent[role])}>
+            <GitBranch className="size-4" />
+          </span>
+        </div>
+      </div>
+
+      <div className="bg-bg-surface px-3 py-3">
+        <div className="grid gap-2">
+          {map.lanes.map((lane, index) => (
+            <div key={lane.label} className="relative rounded-md border border-border-soft bg-white px-3 py-2.5">
+              <div className="flex items-start gap-2.5">
+                <span className={cn('inline-flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-extrabold text-white', roleAccent[role])}>
+                  {index + 1}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-[12px] font-extrabold text-text-primary">{lane.label}</p>
+                      <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.05em] text-text-faint">{lane.owner}</p>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-bg-surface px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.04em] text-text-muted">
+                      map
+                    </span>
+                  </div>
+                  <p className="mt-2 text-[11px] font-semibold leading-4 text-text-secondary">{lane.action}</p>
+                  <div className="mt-2 grid grid-cols-2 gap-1.5">
+                    <CLevelMapChip label="Input" value={lane.input} />
+                    <CLevelMapChip label="Output" value={lane.output} />
+                    <CLevelMapChip label="Need" value={lane.dependency} wide />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-2 rounded-md border border-border-soft bg-white px-3 py-2.5">
+          <div className="flex items-start gap-2">
+            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-status-final" />
+            <div>
+              <p className="text-[11px] font-extrabold text-text-primary">Decision gate Matthew</p>
+              <p className="mt-1 text-[11px] font-semibold leading-4 text-text-muted">{map.decisionGate}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+  )
+}
+
+function CLevelMapChip({ label, value, wide = false }: { label: string; value: string; wide?: boolean }) {
+  return (
+    <div className={cn('min-h-[48px] rounded-md bg-bg-surface px-2 py-1.5', wide && 'col-span-2')}>
+      <p className="text-[8px] font-extrabold uppercase tracking-[0.06em] text-text-faint">{label}</p>
+      <p className="mt-0.5 line-clamp-2 text-[10px] font-semibold leading-3 text-text-secondary">{value}</p>
     </div>
   )
 }
@@ -2535,11 +2616,12 @@ function PlanList({ label, items, muted = false }: { label: string; items: strin
 
 function VisualSurfaceSection() {
   const visualItems = [
+    { icon: GitBranch, label: 'C-level work map', text: 'lane, dependency, artifact, gate' },
     { icon: Table2, label: 'Table', text: 'comparison, supplier, pricing' },
     { icon: BarChart3, label: 'Chart', text: 'ROI, forecast, trend' },
     { icon: GitBranch, label: 'Diagram', text: 'flow, mermaid, process' },
     { icon: ImageIcon, label: 'Image', text: 'visual map, reference, mockup' },
-    { icon: ImageIcon, label: 'Generated image', text: 'generated-image block tampil di detail brief' },
+    { icon: ImageIcon, label: 'Generated image', text: 'generated work map draft' },
     { icon: CheckCircle2, label: 'Output contract', text: 'AgentOutputEnvelope siap membawa visual result' },
   ]
 
@@ -2548,9 +2630,9 @@ function VisualSurfaceSection() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-label-caps text-accent-dark">Visual output</p>
-          <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">Generated image sudah punya tempat</h2>
+          <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">C-level wajib memberi gambaran kerja</h2>
           <p className="mt-1 text-xs leading-5 text-text-secondary">
-            Brief detail bisa berisi grafik, tabel, gambar, diagram, callout, grid C-suite, dan hasil generate image dari agent.
+            Brief detail bisa berisi work map, grafik, tabel, gambar, diagram, callout, grid C-suite, dan hasil generate image dari agent.
           </p>
         </div>
       </div>
