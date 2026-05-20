@@ -94,6 +94,9 @@ import { cn } from '@/lib/utils'
 type SectorValue = 'all' | Role
 type SectionTone = 'decision' | 'doing' | 'review' | 'final' | 'neutral'
 type DashboardView = 'today' | 'department' | 'workmap' | 'sectors' | 'learning' | 'costs' | 'system'
+
+const DASHBOARD_VIEW_STORAGE_KEY = 'gerai.dashboard.view'
+const dashboardViewValues: DashboardView[] = ['today', 'department', 'workmap', 'sectors', 'learning', 'costs', 'system']
 type CLevelWorkbenchMode = 'brief' | 'timeline' | 'visual' | 'data' | 'output'
 
 type StrengthIconKey = DepartmentStrengthArea['id']
@@ -150,7 +153,7 @@ export default function Inbox() {
   const params = useParams<{ id?: string }>()
   const [briefs, setBriefs] = useState<Brief[]>(() => loadStoredBriefs())
   const [sector, setSector] = useState<SectorValue>('all')
-  const [dashboardView, setDashboardView] = useState<DashboardView>('today')
+  const [dashboardView, setDashboardView] = useState<DashboardView>(() => loadStoredDashboardView())
   const [composeOpen, setComposeOpen] = useState(false)
   const [agentHealth, setAgentHealth] = useState<AgentHealth>(fallbackAgentHealth)
   const [lastBridgeResult, setLastBridgeResult] = useState<SubmitAgentBriefResult | null>(null)
@@ -161,6 +164,10 @@ export default function Inbox() {
   useEffect(() => {
     saveStoredBriefs(briefs)
   }, [briefs])
+
+  useEffect(() => {
+    window.sessionStorage.setItem(DASHBOARD_VIEW_STORAGE_KEY, dashboardView)
+  }, [dashboardView])
 
   useEffect(() => {
     saveStoredAutomationRuns(automationRuns)
@@ -386,6 +393,21 @@ export default function Inbox() {
 
 function shouldUseLocalSimulation(result: SubmitAgentBriefResult) {
   return result.mode !== 'webhook' || result.status !== 'accepted'
+}
+
+function isDashboardView(value: string | null): value is DashboardView {
+  return dashboardViewValues.includes(value as DashboardView)
+}
+
+function loadStoredDashboardView(): DashboardView {
+  if (typeof window === 'undefined') return 'today'
+  const storedView = window.sessionStorage.getItem(DASHBOARD_VIEW_STORAGE_KEY)
+  return isDashboardView(storedView) ? storedView : 'today'
+}
+
+function shouldOpenWorkMapInApp() {
+  if (typeof window === 'undefined') return false
+  return window.matchMedia('(max-width: 767px), (hover: none), (pointer: coarse)').matches
 }
 
 const implementationUpdates: Array<{
@@ -2512,12 +2534,20 @@ function CLevelVisualBoard({ plan }: { plan: CLevelPlan }) {
 }
 
 function CLevelWorkMapCard({ role, map }: { role: Exclude<Role, 'ceo'>; map: CLevelWorkMap }) {
+  const navigate = useNavigate()
+
   const openLaneMap = (event: MouseEvent<HTMLAnchorElement>, detailUrl: string) => {
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
       return
     }
 
-    const opened = window.open(detailUrl, '_blank')
+    if (shouldOpenWorkMapInApp()) {
+      event.preventDefault()
+      navigate(detailUrl)
+      return
+    }
+
+    const opened = window.open(detailUrl, '_blank', 'noopener,noreferrer')
     if (!opened) return
 
     event.preventDefault()
@@ -2553,7 +2583,7 @@ function CLevelWorkMapCard({ role, map }: { role: Exclude<Role, 'ceo'>; map: CLe
               rel="noopener noreferrer"
               data-workmap-url={`/workmap/${role}/${index + 1}`}
               onClick={(event) => openLaneMap(event, `/workmap/${role}/${index + 1}`)}
-              aria-label={`Buka canvas mapping ${lane.label} ${DEPARTMENT_LABEL_SHORT[role]} di tab baru`}
+              aria-label={`Buka canvas mapping ${lane.label} ${DEPARTMENT_LABEL_SHORT[role]}`}
               className="relative block min-h-[112px] w-full cursor-pointer rounded-md border border-border-soft bg-white px-3 py-2.5 text-left transition hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
             >
               <div className="flex items-start gap-2.5">
@@ -2567,8 +2597,10 @@ function CLevelWorkMapCard({ role, map }: { role: Exclude<Role, 'ceo'>; map: CLe
                       <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.05em] text-text-faint">{lane.owner}</p>
                     </div>
                     <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-bg-surface px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.04em] text-text-muted">
-                      buka tab
-                      <ExternalLink className="size-3" />
+                      <span className="sm:hidden">buka</span>
+                      <span className="hidden sm:inline">buka tab</span>
+                      <ChevronRight className="size-3 sm:hidden" />
+                      <ExternalLink className="hidden size-3 sm:block" />
                     </span>
                   </div>
                   <p className="mt-2 text-[11px] font-semibold leading-4 text-text-secondary">{lane.action}</p>

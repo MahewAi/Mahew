@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -43,6 +44,10 @@ export default function WorkMapDetail() {
   const plan = cLevelPlans.find((item) => item.role === params.role)
   const laneIndex = Math.max(0, Number(params.lane ?? '1') - 1)
   const lane = plan?.workMap.lanes[laneIndex]
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [params.role, params.lane])
 
   if (!plan || !lane) {
     return <WorkMapMissing />
