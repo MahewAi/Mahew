@@ -10,6 +10,7 @@ import {
   type Role,
 } from '@/lib/types'
 import { generateMockReply, type ChatMessage } from '@/lib/mockReplies'
+import { requestAgentReply } from '@/lib/agentClient'
 import { cn } from '@/lib/utils'
 
 interface CommentThreadProps {
@@ -55,7 +56,7 @@ export function CommentThread({ brief, onAddComment }: CommentThreadProps) {
     }
   }, [comments.length])
 
-  const handleSend = () => {
+  const handleSend = async () => {
     const trimmed = text.trim()
     if (!trimmed || sending) return
     setSending(true)
@@ -66,17 +67,27 @@ export function CommentThread({ brief, onAddComment }: CommentThreadProps) {
       author: c.author,
       text: c.text,
     }))
+    const fullHistory: ChatMessage[] = [
+      ...history,
+      { id: `tmp-${Date.now()}`, author: 'matthew', text: trimmed },
+    ]
     onAddComment(trimmed, 'matthew')
     setText('')
-    // Simulate AI reply with delay
-    setTimeout(() => {
-      const replyText = generateReply(brief, replier, trimmed, [
-        ...history,
-        { id: `tmp-${Date.now()}`, author: 'matthew', text: trimmed },
-      ])
-      onAddComment(replyText, replier)
-      setSending(false)
-    }, 1100)
+
+    // Try remote agent endpoint first (server enforces Sonnet 4.6+ floor).
+    // Fallback ke mock reply hanya kalau bridge gagal atau privacy lock aktif.
+    const briefContext = `${brief.title}. ${brief.summary ?? ''}`.trim()
+    const remote = await requestAgentReply({
+      role: replier,
+      tier: 'orchestration',
+      userMessage: trimmed,
+      history: fullHistory,
+      briefContext,
+    })
+
+    const replyText = remote?.text ?? generateReply(brief, replier, trimmed, fullHistory)
+    onAddComment(replyText, replier)
+    setSending(false)
   }
 
   return (

@@ -10,6 +10,7 @@ import {
   type Role,
 } from '@/lib/types'
 import { generateRoleReply, type ChatMessage } from '@/lib/mockReplies'
+import { requestAgentReply } from '@/lib/agentClient'
 import { cn } from '@/lib/utils'
 
 interface AskRolePanelProps {
@@ -60,26 +61,38 @@ export function AskRolePanel({ role, brief, open, onOpenChange }: AskRolePanelPr
   const colorRole = getContributorColorRole(role)
   const isCfo = colorRole === 'cfo'
 
-  const send = (msgText: string) => {
-    if (!msgText.trim() || sending || !role) return
-    const userMsg: Message = { id: `m-${Date.now()}`, author: 'matthew', text: msgText.trim() }
+  const send = async (msgText: string) => {
+    const trimmed = msgText.trim()
+    if (!trimmed || sending || !role) return
+    const userMsg: Message = { id: `m-${Date.now()}`, author: 'matthew', text: trimmed }
     const historySnapshot: ChatMessage[] = messages.map((m) => ({ id: m.id, author: m.author, text: m.text }))
+    const fullHistory: ChatMessage[] = [
+      ...historySnapshot,
+      { id: `tmp-${Date.now()}`, author: 'matthew', text: trimmed },
+    ]
     setMessages((prev) => [...prev, userMsg])
     setText('')
     setSending(true)
-    setTimeout(() => {
-      const replyText = generateRoleReply(role, msgText.trim(), brief, [
-        ...historySnapshot,
-        { id: `tmp-${Date.now()}`, author: 'matthew', text: msgText.trim() },
-      ])
-      const reply: Message = {
-        id: `m-${Date.now() + 1}`,
-        author: role,
-        text: replyText,
-      }
-      setMessages((prev) => [...prev, reply])
-      setSending(false)
-    }, 1100)
+
+    // Try remote agent endpoint first (server enforces Sonnet 4.6+ floor).
+    // Fallback ke mock reply hanya kalau bridge gagal atau privacy lock aktif.
+    const briefContext = `${brief.title}. ${brief.summary ?? ''}`.trim()
+    const remote = await requestAgentReply({
+      role,
+      tier: 'orchestration',
+      userMessage: trimmed,
+      history: fullHistory,
+      briefContext,
+    })
+
+    const replyText = remote?.text ?? generateRoleReply(role, trimmed, brief, fullHistory)
+    const reply: Message = {
+      id: `m-${Date.now() + 1}`,
+      author: role,
+      text: replyText,
+    }
+    setMessages((prev) => [...prev, reply])
+    setSending(false)
   }
 
   return (

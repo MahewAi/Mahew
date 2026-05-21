@@ -219,9 +219,26 @@ export default async function handler(req, res) {
   const CONTENT_PRIMARY_MODEL = 'anthropic/claude-opus-4.7'
   const STABLE_FALLBACK_MODEL = 'anthropic/claude-sonnet-4.6'
 
+  // === FLOOR ENFORCEMENT ===
+  // Minimum model: Sonnet 4.6. Tidak boleh di bawah (per arahan Matthew).
+  // Whitelist Opus 4.x variants + Sonnet 4.6. Apapun di luar -> fallback ke CONTENT_PRIMARY_MODEL.
+  const ALLOWED_MODELS = new Set([
+    'anthropic/claude-opus-4.7',
+    'anthropic/claude-opus-4.7-fast',
+    'anthropic/claude-opus-4.6',
+    'anthropic/claude-opus-4.6-fast',
+    'anthropic/claude-opus-4.5',
+    'anthropic/claude-opus-4.1',
+    'anthropic/claude-opus-4',
+    'anthropic/claude-sonnet-4.6',
+  ])
+
   const payloadModel = clampText(payload?.model, 200)
   const envModel = process.env.ATMAJA_OPENROUTER_MODEL ?? process.env.OPENROUTER_CHAT_MODEL ?? ''
-  const primaryModel = payloadModel || envModel || CONTENT_PRIMARY_MODEL
+  function pickModel(candidate) {
+    return candidate && ALLOWED_MODELS.has(candidate) ? candidate : null
+  }
+  const primaryModel = pickModel(payloadModel) ?? pickModel(envModel) ?? CONTENT_PRIMARY_MODEL
 
   const referer = process.env.ATMAJA_OPENROUTER_REFERER ?? process.env.PUBLIC_APP_URL ?? 'https://gerai.mahewwork.com'
   const messages = [
