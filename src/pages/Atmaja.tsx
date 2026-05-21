@@ -6,7 +6,6 @@ import { loadStoredBriefs } from '@/lib/briefStore'
 import { recordInteractionLessons } from '@/lib/learningMemory'
 import { isAtmajaRemoteBridgeAllowed, requestAtmajaReply } from '@/lib/atmajaClient'
 import { generateMockReply, type ChatMessage } from '@/lib/mockReplies'
-import { shouldRepairAtmajaReply } from '@/lib/atmajaSystem'
 import { cn } from '@/lib/utils'
 
 type AttachmentKind = 'image' | 'text' | 'document'
@@ -290,10 +289,20 @@ function shouldBuildPaletteVisual(replyText: string) {
   return hexHits >= 2
 }
 
-function buildVisualsForReply(_userText: string, replyText: string): AtmajaVisual[] {
+function buildVisualsForReply(
+  _userText: string,
+  replyText: string,
+  userAttachments: AtmajaAttachment[] = [],
+): AtmajaVisual[] {
   // Catatan: buildGeneratedVisual lama sengaja dihapus dari pipeline auto-render.
   // SVG generic "INPUT → ATMAJA → C-LEVEL → OUT" tidak punya nilai informasional, hanya dekoratif,
   // dan membuat reply seolah-olah berisi visual real padahal tidak.
+  //
+  // Aturan palette card: HANYA render kalau (a) reply text benar-benar menyebut ≥2 hex Gerai
+  // DAN (b) user message TIDAK ada attachment apa-apa. Kalau user upload file (zip/foto/dll),
+  // jangan auto-render palette brand Gerai — itu jadi seperti Atmaja "menjawab" file kamu padahal
+  // mungkin hanya kebetulan menyebut warna brand di teks reply.
+  if (userAttachments.length > 0) return []
   if (shouldBuildPaletteVisual(replyText)) return [buildPaletteVisual()]
   return []
 }
@@ -306,37 +315,6 @@ function withVisualFollowUp(text: string, _userText: string, visuals: AtmajaVisu
   // Sengaja TIDAK menawarkan "mau saya tampilkan sebagai visual?" — kemampuan generate
   // gambar belum ada, jadi tawaran itu janji palsu.
   return text
-}
-
-function upgradeActionableReplies(messages: AtmajaMessage[]) {
-  let upgradedMessages = messages
-
-  for (let index = 0; index < messages.length - 1; index += 1) {
-    const userMessage = messages[index]
-    const replyMessage = messages[index + 1]
-
-    if (
-      userMessage.author === 'matthew' &&
-      replyMessage.author === 'ceo' &&
-      shouldRepairAtmajaReply(userMessage.text, replyMessage.text, (replyMessage.visuals?.length ?? 0) > 0)
-    ) {
-      if (upgradedMessages === messages) upgradedMessages = [...messages]
-      const modelText = buildAttachmentPrompt(userMessage.text, userMessage.attachments ?? [])
-      const result = generateMockReply({
-        userMessage: modelText,
-        history: upgradedMessages.slice(0, index),
-        speaker: 'atmaja',
-      })
-      const visuals = buildVisualsForReply(modelText, result.text)
-      upgradedMessages[index + 1] = {
-        ...replyMessage,
-        text: withVisualFollowUp(result.text, modelText, visuals),
-        visuals,
-      }
-    }
-  }
-
-  return upgradedMessages
 }
 
 function hasDraggedFiles(dataTransfer: DataTransfer) {
@@ -363,10 +341,10 @@ export default function Atmaja() {
     saveThread(messages)
   }, [messages])
 
-  useEffect(() => {
-    const upgradedMessages = upgradeActionableReplies(messages)
-    if (upgradedMessages !== messages) setMessages(upgradedMessages)
-  }, [messages])
+  // CATATAN: useEffect lama "upgradeActionableReplies" sengaja dihapus.
+  // Efek itu mengganti balasan remote Atmaja yang jujur ("saya tidak lihat zip")
+  // dengan mock reply hardcoded yang berisi 3 hex Gerai → palette card otomatis render
+  // walau Atmaja sebenarnya tidak menganalisis apa pun. Itu bohong, kita matikan total.
 
   useEffect(() => {
     return () => {
@@ -423,7 +401,7 @@ export default function Atmaja() {
           return
         }
 
-        const visuals = buildVisualsForReply(modelText, result.text)
+        const visuals = buildVisualsForReply(modelText, result.text, userMsg.attachments ?? [])
         const reply: AtmajaMessage = {
           id: `m-${Date.now() + 1}`,
           author: 'ceo',
