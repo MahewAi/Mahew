@@ -213,10 +213,22 @@ export default async function handler(req, res) {
   }
 
   const attachments = normalizeAttachments(payload?.attachments)
-  const model = process.env.ATMAJA_OPENROUTER_MODEL ?? process.env.OPENROUTER_CHAT_MODEL ?? 'openrouter/auto'
-  const referer = process.env.ATMAJA_OPENROUTER_REFERER ?? process.env.PUBLIC_APP_URL ?? 'https://gerai.mahewwork.com'
+  // Stable Sonnet-tier default sesuai preferensi Matthew (sonnet 4.6 OK untuk orchestration).
+  // openrouter/auto sebelumnya menghasilkan model lemah yang mengembalikan teks kosong.
+  const STABLE_FALLBACK_MODEL = 'anthropic/claude-sonnet-4.6'
 
-  try {
+  const payloadModel = clampText(payload?.model, 200)
+  const envModel = process.env.ATMAJA_OPENROUTER_MODEL ?? process.env.OPENROUTER_CHAT_MODEL ?? ''
+  const primaryModel = payloadModel || envModel || STABLE_FALLBACK_MODEL
+
+  const referer = process.env.ATMAJA_OPENROUTER_REFERER ?? process.env.PUBLIC_APP_URL ?? 'https://gerai.mahewwork.com'
+  const messages = [
+    { role: 'system', content: buildSystemPrompt() },
+    ...normalizeHistory(payload?.history),
+    { role: 'user', content: buildUserContent(userMessage, attachments) },
+  ]
+
+  async function callOpenRouter(modelId) {
     const upstream = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -227,41 +239,59 @@ export default async function handler(req, res) {
         'x-openrouter-title': 'Gerai 1000 Pintu Atmaja',
       },
       body: JSON.stringify({
-        model,
-        messages: [
-          { role: 'system', content: buildSystemPrompt() },
-          ...normalizeHistory(payload?.history),
-          { role: 'user', content: buildUserContent(userMessage, attachments) },
-        ],
+        model: modelId,
+        messages,
         temperature: 0.45,
         max_tokens: 900,
       }),
     })
 
-    const text = await upstream.text()
-    let body = {}
+    const raw = await upstream.text()
+    let parsed = {}
     try {
-      body = text ? JSON.parse(text) : {}
+      parsed = raw ? JSON.parse(raw) : {}
     } catch {
-      body = { raw: text.slice(0, 500) }
+      parsed = { raw: raw.slice(0, 500) }
     }
+
+    return { upstream, body: parsed }
+  }
+
+  try {
+    let { upstream, body } = await callOpenRouter(primaryModel)
+    let usedModel = primaryModel
+    let fallbackTried = false
 
     if (!upstream.ok) {
       sendJson(res, upstream.status, {
         ok: false,
         error: 'openrouter_error',
         upstreamStatus: upstream.status,
+        modelTried: primaryModel,
         note: body?.error?.message ?? body?.message ?? 'OpenRouter request failed.',
       })
       return
     }
 
-    const replyText = body?.choices?.[0]?.message?.content
+    let replyText = body?.choices?.[0]?.message?.content
+
+    // Retry with stable model jika upstream balikan kosong (kasus openrouter/auto)
+    if ((typeof replyText !== 'string' || !replyText.trim()) && primaryModel !== STABLE_FALLBACK_MODEL) {
+      fallbackTried = true
+      const retry = await callOpenRouter(STABLE_FALLBACK_MODEL)
+      upstream = retry.upstream
+      body = retry.body
+      usedModel = STABLE_FALLBACK_MODEL
+      replyText = body?.choices?.[0]?.message?.content
+    }
+
     if (typeof replyText !== 'string' || !replyText.trim()) {
       sendJson(res, 502, {
         ok: false,
         error: 'empty_openrouter_reply',
-        note: 'OpenRouter tidak mengembalikan teks jawaban.',
+        modelTried: usedModel,
+        fallbackTried,
+        note: 'OpenRouter tidak mengembalikan teks jawaban setelah retry.',
       })
       return
     }
@@ -269,7 +299,9 @@ export default async function handler(req, res) {
     sendJson(res, 200, {
       ok: true,
       provider: 'OpenRouter',
-      model: (body?.model ?? model) || null,
+      model: (body?.model ?? usedModel) || null,
+      requestedModel: primaryModel,
+      fallbackUsed: fallbackTried,
       text: replyText.trim(),
       usage: body?.usage ?? null,
       attachmentsPolicy: 'metadata_only',
