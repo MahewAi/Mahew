@@ -6,7 +6,7 @@ import { loadStoredBriefs } from '@/lib/briefStore'
 import { recordInteractionLessons } from '@/lib/learningMemory'
 import { isAtmajaRemoteBridgeAllowed, requestAtmajaReply } from '@/lib/atmajaClient'
 import { generateMockReply, type ChatMessage } from '@/lib/mockReplies'
-import { isAtmajaColorDecisionRequest, shouldRepairAtmajaReply } from '@/lib/atmajaSystem'
+import { shouldRepairAtmajaReply } from '@/lib/atmajaSystem'
 import { cn } from '@/lib/utils'
 
 type AttachmentKind = 'image' | 'text' | 'document'
@@ -35,6 +35,8 @@ interface AtmajaAttachment {
   size: number
   kind: AttachmentKind
   previewText?: string
+  /** Base64 raw bytes (no data: prefix). Hanya untuk image kecil yang akan dikirim ke remote. */
+  dataBase64?: string
   note?: string
 }
 
@@ -47,10 +49,13 @@ interface AtmajaMessage extends ChatMessage {
 const STORAGE_KEY = 'gerai:atmaja-thread'
 const MAX_ATTACHMENTS = 5
 const MAX_FILE_BYTES = 10 * 1024 * 1024
-const MAX_TEXT_PREVIEW_CHARS = 6000
+const MAX_TEXT_PREVIEW_CHARS = 30_000
+// Cap untuk image yang dikirim inline ke server (~1.5 MB raw → ~2 MB base64).
+// Lebih besar dari ini → tetap ditampilkan sebagai metadata, Atmaja tidak akan lihat isinya.
+const MAX_IMAGE_INLINE_BYTES = 1_572_864
+const ALLOWED_IMAGE_MIME = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'])
 const REPLY_DELAY_MS = 1100
 const textAttachmentExtensions = new Set(['txt', 'md', 'csv', 'json', 'log', 'xml', 'yaml', 'yml'])
-const visualKeywordsPattern = /gambar|image|visual|moodboard|preview|canvas|mapping|peta kerja|denah|rancangan|desain|design/
 const paletteVisualColors: AtmajaVisualColor[] = [
   { name: 'Brass gold', hex: '#B8956B', role: 'Signature accent' },
   { name: 'Deep charcoal', hex: '#1F1A14', role: 'Authority base' },
@@ -96,6 +101,8 @@ function stripMessageForStorage(message: AtmajaMessage): AtmajaMessage {
 function stripAttachmentForStorage(attachment: AtmajaAttachment): AtmajaAttachment {
   const stored = { ...attachment }
   delete stored.previewText
+  // Jangan simpan bytes mentah di localStorage — bisa membengkak cepat.
+  delete stored.dataBase64
   return stored
 }
 
@@ -122,6 +129,21 @@ function getAttachmentKind(file: File): AttachmentKind {
   return 'document'
 }
 
+async function readFileAsBase64(file: File): Promise<string | null> {
+  try {
+    const buffer = await file.arrayBuffer()
+    const bytes = new Uint8Array(buffer)
+    let binary = ''
+    const chunkSize = 0x8000
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunkSize)))
+    }
+    return typeof btoa === 'function' ? btoa(binary) : null
+  } catch {
+    return null
+  }
+}
+
 async function buildAttachment(file: File): Promise<AtmajaAttachment> {
   const kind = getAttachmentKind(file)
   const base: AtmajaAttachment = {
@@ -139,10 +161,36 @@ async function buildAttachment(file: File): Promise<AtmajaAttachment> {
     }
   }
 
+  // Image: kalau MIME didukung vision dan ukuran di bawah cap inline, kirim base64 ke Atmaja.
+  if (kind === 'image') {
+    const mime = (file.type || '').toLowerCase()
+    if (!ALLOWED_IMAGE_MIME.has(mime)) {
+      return {
+        ...base,
+        note: `Format gambar belum didukung vision (${mime || 'unknown'}). Kirim JPG/PNG/WEBP/GIF supaya Atmaja bisa lihat.`,
+      }
+    }
+    if (file.size > MAX_IMAGE_INLINE_BYTES) {
+      return {
+        ...base,
+        note: `Gambar > ${formatFileSize(MAX_IMAGE_INLINE_BYTES)}, terlalu besar untuk dikirim ke Atmaja. Kompres/resize dulu supaya Atmaja bisa lihat isinya.`,
+      }
+    }
+    const dataBase64 = await readFileAsBase64(file)
+    if (!dataBase64) {
+      return { ...base, note: 'Gagal membaca gambar sebagai data byte.' }
+    }
+    return {
+      ...base,
+      dataBase64,
+      note: 'Gambar dikirim ke Atmaja (vision aktif).',
+    }
+  }
+
   if (kind !== 'text') {
     return {
       ...base,
-      note: kind === 'image' ? 'Gambar diterima sebagai lampiran visual.' : 'Dokumen diterima sebagai metadata lampiran.',
+      note: 'Dokumen diterima sebagai metadata. Untuk dianalisis isinya, ekstrak atau paste isi ke chat.',
     }
   }
 
@@ -151,7 +199,9 @@ async function buildAttachment(file: File): Promise<AtmajaAttachment> {
     return {
       ...base,
       previewText,
-      note: previewText.length > 0 ? 'Cuplikan isi dibaca lokal untuk jawaban ini.' : 'File teks kosong.',
+      note: previewText.length > 0
+        ? `Cuplikan ${previewText.length.toLocaleString()} karakter dikirim ke Atmaja.`
+        : 'File teks kosong.',
     }
   } catch {
     return {
@@ -221,76 +271,40 @@ function buildPaletteImageDataUri(colors: AtmajaVisualColor[]) {
   `)
 }
 
-function buildGeneratedImageDataUri(title: string, prompt: string) {
-  const safeTitle = escapeSvgText(title)
-  const safePrompt = escapeSvgText(prompt.slice(0, 112))
-
-  return svgDataUri(`
-    <svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img" aria-label="Atmaja visual draft">
-      <rect width="640" height="360" rx="34" fill="#F7F2EA" />
-      <rect x="28" y="28" width="584" height="304" rx="28" fill="#1F1A14" />
-      <text x="54" y="68" fill="#FAF8F4" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="800" letter-spacing="2">AI DEPARTMENT VISUAL</text>
-      <text x="54" y="102" fill="#B8956B" font-family="Georgia, serif" font-size="29" font-weight="800">${safeTitle}</text>
-      <text x="54" y="132" fill="#FAF8F4" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" opacity="0.78">${safePrompt}</text>
-      <rect x="58" y="176" width="116" height="74" rx="18" fill="#FAF8F4" />
-      <rect x="208" y="176" width="116" height="74" rx="18" fill="#B8956B" />
-      <rect x="358" y="176" width="116" height="74" rx="18" fill="#5C8A83" />
-      <path d="M174 213 H208 M324 213 H358 M474 213 H542" stroke="#FAF8F4" stroke-width="4" stroke-linecap="round" opacity="0.75" />
-      <circle cx="556" cy="213" r="20" fill="#FAF8F4" />
-      <text x="80" y="219" fill="#1F1A14" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="900">INPUT</text>
-      <text x="236" y="219" fill="#1F1A14" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="900">ATMAJA</text>
-      <text x="382" y="219" fill="#FAF8F4" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="900">C-LEVEL</text>
-      <text x="541" y="218" fill="#1F1A14" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="900">OUT</text>
-      <text x="54" y="295" fill="#FAF8F4" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700">Draft visual lokal untuk membantu Matthew melihat arah rancangan sebelum dibuat versi final.</text>
-    </svg>
-  `)
-}
-
 function buildPaletteVisual(): AtmajaVisual {
   return {
     id: `vis-palette-${Date.now()}-${Math.random().toString(36).slice(2)}`,
     kind: 'palette',
     title: 'Premium palette preview',
-    caption: 'Visual awal dari 3 warna pilihan Atmaja untuk arah brand Gerai/GSP.',
+    caption: 'Visual referensi 3 warna brand Gerai/GSP yang Atmaja sebut di reply.',
     imageDataUri: buildPaletteImageDataUri(paletteVisualColors),
     colors: paletteVisualColors,
   }
 }
 
-function buildGeneratedVisual(prompt: string): AtmajaVisual {
-  return {
-    id: `vis-image-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    kind: 'generated-image',
-    title: 'Draft visual Atmaja',
-    caption: 'Gambar rancangan awal. Bisa dilanjutkan menjadi moodboard, canvas mapping, atau visual final.',
-    prompt,
-    imageDataUri: buildGeneratedImageDataUri('Draft visual Atmaja', prompt),
-  }
+// Palette card HANYA muncul kalau reply text benar-benar merekomendasikan 3 hex code Gerai brand.
+// Sebelumnya keyword-based ("warna" → langsung render) → misleading karena fire walau Atmaja bilang
+// "saya tidak bisa lihat file". Sekarang harus ada minimal 2 dari 3 hex Gerai DI DALAM teks reply.
+function shouldBuildPaletteVisual(replyText: string) {
+  const hexHits = [/#B8956B/i, /#1F1A14/i, /#FAF8F4/i].filter((re) => re.test(replyText)).length
+  return hexHits >= 2
 }
 
-function shouldBuildPaletteVisual(userText: string, replyText: string) {
-  return isAtmajaColorDecisionRequest(userText) || /#B8956B|#1F1A14|#FAF8F4|brass gold|deep charcoal|warm ivory/i.test(replyText)
-}
-
-function shouldOfferVisual(userText: string, replyText: string) {
-  const combined = `${userText}\n${replyText}`.toLowerCase()
-  return visualKeywordsPattern.test(combined) || /(warna|color|palette|palet|brand|branding)/.test(combined)
-}
-
-function buildVisualsForReply(userText: string, replyText: string): AtmajaVisual[] {
-  if (shouldBuildPaletteVisual(userText, replyText)) return [buildPaletteVisual()]
-  if (visualKeywordsPattern.test(userText.toLowerCase())) return [buildGeneratedVisual(userText)]
+function buildVisualsForReply(_userText: string, replyText: string): AtmajaVisual[] {
+  // Catatan: buildGeneratedVisual lama sengaja dihapus dari pipeline auto-render.
+  // SVG generic "INPUT → ATMAJA → C-LEVEL → OUT" tidak punya nilai informasional, hanya dekoratif,
+  // dan membuat reply seolah-olah berisi visual real padahal tidak.
+  if (shouldBuildPaletteVisual(replyText)) return [buildPaletteVisual()]
   return []
 }
 
-function withVisualFollowUp(text: string, userText: string, visuals: AtmajaVisual[]) {
+function withVisualFollowUp(text: string, _userText: string, visuals: AtmajaVisual[]) {
   if (/preview visual|versi gambar|moodboard/i.test(text)) return text
   if (visuals.length > 0) {
-    return `${text}\n\nSaya sertakan preview visual awal di bawah. Kalau Anda mau, saya bisa buatkan 2-3 versi gambar atau board alternatifnya.`
+    return `${text}\n\nPalette di bawah saya render sebagai referensi visual brand-nya.`
   }
-  if (shouldOfferVisual(userText, text)) {
-    return `${text}\n\nSaya juga bisa berikan versi gambarnya: palette preview, moodboard, atau mapping kerja. Mau saya tampilkan sebagai visual?`
-  }
+  // Sengaja TIDAK menawarkan "mau saya tampilkan sebagai visual?" — kemampuan generate
+  // gambar belum ada, jadi tawaran itu janji palsu.
   return text
 }
 
@@ -381,6 +395,9 @@ export default function Atmaja() {
             size: attachment.size,
             kind: attachment.kind,
             note: attachment.note,
+            // Sertakan bytes/preview supaya Atmaja BISA lihat (vision) dan baca isi teks.
+            dataBase64: attachment.dataBase64,
+            previewText: attachment.previewText,
           })),
         })
         const result =

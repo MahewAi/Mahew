@@ -8,6 +8,17 @@ import { AGENT_BRIDGE_ALLOWED } from '@/lib/privacyGuard'
 
 export type AgentTier = 'content' | 'orchestration'
 
+export interface AgentRemoteAttachment {
+  name: string
+  type: string
+  size: number
+  kind: string
+  note?: string
+  /** Raw base64 (tanpa data: prefix) untuk image kecil. Server cap ulang. */
+  dataBase64?: string
+  previewText?: string
+}
+
 export interface AgentRemoteReply {
   text: string
   provider: 'OpenRouter'
@@ -33,6 +44,7 @@ interface RequestAgentReplyInput {
   userMessage: string
   history: ChatMessage[]
   briefContext?: string
+  attachments?: AgentRemoteAttachment[]
 }
 
 function stripHistory(messages: ChatMessage[]) {
@@ -66,6 +78,15 @@ export async function requestAgentReply(
         userMessage: input.userMessage,
         history: stripHistory(input.history),
         briefContext: input.briefContext?.slice(0, 1_500) ?? '',
+        attachments: (input.attachments ?? []).slice(0, 5).map((a) => ({
+          name: a.name,
+          type: a.type,
+          size: a.size,
+          kind: a.kind,
+          note: a.note,
+          dataBase64: a.dataBase64,
+          previewText: a.previewText,
+        })),
       }),
     })
 

@@ -6,10 +6,17 @@ const jsonHeaders = {
   'cache-control': 'no-store',
 }
 
-const MAX_BODY_BYTES = Number(process.env.AGENT_REPLY_MAX_BYTES ?? 32_768)
+// Body cap dinaikkan untuk dukung image inline (base64). Vercel default 4.5 MB → kita pakai 4.3 MB.
+const MAX_BODY_BYTES = Number(process.env.AGENT_REPLY_MAX_BYTES ?? 4_300_000)
 const RATE_LIMIT_WINDOW_MS = 60_000
 const RATE_LIMIT_MAX = Number(process.env.AGENT_REPLY_RATE_LIMIT ?? 24)
 const recentRequestsByIp = new Map()
+
+// === VISION CAPS === (sama dengan atmaja/chat.js)
+const IMAGE_MAX_BASE64_BYTES = 2_100_000
+const MAX_IMAGES_PER_TURN = 2
+const ALLOWED_IMAGE_MIME = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'])
+const TEXT_PREVIEW_MAX_CHARS = 30_000
 
 // === MODEL FLOOR ENFORCEMENT ===
 // Minimum: Sonnet 4.6. Tidak boleh di bawah.
@@ -66,7 +73,8 @@ const SHARED_INSTRUCTIONS = [
   'Kalau Matthew minta pilihan/warna/foto/opsi, jawab pilihannya dulu sebelum alasan.',
   'Kalau Matthew minta visual/canvas/mapping/moodboard, tawarkan output visual dengan format yang bisa dirender app.',
   'Brand canon: NO em-dash, "tempat" bukan "rumah", "Gerai 1000 Pintu" lengkap, premium curated retail tone calm refined.',
-  'Data policy: jangan klaim baca raw file kalau hanya ada metadata lampiran. File preview tidak dikirim ke provider remote.',
+  'Kalau Matthew melampirkan gambar, kamu BISA lihat gambar (vision aktif via Anthropic). Analisis konkret isi gambar.',
+  'Kalau yang dilampirkan hanya metadata (PDF/zip/docx), bilang jujur belum lihat isi dan tawarkan: ekstrak, paste, atau kirim image kecil.',
   'Untuk kredensial, minta disimpan sebagai server env var, jangan paste ke chat.',
 ]
 
@@ -176,6 +184,94 @@ function normalizeHistory(history) {
     .filter(Boolean)
 }
 
+function sanitizeBase64(value) {
+  if (typeof value !== 'string') return null
+  const stripped = value.replace(/^data:[^,]*,/, '').replace(/\s+/g, '')
+  if (!/^[A-Za-z0-9+/=]+$/.test(stripped)) return null
+  if (stripped.length === 0) return null
+  return stripped
+}
+
+function normalizeAttachments(attachments) {
+  if (!Array.isArray(attachments)) return []
+  let imageCount = 0
+  return attachments.slice(0, 5).map((attachment) => {
+    const type = clampText(attachment?.type, 80)
+    const kind = clampText(attachment?.kind, 40)
+    const normalized = {
+      name: clampText(attachment?.name, 160),
+      type,
+      kind,
+      size: Number.isFinite(Number(attachment?.size)) ? Number(attachment.size) : 0,
+      note: clampText(attachment?.note, 220),
+      previewText: clampText(attachment?.previewText, TEXT_PREVIEW_MAX_CHARS),
+    }
+    const isImage = kind === 'image' && ALLOWED_IMAGE_MIME.has(type.toLowerCase())
+    if (isImage && imageCount < MAX_IMAGES_PER_TURN) {
+      const base64 = sanitizeBase64(attachment?.dataBase64)
+      if (base64 && base64.length <= IMAGE_MAX_BASE64_BYTES) {
+        normalized.dataBase64 = base64
+        normalized.mime = type.toLowerCase()
+        imageCount += 1
+      }
+    }
+    return normalized
+  })
+}
+
+function buildUserContent(message, attachments) {
+  const imageAttachments = attachments.filter((a) => a.dataBase64 && a.mime)
+  const textAttachments = attachments.filter((a) => !a.dataBase64 && a.previewText)
+  const metadataOnly = attachments.filter((a) => !a.dataBase64 && !a.previewText)
+
+  if (imageAttachments.length === 0) {
+    if (attachments.length === 0) return message
+    const lines = []
+    if (textAttachments.length > 0) {
+      lines.push('[Cuplikan isi file teks - dibaca client lalu dikirim ke server]')
+      for (const att of textAttachments) {
+        lines.push(`- ${att.name || 'file'} (${att.type || 'text'}):`)
+        lines.push(att.previewText)
+      }
+    }
+    if (metadataOnly.length > 0) {
+      lines.push('[Lampiran metadata saja - isi belum diekstrak]')
+      for (const att of metadataOnly) {
+        const sizeKb = Math.round((att.size / 1024) * 10) / 10
+        lines.push(`- ${att.name || 'file'} (${att.kind || 'file'}, ${att.type || 'unknown'}, ${sizeKb} KB): ${att.note || 'metadata only'}`)
+      }
+    }
+    return `${message}\n\n${lines.join('\n')}`
+  }
+
+  const blocks = []
+  let textPart = message
+  if (textAttachments.length > 0) {
+    const lines = ['', '[Cuplikan isi file teks]']
+    for (const att of textAttachments) {
+      lines.push(`- ${att.name || 'file'} (${att.type || 'text'}):`)
+      lines.push(att.previewText)
+    }
+    textPart += `\n${lines.join('\n')}`
+  }
+  if (metadataOnly.length > 0) {
+    const lines = ['', '[Lampiran metadata saja - isi belum diekstrak]']
+    for (const att of metadataOnly) {
+      const sizeKb = Math.round((att.size / 1024) * 10) / 10
+      lines.push(`- ${att.name || 'file'} (${att.type || 'unknown'}, ${sizeKb} KB)`)
+    }
+    textPart += `\n${lines.join('\n')}`
+  }
+  blocks.push({ type: 'text', text: textPart })
+  for (const att of imageAttachments) {
+    blocks.push({
+      type: 'image_url',
+      image_url: { url: `data:${att.mime};base64,${att.dataBase64}` },
+    })
+  }
+  return blocks
+}
+
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') {
     res.writeHead(204, jsonHeaders)
@@ -229,6 +325,7 @@ export default async function handler(req, res) {
   const role = clampText(payload?.role, 60) || 'ceo'
   const tier = payload?.tier === 'content' ? 'content' : 'orchestration'
   const briefContext = clampText(payload?.briefContext, 1_500)
+  const attachments = normalizeAttachments(payload?.attachments)
 
   const payloadModel = clampText(payload?.model, 200)
   const envModel = process.env.AGENT_REPLY_MODEL ?? process.env.OPENROUTER_CHAT_MODEL ?? ''
@@ -238,7 +335,7 @@ export default async function handler(req, res) {
   const messages = [
     { role: 'system', content: buildSystemPrompt(role, briefContext) },
     ...normalizeHistory(payload?.history),
-    { role: 'user', content: userMessage },
+    { role: 'user', content: buildUserContent(userMessage, attachments) },
   ]
 
   async function callOpenRouter(modelId) {
@@ -305,6 +402,18 @@ export default async function handler(req, res) {
       return
     }
 
+    const imagesSent = attachments.filter((a) => a.dataBase64 && a.mime).length
+    const textsSent = attachments.filter((a) => !a.dataBase64 && a.previewText).length
+    const metadataOnlyCount = attachments.filter((a) => !a.dataBase64 && !a.previewText).length
+    const policy =
+      imagesSent > 0
+        ? 'vision_inline'
+        : textsSent > 0
+          ? 'text_preview_inline'
+          : metadataOnlyCount > 0
+            ? 'metadata_only'
+            : 'none'
+
     sendJson(res, 200, {
       ok: true,
       provider: 'OpenRouter',
@@ -315,6 +424,8 @@ export default async function handler(req, res) {
       fallbackUsed: fallbackTried,
       text: replyText.trim(),
       usage: body?.usage ?? null,
+      attachmentsPolicy: policy,
+      attachmentsSummary: { imagesSent, textsSent, metadataOnly: metadataOnlyCount },
     })
   } catch (error) {
     sendJson(res, 502, {

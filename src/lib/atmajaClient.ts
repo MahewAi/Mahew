@@ -7,6 +7,10 @@ export interface AtmajaRemoteAttachment {
   size: number
   kind: string
   note?: string
+  /** Raw base64 (tanpa data: prefix) untuk image kecil <= 1.5 MB. Server validate + cap ulang. */
+  dataBase64?: string
+  /** Cuplikan teks untuk file text/markdown/csv/code yang sudah dibaca client. */
+  previewText?: string
 }
 
 export interface AtmajaRemoteReply {
@@ -41,6 +45,8 @@ function stripAttachments(attachments: AtmajaRemoteAttachment[] = []) {
     size: attachment.size,
     kind: attachment.kind,
     note: attachment.note,
+    dataBase64: attachment.dataBase64,
+    previewText: attachment.previewText,
   }))
 }
 

@@ -3,10 +3,19 @@ const jsonHeaders = {
   'cache-control': 'no-store',
 }
 
-const MAX_BODY_BYTES = Number(process.env.ATMAJA_CHAT_MAX_BYTES ?? 32_768)
+// Body cap dinaikkan untuk dukung image inline (base64). Vercel default 4.5 MB → kita pakai 4.3 MB.
+const MAX_BODY_BYTES = Number(process.env.ATMAJA_CHAT_MAX_BYTES ?? 4_300_000)
 const RATE_LIMIT_WINDOW_MS = 60_000
 const RATE_LIMIT_MAX = Number(process.env.ATMAJA_CHAT_RATE_LIMIT ?? 12)
 const recentRequestsByIp = new Map()
+
+// === VISION CAPS ===
+// Per image: 1.5 MB raw → ~2 MB base64. Max 2 image per turn.
+// Anthropic vision support: jpg, png, gif, webp.
+const IMAGE_MAX_BASE64_BYTES = 2_100_000
+const MAX_IMAGES_PER_TURN = 2
+const ALLOWED_IMAGE_MIME = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'])
+const TEXT_PREVIEW_MAX_CHARS = 30_000
 
 function sendJson(res, statusCode, payload) {
   res.writeHead(statusCode, jsonHeaders)
@@ -112,16 +121,45 @@ function normalizeHistory(history) {
     .filter(Boolean)
 }
 
+function sanitizeBase64(value) {
+  // Strip data URI prefix kalau client kirim dengan prefix, return raw base64 saja.
+  // Tolak kalau ada karakter non-base64 (anti-injection di header data URI).
+  if (typeof value !== 'string') return null
+  const stripped = value.replace(/^data:[^,]*,/, '').replace(/\s+/g, '')
+  if (!/^[A-Za-z0-9+/=]+$/.test(stripped)) return null
+  if (stripped.length === 0) return null
+  return stripped
+}
+
 function normalizeAttachments(attachments) {
   if (!Array.isArray(attachments)) return []
 
-  return attachments.slice(0, 5).map((attachment) => ({
-    name: clampText(attachment?.name, 160),
-    type: clampText(attachment?.type, 80),
-    kind: clampText(attachment?.kind, 40),
-    size: Number.isFinite(Number(attachment?.size)) ? Number(attachment.size) : 0,
-    note: clampText(attachment?.note, 220),
-  }))
+  let imageCount = 0
+  return attachments.slice(0, 5).map((attachment) => {
+    const type = clampText(attachment?.type, 80)
+    const kind = clampText(attachment?.kind, 40)
+    const normalized = {
+      name: clampText(attachment?.name, 160),
+      type,
+      kind,
+      size: Number.isFinite(Number(attachment?.size)) ? Number(attachment.size) : 0,
+      note: clampText(attachment?.note, 220),
+      previewText: clampText(attachment?.previewText, TEXT_PREVIEW_MAX_CHARS),
+    }
+
+    // Hanya proses image base64 untuk kind=image + MIME whitelisted + di bawah cap + masih ada slot.
+    const isImage = kind === 'image' && ALLOWED_IMAGE_MIME.has(type.toLowerCase())
+    if (isImage && imageCount < MAX_IMAGES_PER_TURN) {
+      const base64 = sanitizeBase64(attachment?.dataBase64)
+      if (base64 && base64.length <= IMAGE_MAX_BASE64_BYTES) {
+        normalized.dataBase64 = base64
+        normalized.mime = type.toLowerCase()
+        imageCount += 1
+      }
+    }
+
+    return normalized
+  })
 }
 
 function buildSystemPrompt() {
@@ -130,23 +168,68 @@ function buildSystemPrompt() {
     'Jawab dalam Bahasa Indonesia yang ringkas, langsung, dan membantu mengambil keputusan.',
     'Kalau Matthew meminta pilihan, warna, foto, opsi, atau preferensi, jawab pilihannya dulu sebelum alasan.',
     'Jangan membantah arah pertanyaan Matthew. Jika konteks kurang, beri asumsi kerja dan tetap berikan langkah berikutnya.',
-    'Kalau Matthew meminta gambar, visual, canvas, mapping, moodboard, atau rancangan, tawarkan output visual dan jelaskan komponen visualnya dengan format yang bisa dirender app.',
-    'Data policy: jangan mengklaim membaca file mentah jika hanya ada metadata lampiran. File preview sengaja tidak dikirim ke provider remote kecuali sistem diubah eksplisit.',
+    'Kalau Matthew melampirkan gambar, kamu BISA melihat gambar itu langsung (vision aktif). Analisis konten gambar dan jawab konkrit.',
+    'Untuk file teks/kode/markdown yang sudah diekstrak preview-nya, baca cuplikan yang dikirim dan jawab berdasar isi.',
+    'Untuk PDF/zip/docx yang hanya kirim metadata, jelaskan jujur kamu belum lihat isi dan tawarkan jalan (ekstrak, paste, atau kirim image kecil).',
     'Jaga output agar tidak menyuruh Matthew memindahkan rahasia ke chat. Untuk kredensial, minta disimpan sebagai server environment variable.',
   ].join('\n')
 }
 
 function buildUserContent(message, attachments) {
-  if (attachments.length === 0) return message
+  // Pisahkan attachment yang punya bytes vs yang metadata only.
+  const imageAttachments = attachments.filter((a) => a.dataBase64 && a.mime)
+  const textAttachments = attachments.filter((a) => !a.dataBase64 && a.previewText)
+  const metadataOnly = attachments.filter((a) => !a.dataBase64 && !a.previewText)
 
-  const attachmentLines = attachments
-    .map((attachment) => {
-      const sizeKb = Math.round((attachment.size / 1024) * 10) / 10
-      return `- ${attachment.name || 'file'} (${attachment.kind || 'file'}, ${attachment.type || 'unknown'}, ${sizeKb} KB): ${attachment.note || 'metadata only'}`
+  // Kalau tidak ada image inline → tetap pakai string biasa.
+  if (imageAttachments.length === 0) {
+    if (attachments.length === 0) return message
+    const lines = []
+    if (textAttachments.length > 0) {
+      lines.push('[Cuplikan isi file teks - dibaca client lalu dikirim ke server]')
+      for (const att of textAttachments) {
+        lines.push(`- ${att.name || 'file'} (${att.type || 'text'}):`)
+        lines.push(att.previewText)
+      }
+    }
+    if (metadataOnly.length > 0) {
+      lines.push('[Lampiran metadata saja - isi belum diekstrak]')
+      for (const att of metadataOnly) {
+        const sizeKb = Math.round((att.size / 1024) * 10) / 10
+        lines.push(`- ${att.name || 'file'} (${att.kind || 'file'}, ${att.type || 'unknown'}, ${sizeKb} KB): ${att.note || 'metadata only'}`)
+      }
+    }
+    return `${message}\n\n${lines.join('\n')}`
+  }
+
+  // Ada image → kirim sebagai content block array (vision payload).
+  const blocks = []
+  let textPart = message
+  if (textAttachments.length > 0) {
+    const lines = ['', '[Cuplikan isi file teks]']
+    for (const att of textAttachments) {
+      lines.push(`- ${att.name || 'file'} (${att.type || 'text'}):`)
+      lines.push(att.previewText)
+    }
+    textPart += `\n${lines.join('\n')}`
+  }
+  if (metadataOnly.length > 0) {
+    const lines = ['', '[Lampiran metadata saja - isi belum diekstrak]']
+    for (const att of metadataOnly) {
+      const sizeKb = Math.round((att.size / 1024) * 10) / 10
+      lines.push(`- ${att.name || 'file'} (${att.type || 'unknown'}, ${sizeKb} KB)`)
+    }
+    textPart += `\n${lines.join('\n')}`
+  }
+
+  blocks.push({ type: 'text', text: textPart })
+  for (const att of imageAttachments) {
+    blocks.push({
+      type: 'image_url',
+      image_url: { url: `data:${att.mime};base64,${att.dataBase64}` },
     })
-    .join('\n')
-
-  return `${message}\n\n[Lampiran metadata saja - isi file tidak dikirim ke OpenRouter]\n${attachmentLines}`
+  }
+  return blocks
 }
 
 export default async function handler(req, res) {
@@ -315,6 +398,19 @@ export default async function handler(req, res) {
       return
     }
 
+    // Hitung policy actual berdasarkan apa yang BENERAN dikirim.
+    const imagesSent = attachments.filter((a) => a.dataBase64 && a.mime).length
+    const textsSent = attachments.filter((a) => !a.dataBase64 && a.previewText).length
+    const metadataOnlyCount = attachments.filter((a) => !a.dataBase64 && !a.previewText).length
+    const policy =
+      imagesSent > 0
+        ? 'vision_inline'
+        : textsSent > 0
+          ? 'text_preview_inline'
+          : metadataOnlyCount > 0
+            ? 'metadata_only'
+            : 'none'
+
     sendJson(res, 200, {
       ok: true,
       provider: 'OpenRouter',
@@ -323,7 +419,12 @@ export default async function handler(req, res) {
       fallbackUsed: fallbackTried,
       text: replyText.trim(),
       usage: body?.usage ?? null,
-      attachmentsPolicy: 'metadata_only',
+      attachmentsPolicy: policy,
+      attachmentsSummary: {
+        imagesSent,
+        textsSent,
+        metadataOnly: metadataOnlyCount,
+      },
     })
   } catch (error) {
     sendJson(res, 502, {
