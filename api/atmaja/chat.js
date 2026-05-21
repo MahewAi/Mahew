@@ -213,13 +213,15 @@ export default async function handler(req, res) {
   }
 
   const attachments = normalizeAttachments(payload?.attachments)
-  // Stable Sonnet-tier default sesuai preferensi Matthew (sonnet 4.6 OK untuk orchestration).
+  // Atmaja /atmaja chat = CEO sintesis = CONTENT tier (per preferensi Matthew).
+  // Premium content -> Opus 4.7. Sonnet 4.6 untuk fallback dan untuk orchestration C-suite.
   // openrouter/auto sebelumnya menghasilkan model lemah yang mengembalikan teks kosong.
+  const CONTENT_PRIMARY_MODEL = 'anthropic/claude-opus-4.7'
   const STABLE_FALLBACK_MODEL = 'anthropic/claude-sonnet-4.6'
 
   const payloadModel = clampText(payload?.model, 200)
   const envModel = process.env.ATMAJA_OPENROUTER_MODEL ?? process.env.OPENROUTER_CHAT_MODEL ?? ''
-  const primaryModel = payloadModel || envModel || STABLE_FALLBACK_MODEL
+  const primaryModel = payloadModel || envModel || CONTENT_PRIMARY_MODEL
 
   const referer = process.env.ATMAJA_OPENROUTER_REFERER ?? process.env.PUBLIC_APP_URL ?? 'https://gerai.mahewwork.com'
   const messages = [
