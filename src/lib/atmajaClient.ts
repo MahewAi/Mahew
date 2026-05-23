@@ -30,11 +30,14 @@ interface RequestAtmajaReplyInput {
   attachments?: AtmajaRemoteAttachment[]
 }
 
+// Working memory Atmaja: 100 pesan terakhir, 15K char per pesan.
+// Server akan clamp ulang dengan cap yang sama, ini ngirim sebanyak mungkin
+// supaya Atmaja punya konteks panjang multi-hari kerja.
 function stripHistory(messages: ChatMessage[]) {
-  return messages.slice(-10).map((message) => ({
+  return messages.slice(-100).map((message) => ({
     id: message.id,
     author: message.author,
-    text: message.text.slice(0, 2_000),
+    text: message.text.slice(0, 15_000),
   }))
 }
 

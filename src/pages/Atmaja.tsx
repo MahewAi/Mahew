@@ -103,7 +103,9 @@ function loadThread(): AtmajaMessage[] {
 
 function saveThread(messages: AtmajaMessage[]) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-50).map(stripMessageForStorage)))
+    // 300 pesan terakhir disimpan client-side. PDF base64 + previewText sudah di-strip
+    // di stripAttachmentForStorage, jadi quota localStorage aman (text 300 pesan ~600 KB).
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-300).map(stripMessageForStorage)))
   } catch {
     // ignore (quota or disabled)
   }

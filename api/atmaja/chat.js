@@ -115,14 +115,25 @@ function clampText(value, limit) {
   return String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, limit)
 }
 
+// History caps untuk working memory Atmaja.
+// Opus 4.7 context window 200K token (~500K char). 100 pesan * 15K char = 1.5M char worst case,
+// realistic biasanya jauh di bawah. Room masif untuk konteks multi-hari kerja.
+const HISTORY_MAX_MESSAGES = 100
+const HISTORY_PER_MESSAGE_CHARS = 15_000
+
+// clampText untuk history menjaga newline (penting buat preserve struktur analisa Atmaja yang panjang).
+function clampHistoryText(value, limit) {
+  return String(value ?? '').trim().slice(0, limit)
+}
+
 function normalizeHistory(history) {
   if (!Array.isArray(history)) return []
 
   return history
-    .slice(-10)
+    .slice(-HISTORY_MAX_MESSAGES)
     .map((message) => {
       const author = message?.author === 'matthew' ? 'user' : 'assistant'
-      const content = clampText(message?.text, 2_000)
+      const content = clampHistoryText(message?.text, HISTORY_PER_MESSAGE_CHARS)
       return content ? { role: author, content } : null
     })
     .filter(Boolean)
