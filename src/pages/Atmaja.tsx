@@ -600,6 +600,14 @@ export default function Atmaja() {
     setText('')
     setAttachments([])
     setAttachmentError('')
+    // Intercept image-gen command sebelum route ke chat endpoint.
+    // useEffect auto-trigger juga punya guard ini, tapi send() handle juga supaya
+    // tidak race dengan setMessages state propagation.
+    const imgCmd = parseImageCommand(displayText)
+    if (imgCmd) {
+      scheduleImageGen(userMsg, imgCmd)
+      return
+    }
     scheduleAtmajaReply(historySnapshot, userMsg)
   }
 

@@ -4,7 +4,10 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/" }
+    {
+      "source": "/((?!api/|src/|@vite/|@react-refresh|@fs/|@id/|node_modules/|assets/|favicon|icon|manifest|sw\\.js|workbox|robots\\.txt).*)",
+      "destination": "/"
+    }
   ],
   "headers": [
     {
