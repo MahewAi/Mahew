@@ -17,6 +17,13 @@ const MAX_IMAGES_PER_TURN = 2
 const ALLOWED_IMAGE_MIME = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'])
 const TEXT_PREVIEW_MAX_CHARS = 30_000
 
+// === PDF CAPS ===
+// Per PDF: ~2.5 MB raw → ~3.4 MB base64. Max 1 PDF per turn.
+// Claude (Opus/Sonnet 4.x) native PDF reading via OpenRouter file content block.
+const PDF_MAX_BASE64_BYTES = 3_500_000
+const MAX_PDFS_PER_TURN = 1
+const ALLOWED_PDF_MIME = new Set(['application/pdf'])
+
 function sendJson(res, statusCode, payload) {
   res.writeHead(statusCode, jsonHeaders)
   res.end(JSON.stringify(payload))
@@ -135,11 +142,13 @@ function normalizeAttachments(attachments) {
   if (!Array.isArray(attachments)) return []
 
   let imageCount = 0
+  let pdfCount = 0
   return attachments.slice(0, 5).map((attachment) => {
     const type = clampText(attachment?.type, 80)
     const kind = clampText(attachment?.kind, 40)
+    const name = clampText(attachment?.name, 160)
     const normalized = {
-      name: clampText(attachment?.name, 160),
+      name,
       type,
       kind,
       size: Number.isFinite(Number(attachment?.size)) ? Number(attachment.size) : 0,
@@ -154,7 +163,21 @@ function normalizeAttachments(attachments) {
       if (base64 && base64.length <= IMAGE_MAX_BASE64_BYTES) {
         normalized.dataBase64 = base64
         normalized.mime = type.toLowerCase()
+        normalized.documentKind = 'image'
         imageCount += 1
+      }
+    }
+
+    // PDF: kind=document + MIME application/pdf atau ekstensi .pdf + di bawah cap + masih ada slot.
+    const lowerName = name.toLowerCase()
+    const isPdf = kind === 'document' && (ALLOWED_PDF_MIME.has(type.toLowerCase()) || lowerName.endsWith('.pdf'))
+    if (isPdf && pdfCount < MAX_PDFS_PER_TURN) {
+      const base64 = sanitizeBase64(attachment?.dataBase64)
+      if (base64 && base64.length <= PDF_MAX_BASE64_BYTES) {
+        normalized.dataBase64 = base64
+        normalized.mime = 'application/pdf'
+        normalized.documentKind = 'pdf'
+        pdfCount += 1
       }
     }
 
@@ -168,21 +191,24 @@ function buildSystemPrompt() {
     'Jawab dalam Bahasa Indonesia yang ringkas, langsung, dan membantu mengambil keputusan.',
     'Kalau Matthew meminta pilihan, warna, foto, opsi, atau preferensi, jawab pilihannya dulu sebelum alasan.',
     'Jangan membantah arah pertanyaan Matthew. Jika konteks kurang, beri asumsi kerja dan tetap berikan langkah berikutnya.',
-    'Kalau Matthew melampirkan gambar, kamu BISA melihat gambar itu langsung (vision aktif). Analisis konten gambar dan jawab konkrit.',
+    'Kalau Matthew melampirkan gambar (jpg/png/webp/gif), kamu BISA melihat gambar itu langsung (vision aktif). Analisis konten gambar dan jawab konkrit.',
+    'Kalau Matthew melampirkan PDF, kamu BISA baca isi PDF itu langsung (native PDF reading aktif via Claude Opus/Sonnet 4.x). Baca dan analisis isi PDF, kutip bagian relevan, jawab spesifik.',
     'Untuk file teks/kode/markdown yang sudah diekstrak preview-nya, baca cuplikan yang dikirim dan jawab berdasar isi.',
-    'Untuk PDF/zip/docx yang hanya kirim metadata, jelaskan jujur kamu belum lihat isi dan tawarkan jalan (ekstrak, paste, atau kirim image kecil).',
+    'Untuk file docx/xlsx/zip yang hanya kirim metadata, jelaskan jujur kamu belum lihat isi dan tawarkan jalan (ekstrak ke teks, paste isi, atau export ke PDF dulu).',
     'Jaga output agar tidak menyuruh Matthew memindahkan rahasia ke chat. Untuk kredensial, minta disimpan sebagai server environment variable.',
   ].join('\n')
 }
 
 function buildUserContent(message, attachments) {
-  // Pisahkan attachment yang punya bytes vs yang metadata only.
-  const imageAttachments = attachments.filter((a) => a.dataBase64 && a.mime)
+  // Pisahkan attachment per documentKind.
+  const imageAttachments = attachments.filter((a) => a.dataBase64 && a.documentKind === 'image')
+  const pdfAttachments = attachments.filter((a) => a.dataBase64 && a.documentKind === 'pdf')
   const textAttachments = attachments.filter((a) => !a.dataBase64 && a.previewText)
   const metadataOnly = attachments.filter((a) => !a.dataBase64 && !a.previewText)
+  const hasInlineBinary = imageAttachments.length > 0 || pdfAttachments.length > 0
 
-  // Kalau tidak ada image inline → tetap pakai string biasa.
-  if (imageAttachments.length === 0) {
+  // Kalau tidak ada inline binary → tetap pakai string biasa.
+  if (!hasInlineBinary) {
     if (attachments.length === 0) return message
     const lines = []
     if (textAttachments.length > 0) {
@@ -202,7 +228,7 @@ function buildUserContent(message, attachments) {
     return `${message}\n\n${lines.join('\n')}`
   }
 
-  // Ada image → kirim sebagai content block array (vision payload).
+  // Ada inline binary → kirim sebagai content block array.
   const blocks = []
   let textPart = message
   if (textAttachments.length > 0) {
@@ -227,6 +253,16 @@ function buildUserContent(message, attachments) {
     blocks.push({
       type: 'image_url',
       image_url: { url: `data:${att.mime};base64,${att.dataBase64}` },
+    })
+  }
+  // PDF dikirim sebagai file content block (OpenRouter compatible, native PDF reading di Claude 3.5+/4.x).
+  for (const att of pdfAttachments) {
+    blocks.push({
+      type: 'file',
+      file: {
+        filename: att.name || 'document.pdf',
+        file_data: `data:${att.mime};base64,${att.dataBase64}`,
+      },
     })
   }
   return blocks
@@ -399,17 +435,22 @@ export default async function handler(req, res) {
     }
 
     // Hitung policy actual berdasarkan apa yang BENERAN dikirim.
-    const imagesSent = attachments.filter((a) => a.dataBase64 && a.mime).length
+    const imagesSent = attachments.filter((a) => a.dataBase64 && a.documentKind === 'image').length
+    const pdfsSent = attachments.filter((a) => a.dataBase64 && a.documentKind === 'pdf').length
     const textsSent = attachments.filter((a) => !a.dataBase64 && a.previewText).length
     const metadataOnlyCount = attachments.filter((a) => !a.dataBase64 && !a.previewText).length
     const policy =
-      imagesSent > 0
-        ? 'vision_inline'
-        : textsSent > 0
-          ? 'text_preview_inline'
-          : metadataOnlyCount > 0
-            ? 'metadata_only'
-            : 'none'
+      imagesSent > 0 && pdfsSent > 0
+        ? 'multimodal_image_and_pdf'
+        : imagesSent > 0
+          ? 'vision_inline'
+          : pdfsSent > 0
+            ? 'pdf_native'
+            : textsSent > 0
+              ? 'text_preview_inline'
+              : metadataOnlyCount > 0
+                ? 'metadata_only'
+                : 'none'
 
     sendJson(res, 200, {
       ok: true,
@@ -422,6 +463,7 @@ export default async function handler(req, res) {
       attachmentsPolicy: policy,
       attachmentsSummary: {
         imagesSent,
+        pdfsSent,
         textsSent,
         metadataOnly: metadataOnlyCount,
       },

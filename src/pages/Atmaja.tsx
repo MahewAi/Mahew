@@ -68,6 +68,10 @@ const MAX_TEXT_PREVIEW_CHARS = 30_000
 // Lebih besar dari ini → tetap ditampilkan sebagai metadata, Atmaja tidak akan lihat isinya.
 const MAX_IMAGE_INLINE_BYTES = 1_572_864
 const ALLOWED_IMAGE_MIME = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'])
+// Cap untuk PDF yang dikirim inline (~2.5 MB raw → ~3.4 MB base64). Server cap 3.5 MB base64.
+// Vercel body cap 4.3 MB, jadi sisakan buffer untuk text + history.
+const MAX_PDF_INLINE_BYTES = 2_621_440
+const ALLOWED_PDF_MIME = new Set(['application/pdf'])
 const REPLY_DELAY_MS = 1100
 const textAttachmentExtensions = new Set(['txt', 'md', 'csv', 'json', 'log', 'xml', 'yaml', 'yml'])
 const paletteVisualColors: AtmajaVisualColor[] = [
@@ -201,10 +205,32 @@ async function buildAttachment(file: File): Promise<AtmajaAttachment> {
     }
   }
 
-  if (kind !== 'text') {
+  if (kind === 'document') {
+    const mime = (file.type || '').toLowerCase()
+    const ext = getFileExtension(file.name)
+    const isPdf = ALLOWED_PDF_MIME.has(mime) || ext === 'pdf'
+
+    if (isPdf) {
+      if (file.size > MAX_PDF_INLINE_BYTES) {
+        return {
+          ...base,
+          note: `PDF > ${formatFileSize(MAX_PDF_INLINE_BYTES)}, terlalu besar untuk dikirim inline. Pecah file atau extract section utama dulu.`,
+        }
+      }
+      const dataBase64 = await readFileAsBase64(file)
+      if (!dataBase64) {
+        return { ...base, note: 'Gagal membaca PDF sebagai data byte.' }
+      }
+      return {
+        ...base,
+        dataBase64,
+        note: 'PDF dikirim ke Atmaja (native PDF reading aktif).',
+      }
+    }
+
     return {
       ...base,
-      note: 'Dokumen diterima sebagai metadata. Untuk dianalisis isinya, ekstrak atau paste isi ke chat.',
+      note: 'Dokumen diterima sebagai metadata. Format docx/xlsx belum didukung native — extract atau paste isi ke chat.',
     }
   }
 
