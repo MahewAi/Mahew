@@ -6,6 +6,7 @@ import { loadStoredBriefs } from '@/lib/briefStore'
 import { recordInteractionLessons } from '@/lib/learningMemory'
 import { isAtmajaRemoteBridgeAllowed, requestAtmajaReply } from '@/lib/atmajaClient'
 import { generateImage, parseImageCommand, type OpenAIImageModel } from '@/lib/openaiImageClient'
+import { generateVideo, parseVideoCommand, type OpenAIVideoModel } from '@/lib/openaiVideoClient'
 import { generateMockReply, type ChatMessage } from '@/lib/mockReplies'
 import { cn } from '@/lib/utils'
 
@@ -40,10 +41,23 @@ interface AtmajaAttachment {
   note?: string
 }
 
+interface AtmajaVideo {
+  id: string
+  title: string
+  caption: string
+  /** URL ke /api/openai/video/content?id=xxx, pasang langsung ke <video src=...>. */
+  contentUrl: string
+  prompt: string
+  model: OpenAIVideoModel
+  size: string
+  seconds: string
+}
+
 interface AtmajaMessage extends ChatMessage {
   timeAgo: string
   attachments?: AtmajaAttachment[]
   visuals?: AtmajaVisual[]
+  videos?: AtmajaVideo[]
 }
 
 const STORAGE_KEY = 'gerai:atmaja-thread'
@@ -355,6 +369,62 @@ export default function Atmaja() {
     }
   }, [])
 
+  const scheduleVideoGen = useCallback((userMsg: AtmajaMessage, parsed: { prompt: string; model: OpenAIVideoModel }) => {
+    if (pendingReplyTimerRef.current !== null) {
+      window.clearTimeout(pendingReplyTimerRef.current)
+      pendingReplyTimerRef.current = null
+    }
+    setSending(true)
+    void (async () => {
+      const result = await generateVideo({ prompt: parsed.prompt, model: parsed.model })
+
+      if (!result || result.job.status !== 'completed' || !result.job.contentUrl) {
+        const errReply: AtmajaMessage = {
+          id: `m-${Date.now() + 1}`,
+          author: 'ceo',
+          text:
+            'Tidak bisa generate video saat ini. Cek OPENAI_API_KEY + akses Sora 2 di akun OpenAI. Status detail: /api/openai/video/status?id=<job-id>.',
+          timeAgo: 'Baru saja',
+        }
+        setMessages((prev) => {
+          const userIndex = prev.findIndex((m) => m.id === userMsg.id)
+          if (userIndex >= 0 && prev[userIndex + 1]?.author === 'ceo') return prev
+          const next = [...prev, errReply]
+          saveThread(next)
+          return next
+        })
+        setSending(false)
+        return
+      }
+
+      const video: AtmajaVideo = {
+        id: `vid-${result.job.id}`,
+        title: `${result.job.model} · ${result.job.seconds}s · ${result.job.size}`,
+        caption: `Prompt: ${parsed.prompt}`,
+        contentUrl: result.job.contentUrl,
+        prompt: parsed.prompt,
+        model: result.job.model,
+        size: result.job.size,
+        seconds: result.job.seconds,
+      }
+      const reply: AtmajaMessage = {
+        id: `m-${Date.now() + 1}`,
+        author: 'ceo',
+        text: `Video siap (${result.job.model}, ${result.job.seconds}s, ${result.job.size}, ${(result.elapsedMs / 1000).toFixed(1)}s).`,
+        timeAgo: 'Baru saja',
+        videos: [video],
+      }
+      setMessages((prev) => {
+        const userIndex = prev.findIndex((m) => m.id === userMsg.id)
+        if (userIndex >= 0 && prev[userIndex + 1]?.author === 'ceo') return prev
+        const next = [...prev, reply]
+        saveThread(next)
+        return next
+      })
+      setSending(false)
+    })()
+  }, [])
+
   const scheduleImageGen = useCallback((userMsg: AtmajaMessage, parsed: { prompt: string; model: OpenAIImageModel }) => {
     if (pendingReplyTimerRef.current !== null) {
       window.clearTimeout(pendingReplyTimerRef.current)
@@ -486,14 +556,20 @@ export default function Atmaja() {
   useEffect(() => {
     const lastMessage = messages[messages.length - 1]
     if (!lastMessage || lastMessage.author !== 'matthew' || sending) return
-    // Cek image-gen command dulu. Kalau match, route ke OpenAI image bukan Atmaja chat.
+    // Cek video-gen command dulu (paling spesifik).
+    const vidCmd = parseVideoCommand(lastMessage.text)
+    if (vidCmd) {
+      scheduleVideoGen(lastMessage, vidCmd)
+      return
+    }
+    // Lalu image-gen.
     const imgCmd = parseImageCommand(lastMessage.text)
     if (imgCmd) {
       scheduleImageGen(lastMessage, imgCmd)
       return
     }
     scheduleAtmajaReply(messages.slice(0, -1), lastMessage, 350)
-  }, [messages, scheduleAtmajaReply, scheduleImageGen, sending])
+  }, [messages, scheduleAtmajaReply, scheduleImageGen, scheduleVideoGen, sending])
 
   const handleReset = () => {
     setMessages(initialThread)
@@ -600,9 +676,13 @@ export default function Atmaja() {
     setText('')
     setAttachments([])
     setAttachmentError('')
-    // Intercept image-gen command sebelum route ke chat endpoint.
-    // useEffect auto-trigger juga punya guard ini, tapi send() handle juga supaya
-    // tidak race dengan setMessages state propagation.
+    // Intercept video-gen command (paling spesifik).
+    const vidCmd = parseVideoCommand(displayText)
+    if (vidCmd) {
+      scheduleVideoGen(userMsg, vidCmd)
+      return
+    }
+    // Lalu image-gen command.
     const imgCmd = parseImageCommand(displayText)
     if (imgCmd) {
       scheduleImageGen(userMsg, imgCmd)
@@ -933,6 +1013,13 @@ function MessageBubble({ message, reduceMotion }: { message: AtmajaMessage; redu
             ))}
           </div>
         )}
+        {message.videos && message.videos.length > 0 && (
+          <div className="mt-2 grid gap-2">
+            {message.videos.map((video) => (
+              <AtmajaVideoCard key={video.id} video={video} />
+            ))}
+          </div>
+        )}
         <p className={cn('mt-1 px-1 text-[10px] text-text-faint', isMatthew && 'text-right')}>
           {message.timeAgo}
         </p>
@@ -979,6 +1066,40 @@ function AtmajaVisualCard({ visual }: { visual: AtmajaVisual }) {
           ))}
         </div>
       )}
+    </figure>
+  )
+}
+
+function AtmajaVideoCard({ video }: { video: AtmajaVideo }) {
+  // Aspect ratio dari size string (mis. "720x1280" → 9:16, "1280x720" → 16:9)
+  const [w, h] = video.size.split('x').map((n) => Number(n) || 0)
+  const aspectClass = w > 0 && h > 0
+    ? (h > w ? 'aspect-[9/16]' : w === h ? 'aspect-square' : 'aspect-video')
+    : 'aspect-video'
+
+  return (
+    <figure className="overflow-hidden rounded-lg border border-border-soft bg-white/86 text-text-primary shadow-card">
+      <div className="flex items-center gap-2 border-b border-border-soft px-3 py-2">
+        <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-accent-bg text-accent-dark">
+          <ImageIcon className="size-4" />
+        </span>
+        <div className="min-w-0">
+          <p className="truncate text-[12px] font-black">{video.title}</p>
+          <p className="truncate text-[10px] font-bold text-text-muted">Generated video (Sora 2)</p>
+        </div>
+      </div>
+      <video
+        src={video.contentUrl}
+        controls
+        playsInline
+        preload="metadata"
+        className={cn('block w-full bg-black object-cover', aspectClass)}
+      >
+        <track kind="captions" />
+      </video>
+      <figcaption className="px-3 py-2 text-xs font-semibold leading-relaxed text-text-secondary">
+        {video.caption}
+      </figcaption>
     </figure>
   )
 }

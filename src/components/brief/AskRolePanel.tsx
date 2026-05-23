@@ -12,6 +12,7 @@ import {
 import { generateRoleReply, type ChatMessage } from '@/lib/mockReplies'
 import { requestAgentReply } from '@/lib/agentClient'
 import { generateImage, parseImageCommand, type OpenAIImageModel } from '@/lib/openaiImageClient'
+import { generateVideo, parseVideoCommand, type OpenAIVideoModel } from '@/lib/openaiVideoClient'
 import { cn } from '@/lib/utils'
 
 interface AskRolePanelProps {
@@ -29,11 +30,20 @@ interface MessageImage {
   size?: string
 }
 
+interface MessageVideo {
+  contentUrl: string
+  prompt: string
+  model: OpenAIVideoModel
+  size: string
+  seconds: string
+}
+
 interface Message {
   id: string
   author: 'matthew' | Contributor
   text: string
   image?: MessageImage
+  video?: MessageVideo
 }
 
 const roleBg: Record<Role, string> = {
@@ -84,7 +94,35 @@ export function AskRolePanel({ role, brief, open, onOpenChange }: AskRolePanelPr
     setText('')
     setSending(true)
 
-    // Image-gen command intercept. Kalau /img, /image, /dalle, /gpt-image → route ke OpenAI.
+    // Video-gen command intercept (paling spesifik). /vid, /video, /sora, /sora-pro.
+    const vidCmd = parseVideoCommand(trimmed)
+    if (vidCmd) {
+      const result = await generateVideo({ prompt: vidCmd.prompt, model: vidCmd.model })
+      const reply: Message = !result || result.job.status !== 'completed' || !result.job.contentUrl
+        ? {
+            id: `m-${Date.now() + 1}`,
+            author: role,
+            text:
+              'Tidak bisa generate video saat ini. Cek OPENAI_API_KEY + akses Sora 2 di akun OpenAI.',
+          }
+        : {
+            id: `m-${Date.now() + 1}`,
+            author: role,
+            text: `Video siap (${result.job.model}, ${result.job.seconds}s, ${result.job.size}, ${(result.elapsedMs / 1000).toFixed(1)}s).`,
+            video: {
+              contentUrl: result.job.contentUrl,
+              prompt: vidCmd.prompt,
+              model: result.job.model,
+              size: result.job.size,
+              seconds: result.job.seconds,
+            },
+          }
+      setMessages((prev) => [...prev, reply])
+      setSending(false)
+      return
+    }
+
+    // Image-gen command intercept. /img, /image, /dalle, /gpt-image → route ke OpenAI.
     const imgCmd = parseImageCommand(trimmed)
     if (imgCmd) {
       const result = await generateImage({
@@ -326,6 +364,28 @@ function MessageBubble({ message, role }: { message: Message; role: Contributor 
                 <span className="block truncate text-text-muted">
                   {message.image.revisedPrompt || message.image.prompt}
                 </span>
+              </span>
+            </figcaption>
+          </figure>
+        )}
+        {message.video && (
+          <figure className="mt-2.5 overflow-hidden rounded-md border border-white/30 bg-white/8">
+            <video
+              src={message.video.contentUrl}
+              controls
+              playsInline
+              preload="metadata"
+              className={cn('block w-full max-w-[420px] bg-black', message.video.size.startsWith('720') ? 'aspect-[9/16]' : 'aspect-video')}
+            >
+              <track kind="captions" />
+            </video>
+            <figcaption className="flex items-start gap-1.5 px-2 py-1.5 text-[10px] font-bold leading-4 text-text-secondary bg-white/85">
+              <ImageIcon aria-hidden="true" className="size-3 shrink-0 text-accent-dark" />
+              <span className="min-w-0">
+                <span className="block truncate font-extrabold uppercase tracking-wide text-accent-dark">
+                  {message.video.model} · {message.video.seconds}s · {message.video.size}
+                </span>
+                <span className="block truncate text-text-muted">{message.video.prompt}</span>
               </span>
             </figcaption>
           </figure>
