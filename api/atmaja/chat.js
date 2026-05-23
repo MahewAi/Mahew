@@ -366,7 +366,15 @@ export default async function handler(req, res) {
     { role: 'user', content: buildUserContent(userMessage, attachments) },
   ]
 
-  async function callOpenRouter(modelId) {
+  // Max output per single call. Opus 4.7 via OpenRouter support up to 8192 standard.
+  const MAX_TOKENS_PER_CALL = 8192
+  // Max auto-continuation kalau response masih kepotong (1 initial + N continuations).
+  // Total worst case output: 8192 * 3 = 24,576 token = ~18K kata. Sangat jarang full.
+  const MAX_CONTINUATIONS = 2
+  // Cap total accumulated reply (safety net, hindari runaway response).
+  const MAX_TOTAL_REPLY_CHARS = 60_000
+
+  async function callOpenRouter(modelId, messagesArg) {
     const upstream = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -378,9 +386,9 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: modelId,
-        messages,
+        messages: messagesArg,
         temperature: 0.45,
-        max_tokens: 4096,
+        max_tokens: MAX_TOKENS_PER_CALL,
       }),
     })
 
@@ -395,8 +403,78 @@ export default async function handler(req, res) {
     return { upstream, body: parsed }
   }
 
+  function extractFinishReason(body) {
+    return body?.choices?.[0]?.finish_reason ?? body?.choices?.[0]?.native_finish_reason ?? null
+  }
+
+  function isTruncated(reason) {
+    return reason === 'length' || reason === 'max_tokens'
+  }
+
+  function sumUsage(target, src) {
+    if (!src || typeof src !== 'object') return target
+    return {
+      prompt_tokens: (target.prompt_tokens ?? 0) + (Number(src.prompt_tokens) || 0),
+      completion_tokens: (target.completion_tokens ?? 0) + (Number(src.completion_tokens) || 0),
+      total_tokens: (target.total_tokens ?? 0) + (Number(src.total_tokens) || 0),
+    }
+  }
+
+  async function callWithAutoContinuation(modelId, initialMessages) {
+    let conversation = [...initialMessages]
+    let accumulatedText = ''
+    let lastUpstream = null
+    let lastBody = null
+    let lastFinishReason = null
+    let continuations = 0
+    let aggregatedUsage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
+
+    for (let attempt = 0; attempt <= MAX_CONTINUATIONS; attempt++) {
+      const result = await callOpenRouter(modelId, conversation)
+      lastUpstream = result.upstream
+      lastBody = result.body
+      aggregatedUsage = sumUsage(aggregatedUsage, result.body?.usage)
+
+      if (!result.upstream.ok) break
+
+      const partial = result.body?.choices?.[0]?.message?.content
+      if (typeof partial !== 'string' || !partial.trim()) break
+
+      accumulatedText += (accumulatedText ? '' : '') + partial
+      lastFinishReason = extractFinishReason(result.body)
+
+      // Hard safety cap kalau response runaway (mestinya tidak terjadi karena MAX_CONTINUATIONS).
+      if (accumulatedText.length >= MAX_TOTAL_REPLY_CHARS) break
+
+      // Selesai natural — stop loop.
+      if (!isTruncated(lastFinishReason)) break
+
+      // Truncated — tambah continuation prompt + loop lagi.
+      if (attempt >= MAX_CONTINUATIONS) break
+      continuations += 1
+      conversation = [
+        ...conversation,
+        { role: 'assistant', content: partial },
+        {
+          role: 'user',
+          content: 'Lanjutkan persis dari titik kamu berhenti barusan. Jangan ulang yang sudah ditulis, jangan ulang heading yang sudah ada. Selesaikan tuntas sampai poin terakhir.',
+        },
+      ]
+    }
+
+    return {
+      upstream: lastUpstream,
+      body: lastBody,
+      accumulatedText,
+      lastFinishReason,
+      continuations,
+      aggregatedUsage,
+    }
+  }
+
   try {
-    let { upstream, body } = await callOpenRouter(primaryModel)
+    let { upstream, body, accumulatedText, lastFinishReason, continuations, aggregatedUsage } =
+      await callWithAutoContinuation(primaryModel, messages)
     let usedModel = primaryModel
     let fallbackTried = false
 
@@ -411,16 +489,19 @@ export default async function handler(req, res) {
       return
     }
 
-    let replyText = body?.choices?.[0]?.message?.content
+    let replyText = accumulatedText
 
     // Retry with stable model jika upstream balikan kosong (kasus openrouter/auto)
     if ((typeof replyText !== 'string' || !replyText.trim()) && primaryModel !== STABLE_FALLBACK_MODEL) {
       fallbackTried = true
-      const retry = await callOpenRouter(STABLE_FALLBACK_MODEL)
+      const retry = await callWithAutoContinuation(STABLE_FALLBACK_MODEL, messages)
       upstream = retry.upstream
       body = retry.body
       usedModel = STABLE_FALLBACK_MODEL
-      replyText = body?.choices?.[0]?.message?.content
+      replyText = retry.accumulatedText
+      lastFinishReason = retry.lastFinishReason
+      continuations = retry.continuations
+      aggregatedUsage = retry.aggregatedUsage
     }
 
     if (typeof replyText !== 'string' || !replyText.trim()) {
@@ -434,11 +515,10 @@ export default async function handler(req, res) {
       return
     }
 
-    // Detect truncation: append clear note kalau response kena max_tokens cap.
-    const finishReason = body?.choices?.[0]?.finish_reason ?? body?.choices?.[0]?.native_finish_reason ?? null
-    const truncated = finishReason === 'length' || finishReason === 'max_tokens'
-    if (truncated) {
-      replyText = replyText.trim() + '\n\n---\n_[Jawaban terpotong karena batas panjang. Balas "lanjutkan" supaya saya teruskan dari titik berhenti.]_'
+    // Truncation indicator: muncul HANYA kalau sudah max continuation tapi masih kepotong.
+    const finalTruncated = isTruncated(lastFinishReason)
+    if (finalTruncated) {
+      replyText = replyText.trim() + '\n\n---\n_[Jawaban masih panjang. Balas "lanjutkan" supaya saya teruskan dari titik berhenti.]_'
     }
 
     // Hitung policy actual berdasarkan apa yang BENERAN dikirim.
@@ -465,10 +545,11 @@ export default async function handler(req, res) {
       model: (body?.model ?? usedModel) || null,
       requestedModel: primaryModel,
       fallbackUsed: fallbackTried,
-      truncated,
-      finishReason,
+      truncated: finalTruncated,
+      finishReason: lastFinishReason,
+      continuations,
       text: replyText.trim(),
-      usage: body?.usage ?? null,
+      usage: aggregatedUsage,
       attachmentsPolicy: policy,
       attachmentsSummary: {
         imagesSent,
