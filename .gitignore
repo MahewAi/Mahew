@@ -51,3 +51,9 @@ SECURITY_REMINDER_*.md
 
 # Local Codex/Codex skills cache
 .agents
+
+# Notion content (gitignored: bisa berisi data sensitif vendor/finance)
+notion-import/*
+!notion-import/README.md
+notion-export-updated/*
+!notion-export-updated/README.md
