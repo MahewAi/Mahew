@@ -9,6 +9,7 @@ export default function handler(_req, res) {
   const openRouterChatEnabled = process.env.ATMAJA_OPENROUTER_ENABLED === 'true'
   const openRouterKeyConfigured = Boolean(process.env.OPENROUTER_API_KEY)
   const openRouterModel = process.env.ATMAJA_OPENROUTER_MODEL ?? process.env.OPENROUTER_CHAT_MODEL ?? null
+  const openAIKeyConfigured = Boolean(process.env.OPENAI_API_KEY)
   const allowedHosts = String(process.env.ATMAJA_WEBHOOK_ALLOWED_HOSTS ?? '')
     .split(',')
     .map((host) => host.trim())
@@ -33,7 +34,32 @@ export default function handler(_req, res) {
         enabled: openRouterChatEnabled && openRouterKeyConfigured,
         keyConfigured: openRouterKeyConfigured,
         model: openRouterModel,
-        attachmentsPolicy: 'metadata_only',
+        // Server endpoint sekarang support vision_inline (image base64 langsung ke Claude)
+        // dan text_preview_inline (cuplikan teks file). Bukan lagi metadata_only.
+        attachmentsPolicy: 'vision_inline_or_text_preview',
+        capabilities: {
+          imageVision: true,
+          textPreview: true,
+          maxImageBase64Bytes: 2_100_000,
+          maxImagesPerTurn: 2,
+          maxTextPreviewChars: 30_000,
+        },
+      },
+      image: {
+        provider: 'OpenAI',
+        endpoint: '/api/openai/image',
+        enabled: openAIKeyConfigured,
+        keyConfigured: openAIKeyConfigured,
+        modelsSupported: [
+          'gpt-image-1',
+          'gpt-image-1-mini',
+          'gpt-image-1.5',
+          'gpt-image-2',
+          'gpt-image-2-2026-04-21',
+          'chatgpt-image-latest',
+          'dall-e-3 (legacy, may 404 on newer accounts)',
+        ],
+        creditsEndpoint: '/api/openai/credits',
       },
       runtime: {
         engine: 'OpenClaw Atmaja',

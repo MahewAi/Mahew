@@ -20,7 +20,22 @@ export interface AgentHealth {
     enabled: boolean
     keyConfigured: boolean
     model: string | null
-    attachmentsPolicy: 'metadata_only'
+    attachmentsPolicy: 'metadata_only' | 'vision_inline_or_text_preview'
+    capabilities?: {
+      imageVision: boolean
+      textPreview: boolean
+      maxImageBase64Bytes: number
+      maxImagesPerTurn: number
+      maxTextPreviewChars: number
+    }
+  }
+  image?: {
+    provider: 'OpenAI'
+    endpoint: string
+    enabled: boolean
+    keyConfigured: boolean
+    modelsSupported: string[]
+    creditsEndpoint: string
   }
   runtime: {
     engine: string

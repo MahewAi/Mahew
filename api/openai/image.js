@@ -14,10 +14,24 @@ const RATE_LIMIT_MAX = Number(process.env.OPENAI_IMAGE_RATE_LIMIT ?? 6)
 const recentRequestsByIp = new Map()
 
 // === MODEL WHITELIST ===
-// Hanya 2 model image yang diizinkan saat ini.
-const ALLOWED_MODELS = new Set(['gpt-image-1', 'dall-e-3'])
+// gpt-image family adalah pengganti DALL-E (yang sudah pension untuk akun baru di 2026).
+// gpt-image-2 = kualitas tertinggi (April 2026 release).
+// gpt-image-1.5 = mid-tier.
+// gpt-image-1 = balance speed + kualitas (default).
+// gpt-image-1-mini = paling cepat + murah.
+// chatgpt-image-latest = alias auto-update.
+// dall-e-3 di-keep sebagai legacy fallback (akan return error kalau akun tidak ada akses).
+const ALLOWED_MODELS = new Set([
+  'gpt-image-1',
+  'gpt-image-1-mini',
+  'gpt-image-1.5',
+  'gpt-image-2',
+  'gpt-image-2-2026-04-21',
+  'chatgpt-image-latest',
+  'dall-e-3',
+])
 
-// Size whitelist per model (mencegah typo/abuse).
+// Size whitelist per family.
 const DALL_E_3_SIZES = new Set(['1024x1024', '1024x1792', '1792x1024'])
 const GPT_IMAGE_SIZES = new Set([
   '1024x1024',
@@ -28,9 +42,13 @@ const GPT_IMAGE_SIZES = new Set([
   'auto',
 ])
 
-// Quality whitelist per model (sebut explicit untuk audit).
+// Quality whitelist per family.
 const DALL_E_3_QUALITIES = new Set(['standard', 'hd'])
 const GPT_IMAGE_QUALITIES = new Set(['low', 'medium', 'high', 'auto'])
+
+function isGptImageFamily(model) {
+  return model.startsWith('gpt-image') || model === 'chatgpt-image-latest'
+}
 
 function sendJson(res, statusCode, payload) {
   res.writeHead(statusCode, jsonHeaders)
@@ -117,24 +135,28 @@ function clampText(value, limit) {
 }
 
 function resolveModel(input) {
-  const m = clampText(input, 40).toLowerCase()
+  const m = clampText(input, 40)
+  // Allow exact match (case-sensitive) untuk model names yang punya dot (gpt-image-1.5)
   if (ALLOWED_MODELS.has(m)) return m
-  // Default ke gpt-image-1 (kualitas terbaru per 2026).
+  // Lalu coba lowercase
+  const ml = m.toLowerCase()
+  if (ALLOWED_MODELS.has(ml)) return ml
+  // Default ke gpt-image-1 (balance speed + quality).
   return 'gpt-image-1'
 }
 
 function resolveSize(model, input) {
   const s = clampText(input, 20)
-  const allowed = model === 'dall-e-3' ? DALL_E_3_SIZES : GPT_IMAGE_SIZES
+  const allowed = isGptImageFamily(model) ? GPT_IMAGE_SIZES : DALL_E_3_SIZES
   if (allowed.has(s)) return s
   return '1024x1024'
 }
 
 function resolveQuality(model, input) {
   const q = clampText(input, 20).toLowerCase()
-  const allowed = model === 'dall-e-3' ? DALL_E_3_QUALITIES : GPT_IMAGE_QUALITIES
+  const allowed = isGptImageFamily(model) ? GPT_IMAGE_QUALITIES : DALL_E_3_QUALITIES
   if (allowed.has(q)) return q
-  return model === 'dall-e-3' ? 'hd' : 'high'
+  return isGptImageFamily(model) ? 'high' : 'hd'
 }
 
 async function fetchUrlAsBase64(url) {
@@ -200,23 +222,19 @@ export default async function handler(req, res) {
   const size = resolveSize(model, payload?.size)
   const quality = resolveQuality(model, payload?.quality)
 
-  // Build request body sesuai schema OpenAI Images API per model.
-  // gpt-image-1: pakai 'quality' (low|medium|high|auto), default response_format = b64_json
-  // dall-e-3: pakai 'quality' (standard|hd), default response_format = url
+  // Build request body sesuai schema OpenAI Images API per family.
+  // gpt-image-* family: 'quality' (low|medium|high|auto), SELALU return b64_json (jangan kirim response_format).
+  // dall-e-3: 'quality' (standard|hd), pakai response_format=b64_json supaya konsisten, plus optional style.
   const openaiBody = {
     model,
     prompt,
     n: 1,
     size,
+    quality,
   }
   if (model === 'dall-e-3') {
-    openaiBody.quality = quality
-    openaiBody.response_format = 'b64_json' // minta langsung base64 supaya konsisten
+    openaiBody.response_format = 'b64_json'
     openaiBody.style = clampText(payload?.style, 20) === 'natural' ? 'natural' : 'vivid'
-  } else {
-    // gpt-image-1
-    openaiBody.quality = quality
-    // gpt-image-1 SELALU return b64_json, response_format param tidak diperlukan dan akan error kalau dikirim
   }
 
   const startedAt = Date.now()

@@ -4,7 +4,14 @@
 
 import { AGENT_BRIDGE_ALLOWED } from '@/lib/privacyGuard'
 
-export type OpenAIImageModel = 'gpt-image-1' | 'dall-e-3'
+export type OpenAIImageModel =
+  | 'gpt-image-1'
+  | 'gpt-image-1-mini'
+  | 'gpt-image-1.5'
+  | 'gpt-image-2'
+  | 'gpt-image-2-2026-04-21'
+  | 'chatgpt-image-latest'
+  | 'dall-e-3'
 export type OpenAIImageSize =
   | '1024x1024'
   | '1024x1536'
@@ -50,19 +57,31 @@ export function isOpenAIBridgeAllowed() {
 /**
  * Parse user input untuk image-gen command.
  * Triggers (case-insensitive):
- *   /img <prompt>            → gpt-image-1 (default)
+ *   /img <prompt>            → gpt-image-1 (default, balance)
  *   /image <prompt>          → gpt-image-1
- *   /dalle <prompt>          → dall-e-3
+ *   /img2 <prompt>           → gpt-image-2 (kualitas tertinggi)
+ *   /img15 <prompt>          → gpt-image-1.5 (mid-tier)
+ *   /imgmini <prompt>        → gpt-image-1-mini (cepat + murah)
  *   /gpt-image <prompt>      → gpt-image-1
+ *   /dalle <prompt>          → dall-e-3 (legacy, kemungkinan 404 di akun baru)
  * Separator setelah command boleh spasi, ":", atau "-".
  */
 export function parseImageCommand(text: string): { prompt: string; model: OpenAIImageModel } | null {
-  const m = text.match(/^\/(img|image|dalle|gpt-image)\s*[:\-]?\s*([\s\S]+)$/i)
+  const m = text.match(/^\/(img2|img15|imgmini|img|image|dalle|gpt-image)\s*[:\-]?\s*([\s\S]+)$/i)
   if (!m) return null
   const cmd = m[1].toLowerCase()
   const prompt = m[2].trim()
   if (!prompt || prompt.length < 3) return null
-  const model: OpenAIImageModel = cmd === 'dalle' ? 'dall-e-3' : 'gpt-image-1'
+  const modelMap: Record<string, OpenAIImageModel> = {
+    img2: 'gpt-image-2',
+    img15: 'gpt-image-1.5',
+    imgmini: 'gpt-image-1-mini',
+    img: 'gpt-image-1',
+    image: 'gpt-image-1',
+    'gpt-image': 'gpt-image-1',
+    dalle: 'dall-e-3',
+  }
+  const model = modelMap[cmd] ?? 'gpt-image-1'
   return { prompt, model }
 }
 
