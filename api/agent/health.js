@@ -34,14 +34,18 @@ export default function handler(_req, res) {
         enabled: openRouterChatEnabled && openRouterKeyConfigured,
         keyConfigured: openRouterKeyConfigured,
         model: openRouterModel,
-        // Server endpoint sekarang support vision_inline (image base64 langsung ke Claude)
-        // dan text_preview_inline (cuplikan teks file). Bukan lagi metadata_only.
-        attachmentsPolicy: 'vision_inline_or_text_preview',
+        // Server endpoint sekarang support vision_inline (image base64 langsung ke Claude),
+        // pdf_native (PDF base64 via OpenRouter file content block, Claude Opus/Sonnet 4.x baca langsung),
+        // dan text_preview_inline (cuplikan teks file).
+        attachmentsPolicy: 'vision_pdf_native_or_text_preview',
         capabilities: {
           imageVision: true,
+          pdfNative: true,
           textPreview: true,
           maxImageBase64Bytes: 2_100_000,
           maxImagesPerTurn: 2,
+          maxPdfBase64Bytes: 3_500_000,
+          maxPdfsPerTurn: 1,
           maxTextPreviewChars: 30_000,
         },
       },
