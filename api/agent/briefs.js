@@ -1,12 +1,35 @@
+// Multi-action briefs endpoint (consolidated dari briefs.js + briefs-list + briefs-result).
+// Single file karena Vercel Hobby plan limit 12 serverless functions per project.
+//
+// Actions:
+//   POST /api/agent/briefs                  → submit brief (original, forward ke webhook runtime)
+//   POST /api/agent/briefs?action=result    → n8n callback setelah workflow done
+//   GET  /api/agent/briefs?action=list      → list briefs (untuk n8n Daily Digest)
+//                                             Optional: &status=<filter>&since=<ts>
+//
+// Auth:
+//   POST (submit)         : origin allowlist + rate limit (no token, app same-origin call)
+//   POST (action=result)  : bearer N8N_WEBHOOK_TOKEN
+//   GET  (action=list)    : bearer N8N_WEBHOOK_TOKEN
+
 const jsonHeaders = {
   'content-type': 'application/json; charset=utf-8',
   'cache-control': 'no-store',
 }
 
 const MAX_BODY_BYTES = Number(process.env.ATMAJA_BRIEF_MAX_BYTES ?? 262_144)
+const CALLBACK_MAX_BYTES = Number(process.env.N8N_CALLBACK_MAX_BYTES ?? 512_000)
 const RATE_LIMIT_WINDOW_MS = 60_000
 const RATE_LIMIT_MAX = Number(process.env.ATMAJA_BRIDGE_RATE_LIMIT ?? 20)
+const CALLBACK_RATE_LIMIT = Number(process.env.N8N_CALLBACK_RATE_LIMIT ?? 30)
 const recentRequestsByIp = new Map()
+const recentCallbacksByIp = new Map()
+
+// Shared in-memory brief store. Reset on cold start. Akan migrate ke Vercel KV nanti.
+const briefStore = globalThis.__geraiBriefStore ?? new Map()
+globalThis.__geraiBriefStore = briefStore
+
+const VALID_STATUSES = new Set(['completed', 'failed', 'degraded', 'partial', 'in_progress', 'queued'])
 
 function sendJson(res, statusCode, payload) {
   res.writeHead(statusCode, jsonHeaders)
@@ -19,10 +42,7 @@ function getHeader(req, name) {
 }
 
 function parseCsv(value) {
-  return String(value ?? '')
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
+  return String(value ?? '').split(',').map((item) => item.trim()).filter(Boolean)
 }
 
 function getRequestHost(req) {
@@ -40,7 +60,6 @@ function getClientIp(req) {
 function isOriginAllowed(req) {
   const origin = getHeader(req, 'origin')
   if (!origin) return true
-
   try {
     const originUrl = new URL(origin)
     const requestHost = getRequestHost(req)
@@ -51,6 +70,15 @@ function isOriginAllowed(req) {
   }
 }
 
+function isAuthorizedN8n(req) {
+  const expected = process.env.N8N_WEBHOOK_TOKEN
+  if (!expected) return false
+  const auth = getHeader(req, 'authorization') ?? ''
+  const m = auth.match(/^Bearer\s+(.+)$/i)
+  if (!m) return false
+  return m[1] === expected
+}
+
 function isWebhookAllowed(webhookUrl) {
   let url
   try {
@@ -58,53 +86,43 @@ function isWebhookAllowed(webhookUrl) {
   } catch {
     return { ok: false, reason: 'invalid_webhook_url' }
   }
-
   if (url.protocol !== 'https:') {
     return { ok: false, reason: 'webhook_must_use_https' }
   }
-
   const allowedHosts = parseCsv(process.env.ATMAJA_WEBHOOK_ALLOWED_HOSTS)
   if (allowedHosts.length > 0 && !allowedHosts.includes(url.hostname)) {
     return { ok: false, reason: 'webhook_host_not_allowed' }
   }
-
   return { ok: true, url }
 }
 
-function consumeRateLimit(req) {
+function consumeRateLimit(req, bucket, max) {
   const ip = getClientIp(req)
   const now = Date.now()
-  const bucket = recentRequestsByIp.get(ip) ?? { count: 0, resetAt: now + RATE_LIMIT_WINDOW_MS }
-
-  if (bucket.resetAt <= now) {
-    bucket.count = 0
-    bucket.resetAt = now + RATE_LIMIT_WINDOW_MS
+  const entry = bucket.get(ip) ?? { count: 0, resetAt: now + RATE_LIMIT_WINDOW_MS }
+  if (entry.resetAt <= now) {
+    entry.count = 0
+    entry.resetAt = now + RATE_LIMIT_WINDOW_MS
   }
-
-  bucket.count += 1
-  recentRequestsByIp.set(ip, bucket)
-
-  return bucket.count <= RATE_LIMIT_MAX
+  entry.count += 1
+  bucket.set(ip, entry)
+  return entry.count <= max
 }
 
-function readBody(req) {
+function readBody(req, maxBytes) {
   return new Promise((resolve, reject) => {
     let raw = ''
     req.on('data', (chunk) => {
       raw += chunk
-      if (Buffer.byteLength(raw) > MAX_BODY_BYTES) {
+      if (Buffer.byteLength(raw) > maxBytes) {
         const error = new Error('payload_too_large')
         error.statusCode = 413
         reject(error)
         req.destroy()
-        return
       }
     })
     req.on('end', () => {
-      if (!raw) {
-        resolve({})
-        return
-      }
+      if (!raw) return resolve({})
       try {
         resolve(JSON.parse(raw))
       } catch (error) {
@@ -116,39 +134,106 @@ function readBody(req) {
   })
 }
 
-export default async function handler(req, res) {
-  if (req.method === 'OPTIONS') {
-    res.writeHead(204, jsonHeaders)
-    res.end()
+function clampText(value, limit) {
+  return String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, limit)
+}
+
+// === ACTION: list briefs (GET, requires n8n auth) ===
+async function handleList(req, res, url) {
+  if (!isAuthorizedN8n(req)) {
+    sendJson(res, 401, { ok: false, error: 'n8n_token_required', note: 'Header: Authorization: Bearer <N8N_WEBHOOK_TOKEN>' })
     return
   }
+  const statusFilter = url.searchParams.get('status')
+  const since = Number(url.searchParams.get('since') ?? 0)
+  const all = Array.from(briefStore.values())
+  const filtered = all
+    .filter((b) => !statusFilter || b.status === statusFilter)
+    .filter((b) => !since || (b.updatedAt ?? 0) >= since)
+    .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
+    .slice(0, 100)
 
-  if (req.method !== 'POST') {
-    sendJson(res, 405, { error: 'method_not_allowed' })
+  sendJson(res, 200, {
+    ok: true,
+    action: 'list',
+    count: filtered.length,
+    storeSize: all.length,
+    storageMode: 'in_memory_ephemeral',
+    note: 'In-memory store, reset on cold start. Migrate Vercel KV planned.',
+    briefs: filtered,
+  })
+}
+
+// === ACTION: result (POST, requires n8n auth) ===
+async function handleResult(req, res) {
+  if (!isAuthorizedN8n(req)) {
+    sendJson(res, 401, { ok: false, error: 'n8n_token_required' })
     return
   }
-
-  if (!isOriginAllowed(req)) {
-    sendJson(res, 403, { error: 'origin_not_allowed' })
+  if (!consumeRateLimit(req, recentCallbacksByIp, CALLBACK_RATE_LIMIT)) {
+    sendJson(res, 429, { ok: false, error: 'rate_limited' })
     return
   }
-
-  if (!consumeRateLimit(req)) {
-    sendJson(res, 429, { error: 'rate_limited' })
-    return
-  }
-
-  const contentType = getHeader(req, 'content-type') ?? ''
-  if (!contentType.includes('application/json')) {
-    sendJson(res, 415, { error: 'unsupported_media_type' })
-    return
-  }
-
   let payload
   try {
-    payload = await readBody(req)
+    payload = await readBody(req, CALLBACK_MAX_BYTES)
   } catch (error) {
-    sendJson(res, error.statusCode ?? 400, { error: error.message === 'payload_too_large' ? 'payload_too_large' : 'invalid_json' })
+    sendJson(res, error.statusCode ?? 400, {
+      ok: false,
+      error: error.message === 'payload_too_large' ? 'payload_too_large' : 'invalid_json',
+    })
+    return
+  }
+  const briefId = clampText(payload?.briefId, 80)
+  if (!briefId) {
+    sendJson(res, 400, { ok: false, error: 'briefId_required' })
+    return
+  }
+  const status = clampText(payload?.status, 30)
+  if (!VALID_STATUSES.has(status)) {
+    sendJson(res, 400, { ok: false, error: 'invalid_status', allowed: Array.from(VALID_STATUSES) })
+    return
+  }
+  const stored = {
+    briefId,
+    status,
+    result: payload?.result ?? null,
+    receivedAt: Date.now(),
+    updatedAt: Date.now(),
+    source: 'n8n',
+  }
+  briefStore.set(briefId, stored)
+  // Trim store kalau > 200 entries
+  if (briefStore.size > 200) {
+    const sorted = Array.from(briefStore.entries()).sort((a, b) => (b[1].updatedAt ?? 0) - (a[1].updatedAt ?? 0))
+    briefStore.clear()
+    for (const [k, v] of sorted.slice(0, 100)) briefStore.set(k, v)
+  }
+  sendJson(res, 202, {
+    ok: true,
+    action: 'result',
+    accepted: true,
+    briefId,
+    status,
+    storeSize: briefStore.size,
+    note: 'Client should poll GET /api/agent/briefs?action=list&since=<receivedAt-1>',
+  })
+}
+
+// === ACTION: submit (POST default, app-originated brief submit ke webhook runtime) ===
+async function handleSubmit(req, res) {
+  if (!consumeRateLimit(req, recentRequestsByIp, RATE_LIMIT_MAX)) {
+    sendJson(res, 429, { ok: false, error: 'rate_limited' })
+    return
+  }
+  let payload
+  try {
+    payload = await readBody(req, MAX_BODY_BYTES)
+  } catch (error) {
+    sendJson(res, error.statusCode ?? 400, {
+      ok: false,
+      error: error.message === 'payload_too_large' ? 'payload_too_large' : 'invalid_json',
+    })
     return
   }
 
@@ -158,40 +243,28 @@ export default async function handler(req, res) {
 
   if (!webhookUrl) {
     res.writeHead(202, jsonHeaders)
-    res.end(
-      JSON.stringify({
-        mode: 'contract',
-        status: 'accepted',
-        jobId,
-        note: 'ATMAJA_BRIEF_WEBHOOK_URL belum dikonfigurasi. App memakai contract-mode fallback.',
-      }),
-    )
+    res.end(JSON.stringify({
+      mode: 'contract',
+      status: 'accepted',
+      jobId,
+      note: 'ATMAJA_BRIEF_WEBHOOK_URL belum dikonfigurasi. App memakai contract-mode fallback.',
+    }))
     return
   }
-
   if (!bridgeToken) {
     sendJson(res, 428, {
       mode: 'offline',
       status: 'bridge_error',
       jobId,
       error: 'bridge_token_required',
-      note: 'ATMAJA_BRIDGE_TOKEN wajib diset sebelum app boleh forward brief ke runtime.',
     })
     return
   }
-
   const webhookPolicy = isWebhookAllowed(webhookUrl)
   if (!webhookPolicy.ok) {
-    sendJson(res, 422, {
-      mode: 'offline',
-      status: 'bridge_error',
-      jobId,
-      error: webhookPolicy.reason,
-      note: 'Webhook runtime tidak lolos kebijakan keamanan bridge.',
-    })
+    sendJson(res, 422, { mode: 'offline', status: 'bridge_error', jobId, error: webhookPolicy.reason })
     return
   }
-
   try {
     const upstream = await fetch(webhookPolicy.url, {
       method: 'POST',
@@ -199,41 +272,66 @@ export default async function handler(req, res) {
         'content-type': 'application/json',
         authorization: `Bearer ${bridgeToken}`,
       },
-      body: JSON.stringify({
-        jobId,
-        source: 'gerai-app',
-        schema: 'gerai-agent-output-v1',
-        payload,
-      }),
+      body: JSON.stringify({ jobId, source: 'gerai-app', schema: 'gerai-agent-output-v1', payload }),
     })
-
     const text = await upstream.text()
     let body = {}
-    try {
-      body = text ? JSON.parse(text) : {}
-    } catch {
-      body = { raw: text }
-    }
-
+    try { body = text ? JSON.parse(text) : {} } catch { body = { raw: text } }
     res.writeHead(upstream.ok ? 202 : upstream.status, jsonHeaders)
-    res.end(
-      JSON.stringify({
-        mode: 'webhook',
-        status: upstream.ok ? 'accepted' : 'upstream_error',
-        jobId,
-        upstreamStatus: upstream.status,
-        upstream: body,
-      }),
-    )
+    res.end(JSON.stringify({
+      mode: 'webhook',
+      status: upstream.ok ? 'accepted' : 'upstream_error',
+      jobId,
+      upstreamStatus: upstream.status,
+      upstream: body,
+    }))
   } catch (error) {
     res.writeHead(502, jsonHeaders)
-    res.end(
-      JSON.stringify({
-        mode: 'webhook',
-        status: 'bridge_error',
-        jobId,
-        error: error instanceof Error ? error.message : 'unknown_error',
-      }),
-    )
+    res.end(JSON.stringify({
+      mode: 'webhook',
+      status: 'bridge_error',
+      jobId,
+      error: error instanceof Error ? error.message : 'unknown_error',
+    }))
   }
+}
+
+// === MAIN HANDLER: route by method + action query ===
+export default async function handler(req, res) {
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, jsonHeaders)
+    res.end()
+    return
+  }
+
+  if (!isOriginAllowed(req)) {
+    sendJson(res, 403, { ok: false, error: 'origin_not_allowed' })
+    return
+  }
+
+  const url = new URL(req.url, `http://${getHeader(req, 'host') ?? 'localhost'}`)
+  const action = (url.searchParams.get('action') ?? '').toLowerCase()
+
+  if (req.method === 'GET') {
+    if (action === 'list' || action === '') {
+      return handleList(req, res, url)
+    }
+    sendJson(res, 400, { ok: false, error: 'unknown_action', note: 'GET hanya support ?action=list' })
+    return
+  }
+
+  if (req.method === 'POST') {
+    const contentType = getHeader(req, 'content-type') ?? ''
+    if (!contentType.includes('application/json')) {
+      sendJson(res, 415, { ok: false, error: 'unsupported_media_type' })
+      return
+    }
+    if (action === 'result') {
+      return handleResult(req, res)
+    }
+    // Default POST = submit brief (backward compat)
+    return handleSubmit(req, res)
+  }
+
+  sendJson(res, 405, { ok: false, error: 'method_not_allowed' })
 }
