@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Send, X } from 'lucide-react'
+import { Send, X, Image as ImageIcon } from 'lucide-react'
 import {
   CONTRIBUTOR_META,
   getContributorColorRole,
@@ -11,6 +11,7 @@ import {
 } from '@/lib/types'
 import { generateRoleReply, type ChatMessage } from '@/lib/mockReplies'
 import { requestAgentReply } from '@/lib/agentClient'
+import { generateImage, parseImageCommand, type OpenAIImageModel } from '@/lib/openaiImageClient'
 import { cn } from '@/lib/utils'
 
 interface AskRolePanelProps {
@@ -20,10 +21,19 @@ interface AskRolePanelProps {
   onOpenChange: (open: boolean) => void
 }
 
+interface MessageImage {
+  dataUri: string
+  prompt: string
+  model: OpenAIImageModel
+  revisedPrompt?: string | null
+  size?: string
+}
+
 interface Message {
   id: string
   author: 'matthew' | Contributor
   text: string
+  image?: MessageImage
 }
 
 const roleBg: Record<Role, string> = {
@@ -73,6 +83,38 @@ export function AskRolePanel({ role, brief, open, onOpenChange }: AskRolePanelPr
     setMessages((prev) => [...prev, userMsg])
     setText('')
     setSending(true)
+
+    // Image-gen command intercept. Kalau /img, /image, /dalle, /gpt-image → route ke OpenAI.
+    const imgCmd = parseImageCommand(trimmed)
+    if (imgCmd) {
+      const result = await generateImage({
+        prompt: imgCmd.prompt,
+        model: imgCmd.model,
+        size: '1024x1024',
+      })
+      const reply: Message = !result
+        ? {
+            id: `m-${Date.now() + 1}`,
+            author: role,
+            text:
+              'Tidak bisa generate gambar saat ini. Cek apakah OPENAI_API_KEY sudah terpasang di server dan credit OpenAI masih ada.',
+          }
+        : {
+            id: `m-${Date.now() + 1}`,
+            author: role,
+            text: `Gambar siap (${result.model}, ${result.size}, ${(result.elapsedMs / 1000).toFixed(1)}s).`,
+            image: {
+              dataUri: result.dataUri,
+              prompt: imgCmd.prompt,
+              model: result.model,
+              revisedPrompt: result.revisedPrompt,
+              size: result.size,
+            },
+          }
+      setMessages((prev) => [...prev, reply])
+      setSending(false)
+      return
+    }
 
     // Try remote agent endpoint first (server enforces Sonnet 4.6+ floor).
     // Fallback ke mock reply hanya kalau bridge gagal atau privacy lock aktif.
@@ -266,7 +308,28 @@ function MessageBubble({ message, role }: { message: Message; role: Contributor 
           isMatthew ? 'bg-accent text-white shadow-glass' : 'glass-soft text-text-primary shadow-glass',
         )}
       >
-        {message.text}
+        <div className="whitespace-pre-line">{message.text}</div>
+        {message.image && (
+          <figure className="mt-2.5 overflow-hidden rounded-md border border-white/30 bg-white/8">
+            <img
+              src={message.image.dataUri}
+              alt={message.image.prompt}
+              loading="lazy"
+              className="block aspect-square w-full max-w-[420px] object-cover"
+            />
+            <figcaption className="flex items-start gap-1.5 px-2 py-1.5 text-[10px] font-bold leading-4 text-text-secondary bg-white/85">
+              <ImageIcon aria-hidden="true" className="size-3 shrink-0 text-accent-dark" />
+              <span className="min-w-0">
+                <span className="block truncate font-extrabold uppercase tracking-wide text-accent-dark">
+                  {message.image.model}{message.image.size ? ` · ${message.image.size}` : ''}
+                </span>
+                <span className="block truncate text-text-muted">
+                  {message.image.revisedPrompt || message.image.prompt}
+                </span>
+              </span>
+            </figcaption>
+          </figure>
+        )}
       </div>
     </motion.div>
   )

@@ -5,6 +5,7 @@ import { Send, Sunrise, ArrowUpRight, Trash2, ChevronDown, FileText, Image as Im
 import { loadStoredBriefs } from '@/lib/briefStore'
 import { recordInteractionLessons } from '@/lib/learningMemory'
 import { isAtmajaRemoteBridgeAllowed, requestAtmajaReply } from '@/lib/atmajaClient'
+import { generateImage, parseImageCommand, type OpenAIImageModel } from '@/lib/openaiImageClient'
 import { generateMockReply, type ChatMessage } from '@/lib/mockReplies'
 import { cn } from '@/lib/utils'
 
@@ -354,6 +355,66 @@ export default function Atmaja() {
     }
   }, [])
 
+  const scheduleImageGen = useCallback((userMsg: AtmajaMessage, parsed: { prompt: string; model: OpenAIImageModel }) => {
+    if (pendingReplyTimerRef.current !== null) {
+      window.clearTimeout(pendingReplyTimerRef.current)
+      pendingReplyTimerRef.current = null
+    }
+    setSending(true)
+    void (async () => {
+      const result = await generateImage({
+        prompt: parsed.prompt,
+        model: parsed.model,
+        size: '1024x1024',
+      })
+
+      if (!result) {
+        const errReply: AtmajaMessage = {
+          id: `m-${Date.now() + 1}`,
+          author: 'ceo',
+          text:
+            'Saya tidak bisa generate gambar saat ini. Cek apakah OPENAI_API_KEY sudah terpasang di server dan credit OpenAI masih ada. Status detail: /api/openai/credits.',
+          timeAgo: 'Baru saja',
+        }
+        setMessages((prev) => {
+          const userIndex = prev.findIndex((m) => m.id === userMsg.id)
+          if (userIndex >= 0 && prev[userIndex + 1]?.author === 'ceo') return prev
+          const next = [...prev, errReply]
+          saveThread(next)
+          return next
+        })
+        setSending(false)
+        return
+      }
+
+      const visual: AtmajaVisual = {
+        id: `vis-genimg-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        kind: 'generated-image',
+        title: `${result.model} · ${result.size}`,
+        caption: result.revisedPrompt
+          ? `Prompt diolah ulang model: ${result.revisedPrompt}`
+          : `Prompt: ${parsed.prompt}`,
+        imageDataUri: result.dataUri,
+        prompt: parsed.prompt,
+      }
+      const reply: AtmajaMessage = {
+        id: `m-${Date.now() + 1}`,
+        author: 'ceo',
+        text: `Gambar siap (${result.model}, ${result.size}, ${(result.elapsedMs / 1000).toFixed(1)}s).`,
+        timeAgo: 'Baru saja',
+        visuals: [visual],
+      }
+      setMessages((prev) => {
+        const userIndex = prev.findIndex((m) => m.id === userMsg.id)
+        if (userIndex >= 0 && prev[userIndex + 1]?.author === 'ceo') return prev
+        const next = [...prev, reply]
+        saveThread(next)
+        return next
+      })
+      setSending(false)
+    })()
+  }, [])
+
   const scheduleAtmajaReply = useCallback((historySnapshot: AtmajaMessage[], userMsg: AtmajaMessage, delay = REPLY_DELAY_MS) => {
     if (pendingReplyTimerRef.current !== null) {
       window.clearTimeout(pendingReplyTimerRef.current)
@@ -425,8 +486,14 @@ export default function Atmaja() {
   useEffect(() => {
     const lastMessage = messages[messages.length - 1]
     if (!lastMessage || lastMessage.author !== 'matthew' || sending) return
+    // Cek image-gen command dulu. Kalau match, route ke OpenAI image bukan Atmaja chat.
+    const imgCmd = parseImageCommand(lastMessage.text)
+    if (imgCmd) {
+      scheduleImageGen(lastMessage, imgCmd)
+      return
+    }
     scheduleAtmajaReply(messages.slice(0, -1), lastMessage, 350)
-  }, [messages, scheduleAtmajaReply, sending])
+  }, [messages, scheduleAtmajaReply, scheduleImageGen, sending])
 
   const handleReset = () => {
     setMessages(initialThread)
