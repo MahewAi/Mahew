@@ -1,0 +1,180 @@
+{
+  "name": "Gerai 01 - Brief Lifecycle",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "gerai-brief-submit",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "trigger-webhook",
+      "name": "Webhook: Brief Submit",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "gerai-brief-submit"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate input + normalize brief data\nconst body = $input.first().json.body || {};\nconst briefId = body.briefId || `br-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;\nconst title = (body.title || '').trim().slice(0, 200);\nconst summary = (body.summary || '').trim().slice(0, 2000);\nconst contributors = Array.isArray(body.contributors) ? body.contributors.slice(0, 4) : ['coo', 'cmo', 'cfo', 'cco'];\n\nif (!title) {\n  throw new Error('title_required');\n}\nif (!summary) {\n  throw new Error('summary_required');\n}\n\nreturn {\n  briefId,\n  title,\n  summary,\n  contributors,\n  receivedAt: Date.now(),\n  callbackUrl: body.callbackUrl || 'https://gerai.mahewwork.com/api/agent/briefs?action=result',\n};"
+      },
+      "id": "validate",
+      "name": "Validate + Normalize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "contributors",
+        "options": {}
+      },
+      "id": "split-roles",
+      "name": "Split per Contributor",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gerai.mahewwork.com/api/agent/reply",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"role\": \"{{ $json.contributors }}\",\n  \"tier\": \"orchestration\",\n  \"userMessage\": \"Berikan analisis singkat 200 kata untuk brief berikut. Output: Plan A satu paragraf, risiko utama satu kalimat, next action satu kalimat. Brief: {{ $('Validate + Normalize').item.json.title }}. Detail: {{ $('Validate + Normalize').item.json.summary }}\",\n  \"briefContext\": \"{{ $('Validate + Normalize').item.json.title }}\"\n}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "call-csuite",
+      "name": "Call C-Suite Reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [840, 300]
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "id": "aggregate-replies",
+      "name": "Wait All C-Suite",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [1040, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build assembled context untuk Atmaja synthesis\nconst all = $input.all();\nconst replies = all[0].json.data || [];\nconst meta = $('Validate + Normalize').first().json;\n\nconst lines = replies.map(r => {\n  const role = (r.role || 'unknown').toUpperCase();\n  const text = (r.text || '').slice(0, 1500);\n  return `### ${role}\\n${text}`;\n}).join('\\n\\n');\n\nreturn {\n  briefId: meta.briefId,\n  title: meta.title,\n  summary: meta.summary,\n  callbackUrl: meta.callbackUrl,\n  csuiteOutput: lines,\n  synthPrompt: `Sintesakan output 4 C-suite ini untuk brief \\\"${meta.title}\\\" jadi 1 keputusan utama, 3 next action konkret, dan 1 risiko terbesar. Maximum 300 kata.\\n\\n${lines}`,\n};"
+      },
+      "id": "build-synth",
+      "name": "Build Atmaja Synth Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1240, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gerai.mahewwork.com/api/atmaja/chat",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"userMessage\": \"{{ $json.synthPrompt.replace(/\"/g, '\\\\\"').replace(/\\n/g, '\\\\n') }}\"\n}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "atmaja-synth",
+      "name": "Atmaja Final Synthesis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1440, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build final AgentOutputEnvelope payload\nconst synth = $input.first().json;\nconst meta = $('Build Atmaja Synth Prompt').first().json;\n\nreturn {\n  briefId: meta.briefId,\n  status: synth.ok ? 'completed' : 'degraded',\n  result: {\n    summary: synth.text || 'Atmaja synthesis tidak tersedia',\n    csuiteOutput: meta.csuiteOutput,\n    model: synth.model || 'unknown',\n    title: meta.title,\n    originalSummary: meta.summary,\n    completedAt: Date.now(),\n  },\n  callbackUrl: meta.callbackUrl,\n};"
+      },
+      "id": "build-envelope",
+      "name": "Build Result Envelope",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1640, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.callbackUrl }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $credentials.gerai_n8n_token.token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"briefId\": \"{{ $json.briefId }}\",\n  \"status\": \"{{ $json.status }}\",\n  \"result\": {{ JSON.stringify($json.result) }}\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "callback-app",
+      "name": "Callback to App",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1840, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"ok\": true,\n  \"briefId\": \"{{ $('Build Result Envelope').first().json.briefId }}\",\n  \"status\": \"{{ $('Build Result Envelope').first().json.status }}\",\n  \"summary\": \"{{ ($('Build Result Envelope').first().json.result.summary || '').slice(0, 200) }}\"\n}"
+      },
+      "id": "respond",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2040, 300]
+    }
+  ],
+  "connections": {
+    "Webhook: Brief Submit": {
+      "main": [[{ "node": "Validate + Normalize", "type": "main", "index": 0 }]]
+    },
+    "Validate + Normalize": {
+      "main": [[{ "node": "Split per Contributor", "type": "main", "index": 0 }]]
+    },
+    "Split per Contributor": {
+      "main": [[{ "node": "Call C-Suite Reply", "type": "main", "index": 0 }]]
+    },
+    "Call C-Suite Reply": {
+      "main": [[{ "node": "Wait All C-Suite", "type": "main", "index": 0 }]]
+    },
+    "Wait All C-Suite": {
+      "main": [[{ "node": "Build Atmaja Synth Prompt", "type": "main", "index": 0 }]]
+    },
+    "Build Atmaja Synth Prompt": {
+      "main": [[{ "node": "Atmaja Final Synthesis", "type": "main", "index": 0 }]]
+    },
+    "Atmaja Final Synthesis": {
+      "main": [[{ "node": "Build Result Envelope", "type": "main", "index": 0 }]]
+    },
+    "Build Result Envelope": {
+      "main": [[{ "node": "Callback to App", "type": "main", "index": 0 }]]
+    },
+    "Callback to App": {
+      "main": [[{ "node": "Respond OK", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "meta": {
+    "description": "Gerai 1000 Pintu - Brief Lifecycle workflow. Receive brief via webhook, fan-out ke 4 C-suite (COO/CMO/CFO/CCO) via Sonnet 4.6, aggregate, sintesakan via Atmaja Opus 4.7, callback hasil ke app endpoint /api/agent/briefs?action=result.",
+    "owner": "Matthew - Gerai 1000 Pintu",
+    "version": "1.0.0"
+  }
+}

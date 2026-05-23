@@ -1,0 +1,145 @@
+{
+  "name": "Gerai 02 - Daily Digest",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 7 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule",
+      "name": "Schedule: 07:00 WITA",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://gerai.mahewwork.com/api/agent/briefs",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "action", "value": "list" },
+            { "name": "status", "value": "in_progress" }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $credentials.gerai_n8n_token.token }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "fetch-briefs",
+      "name": "Fetch Active Briefs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build digest prompt dari list briefs\nconst data = $input.first().json;\nconst briefs = data.briefs || [];\n\nif (briefs.length === 0) {\n  return {\n    skip: true,\n    note: 'No active briefs, skip digest',\n  };\n}\n\nconst lines = briefs.map((b, i) => {\n  const title = b.result?.title || b.briefId;\n  const status = b.status;\n  const summary = (b.result?.summary || '').slice(0, 200);\n  return `${i + 1}. [${status}] ${title}\\n   ${summary}`;\n}).join('\\n\\n');\n\nreturn {\n  skip: false,\n  briefCount: briefs.length,\n  digestPrompt: `Sintesakan kondisi Gerai 1000 Pintu hari ini dari ${briefs.length} brief aktif berikut. Format: 3 prioritas urutan, 1 risiko utama, 1 next action konkret yang harus Matthew lakukan hari ini. Maximum 250 kata.\\n\\nBrief aktif:\\n${lines}`,\n};"
+      },
+      "id": "build-prompt",
+      "name": "Build Digest Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "skip-check",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "false" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "skip-if-empty",
+      "name": "Skip If Empty",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [840, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gerai.mahewwork.com/api/atmaja/chat",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"userMessage\": \"{{ $json.digestPrompt.replace(/\"/g, '\\\\\"').replace(/\\n/g, '\\\\n') }}\"\n}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "atmaja-digest",
+      "name": "Atmaja Sintesis Digest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1040, 220]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format digest output. Akan dikirim ke channel notif (email/Discord/PWA push) di node berikutnya.\n// Untuk MVP, sekarang cuma log + opsi kirim ke webhook callback app.\nconst result = $input.first().json;\nconst digestText = result.text || 'Atmaja synth tidak tersedia';\nconst now = new Date();\nconst dateStr = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });\n\nreturn {\n  date: dateStr,\n  digest: digestText,\n  model: result.model || 'unknown',\n  briefCount: $('Build Digest Prompt').first().json.briefCount,\n  note: 'Digest siap. Sambungkan ke channel notif (email, Discord, atau PWA push) untuk auto-kirim ke Matthew.',\n};"
+      },
+      "id": "format-output",
+      "name": "Format Digest Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1240, 220]
+    }
+  ],
+  "connections": {
+    "Schedule: 07:00 WITA": {
+      "main": [[{ "node": "Fetch Active Briefs", "type": "main", "index": 0 }]]
+    },
+    "Fetch Active Briefs": {
+      "main": [[{ "node": "Build Digest Prompt", "type": "main", "index": 0 }]]
+    },
+    "Build Digest Prompt": {
+      "main": [[{ "node": "Skip If Empty", "type": "main", "index": 0 }]]
+    },
+    "Skip If Empty": {
+      "main": [
+        [{ "node": "Atmaja Sintesis Digest", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Atmaja Sintesis Digest": {
+      "main": [[{ "node": "Format Digest Output", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Makassar"
+  },
+  "active": false,
+  "meta": {
+    "description": "Gerai 1000 Pintu - Daily Digest. Setiap pagi 07:00 WITA pull list brief aktif, kirim ke Atmaja Opus 4.7 untuk sintesa, hasilkan 3 prioritas + 1 risiko + 1 next action. Optional connect ke email/Discord/PWA push untuk auto-kirim ke Matthew.",
+    "owner": "Matthew - Gerai 1000 Pintu",
+    "version": "1.0.0"
+  }
+}
