@@ -380,7 +380,7 @@ export default async function handler(req, res) {
         model: modelId,
         messages,
         temperature: 0.45,
-        max_tokens: 900,
+        max_tokens: 4096,
       }),
     })
 
@@ -434,6 +434,13 @@ export default async function handler(req, res) {
       return
     }
 
+    // Detect truncation: append clear note kalau response kena max_tokens cap.
+    const finishReason = body?.choices?.[0]?.finish_reason ?? body?.choices?.[0]?.native_finish_reason ?? null
+    const truncated = finishReason === 'length' || finishReason === 'max_tokens'
+    if (truncated) {
+      replyText = replyText.trim() + '\n\n---\n_[Jawaban terpotong karena batas panjang. Balas "lanjutkan" supaya saya teruskan dari titik berhenti.]_'
+    }
+
     // Hitung policy actual berdasarkan apa yang BENERAN dikirim.
     const imagesSent = attachments.filter((a) => a.dataBase64 && a.documentKind === 'image').length
     const pdfsSent = attachments.filter((a) => a.dataBase64 && a.documentKind === 'pdf').length
@@ -458,6 +465,8 @@ export default async function handler(req, res) {
       model: (body?.model ?? usedModel) || null,
       requestedModel: primaryModel,
       fallbackUsed: fallbackTried,
+      truncated,
+      finishReason,
       text: replyText.trim(),
       usage: body?.usage ?? null,
       attachmentsPolicy: policy,
