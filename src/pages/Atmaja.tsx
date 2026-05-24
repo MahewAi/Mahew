@@ -404,6 +404,8 @@ export default function Atmaja() {
   }, [messages])
 
   // Lapis 3: load server capabilities + library files on mount.
+  // Plus auto-detect kalau service worker cache stale (response empty padahal capability live)
+  // dan otomatis suggest force reload tanpa user harus tau teknis.
   useEffect(() => {
     let cancelled = false
     void (async () => {
@@ -417,8 +419,41 @@ export default function Atmaja() {
         if (list?.ok) {
           setLibraryFiles(list.files)
           setLibraryError('')
+          // Cek versi service worker — kalau ada update pending, auto-trigger update biar UX cepat
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistration().then((reg) => {
+              if (reg && reg.waiting) {
+                reg.waiting.postMessage({ type: 'SKIP_WAITING' })
+              }
+              if (reg) {
+                void reg.update()
+              }
+            }).catch(() => {})
+          }
         } else {
-          setLibraryError('Gagal load library (server returned null/error). Coba klik Refresh atau hard reload PWA.')
+          // Library fetch fail dari client tapi server capability fileLibrary=true.
+          // Bisa 1 dari 2: SW intercept return stale, atau real server error.
+          // Try once more dengan SW skip via cache:'reload' option (force network).
+          try {
+            const retryResp = await fetch(`/api/atmaja/memory?type=files&_=${Date.now()}`, {
+              cache: 'reload',
+              headers: { 'cache-control': 'no-cache' },
+            })
+            if (retryResp.ok) {
+              const retryData = await retryResp.json()
+              if (retryData?.ok) {
+                setLibraryFiles(retryData.files ?? [])
+                setLibraryError('')
+                setLibraryLoading(false)
+                return
+              }
+            }
+          } catch {
+            // ignore, fall through to error UI
+          }
+          setLibraryError(
+            'Library fetch gagal. Service worker cache lama mungkin block. Klik "Force reload PWA" di bawah untuk auto-fix.',
+          )
         }
         setLibraryLoading(false)
       }
