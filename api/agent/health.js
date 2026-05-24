@@ -46,7 +46,9 @@ export default function handler(_req, res) {
           textPreview: true,
           longTermMemory: Boolean(process.env.KV_REST_API_URL ?? process.env.KV_URL),
           memoryAutoUpdate: true,
+          memoryBackup: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
           fileLibrary: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
+          skillProposals: Boolean(process.env.KV_REST_API_URL ?? process.env.KV_URL),
           historyMaxMessages: 100,
           historyMaxCharsPerMessage: 15_000,
           maxImageBase64Bytes: 2_100_000,
@@ -55,6 +57,13 @@ export default function handler(_req, res) {
           maxPdfsPerTurn: 1,
           maxFileAttachedPerTurn: 3,
           maxTextPreviewChars: 30_000,
+        },
+        endpoints: {
+          chat: '/api/atmaja/chat',
+          memory: '/api/atmaja/memory',
+          files: '/api/atmaja/memory?type=files',
+          backup: '/api/atmaja/memory?type=backup',
+          proposals: '/api/atmaja/memory?type=proposals',
         },
       },
       image: {

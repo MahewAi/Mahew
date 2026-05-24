@@ -123,6 +123,132 @@ export async function getMemoryStats() {
 }
 
 // ============================================================================
+// SKILL PROPOSAL OPERATIONS (foundation Self-Evolving Atmaja)
+// ============================================================================
+// Pattern: Atmaja propose new specialist/workflow/skill/integration berdasarkan
+// pattern percakapan + gap detection. Matthew review + approve/reject di PWA.
+// Approved proposals → trigger implementation pipeline (manual atau auto).
+
+const PROPOSALS_KEY = 'atmaja:proposals:matthew'
+const PROPOSALS_MAX_ACTIVE = 50
+const VALID_PROPOSAL_TYPES = new Set(['specialist', 'workflow', 'skill', 'prompt-refinement', 'integration', 'feature'])
+const VALID_PROPOSAL_STATUS = new Set(['pending', 'approved', 'rejected', 'implemented'])
+
+function generateProposalId() {
+  return `prop-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+}
+
+export async function listProposals(filter = null) {
+  try {
+    const stored = await kv.get(PROPOSALS_KEY)
+    const arr = Array.isArray(stored) ? stored : []
+    if (filter && VALID_PROPOSAL_STATUS.has(filter)) {
+      return arr.filter((p) => p.status === filter)
+    }
+    return arr
+  } catch (error) {
+    console.error('[atmaja-proposals] list error:', error?.message ?? error)
+    return []
+  }
+}
+
+export async function createProposal(input) {
+  const proposalType = String(input?.type ?? '').trim()
+  if (!VALID_PROPOSAL_TYPES.has(proposalType)) {
+    return { ok: false, error: 'invalid_type', valid: Array.from(VALID_PROPOSAL_TYPES) }
+  }
+  const title = String(input?.title ?? '').trim().slice(0, 200)
+  const description = String(input?.description ?? '').trim().slice(0, 2000)
+  if (!title || !description) {
+    return { ok: false, error: 'title_and_description_required' }
+  }
+
+  const proposal = {
+    id: generateProposalId(),
+    type: proposalType,
+    title,
+    description,
+    rationale: String(input?.rationale ?? '').trim().slice(0, 2000),
+    examples: Array.isArray(input?.examples) ? input.examples.slice(0, 5).map((e) => String(e).slice(0, 500)) : [],
+    estimatedEffort: String(input?.estimatedEffort ?? '').trim().slice(0, 100),
+    estimatedCost: String(input?.estimatedCost ?? '').trim().slice(0, 100),
+    proposedBy: String(input?.proposedBy ?? 'atmaja').trim().slice(0, 50),
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+    approvedAt: null,
+    rejectedReason: null,
+    implementedAt: null,
+    implementedCommit: null,
+  }
+
+  try {
+    const existing = await listProposals()
+
+    // Dedup: skip kalau ada proposal pending dengan title 90%+ mirip (basic similarity)
+    const titleLower = title.toLowerCase()
+    const dup = existing.find((p) =>
+      p.status === 'pending' && String(p.title ?? '').toLowerCase() === titleLower
+    )
+    if (dup) {
+      return { ok: true, proposal: dup, note: 'duplicate_pending_proposal_returned' }
+    }
+
+    if (existing.filter((p) => p.status === 'pending').length >= PROPOSALS_MAX_ACTIVE) {
+      return { ok: false, error: 'pending_quota_exceeded', max: PROPOSALS_MAX_ACTIVE }
+    }
+
+    const updated = [...existing, proposal]
+    await kv.set(PROPOSALS_KEY, updated)
+    return { ok: true, proposal }
+  } catch (error) {
+    console.error('[atmaja-proposals] create error:', error?.message ?? error)
+    return { ok: false, error: error?.message ?? 'unknown' }
+  }
+}
+
+export async function updateProposalStatus(id, status, extra = {}) {
+  if (!VALID_PROPOSAL_STATUS.has(status)) {
+    return { ok: false, error: 'invalid_status', valid: Array.from(VALID_PROPOSAL_STATUS) }
+  }
+  try {
+    const existing = await listProposals()
+    const idx = existing.findIndex((p) => p.id === id)
+    if (idx === -1) {
+      return { ok: false, error: 'proposal_not_found' }
+    }
+    const updated = { ...existing[idx], status }
+    const ts = new Date().toISOString()
+    if (status === 'approved') updated.approvedAt = ts
+    if (status === 'rejected') updated.rejectedReason = String(extra?.reason ?? '').slice(0, 500)
+    if (status === 'implemented') {
+      updated.implementedAt = ts
+      updated.implementedCommit = String(extra?.commit ?? '').slice(0, 60)
+    }
+    existing[idx] = updated
+    await kv.set(PROPOSALS_KEY, existing)
+    return { ok: true, proposal: updated }
+  } catch (error) {
+    console.error('[atmaja-proposals] update error:', error?.message ?? error)
+    return { ok: false, error: error?.message ?? 'unknown' }
+  }
+}
+
+export async function clearProposals(statusFilter = null) {
+  try {
+    if (!statusFilter) {
+      await kv.del(PROPOSALS_KEY)
+      return { ok: true, cleared: 'all' }
+    }
+    const existing = await listProposals()
+    const remaining = existing.filter((p) => p.status !== statusFilter)
+    await kv.set(PROPOSALS_KEY, remaining)
+    return { ok: true, removed: existing.length - remaining.length, remaining: remaining.length }
+  } catch (error) {
+    return { ok: false, error: error?.message ?? 'unknown' }
+  }
+}
+
+// ============================================================================
 // BACKUP OPERATIONS (Lapis 2 defensive — daily snapshot ke Blob, rolling 30 hari)
 // ============================================================================
 
@@ -647,7 +773,93 @@ export default async function handler(req, res) {
     return
   }
 
+  if (type === 'proposals') {
+    await handleProposals(req, res, url)
+    return
+  }
+
   await handleMemory(req, res)
+}
+
+// ============================================================================
+// PROPOSALS HANDLER (Self-Evolving Atmaja foundation)
+// ============================================================================
+
+async function handleProposals(req, res, url) {
+  const action = url.searchParams.get('action')
+
+  // GET ?type=proposals[&status=pending|approved|rejected|implemented]
+  if (req.method === 'GET') {
+    const filter = url.searchParams.get('status')
+    const proposals = await listProposals(filter)
+    const counts = {
+      pending: 0,
+      approved: 0,
+      rejected: 0,
+      implemented: 0,
+    }
+    for (const p of proposals) {
+      if (counts[p.status] != null) counts[p.status] += 1
+    }
+    sendJson(res, 200, {
+      ok: true,
+      proposals,
+      count: proposals.length,
+      counts,
+      filter: filter || null,
+    })
+    return
+  }
+
+  // POST ?type=proposals&action=create body {type, title, description, rationale, examples, ...}
+  if (req.method === 'POST' && action === 'create') {
+    let payload
+    try {
+      payload = await readBody(req, 20_000)
+    } catch (error) {
+      sendJson(res, error.statusCode ?? 400, {
+        ok: false,
+        error: error.message === 'payload_too_large' ? 'payload_too_large' : 'invalid_json',
+      })
+      return
+    }
+    const result = await createProposal(payload)
+    sendJson(res, result.ok ? 200 : 400, result)
+    return
+  }
+
+  // PUT ?type=proposals&action=approve&id=X body {note?}
+  if (req.method === 'PUT' && (action === 'approve' || action === 'reject' || action === 'implemented')) {
+    const id = url.searchParams.get('id')
+    if (!id) {
+      sendJson(res, 400, { ok: false, error: 'id_required' })
+      return
+    }
+    let payload = {}
+    try {
+      payload = await readBody(req, 5_000)
+    } catch (error) {
+      // body opsional
+    }
+    const statusMap = { approve: 'approved', reject: 'rejected', implemented: 'implemented' }
+    const result = await updateProposalStatus(id, statusMap[action], payload || {})
+    sendJson(res, result.ok ? 200 : 404, result)
+    return
+  }
+
+  // DELETE ?type=proposals[&status=X] → clear all atau filter by status
+  if (req.method === 'DELETE') {
+    const statusFilter = url.searchParams.get('status')
+    const result = await clearProposals(statusFilter)
+    sendJson(res, 200, result)
+    return
+  }
+
+  sendJson(res, 405, {
+    ok: false,
+    error: 'method_or_action_not_allowed',
+    note: 'GET (list) | POST ?action=create | PUT ?action=approve|reject|implemented&id=X | DELETE',
+  })
 }
 
 // ============================================================================

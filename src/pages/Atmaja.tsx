@@ -416,6 +416,9 @@ export default function Atmaja() {
         if (cancelled) return
         if (list?.ok) {
           setLibraryFiles(list.files)
+          setLibraryError('')
+        } else {
+          setLibraryError('Gagal load library (server returned null/error). Coba klik Refresh atau hard reload PWA.')
         }
         setLibraryLoading(false)
       }
@@ -426,14 +429,38 @@ export default function Atmaja() {
   }, [])
 
   const refreshLibrary = useCallback(async () => {
-    if (!serverCaps?.fileLibrary) return
+    if (!serverCaps?.fileLibrary) {
+      setLibraryError('Server fileLibrary capability not detected. Cek /api/agent/health.')
+      return
+    }
     setLibraryLoading(true)
+    setLibraryError('')
     const list = await listLibraryFiles()
     if (list?.ok) {
       setLibraryFiles(list.files)
+    } else {
+      setLibraryError('Refresh gagal. Server tidak return data. Coba force reload PWA via tombol di bawah.')
     }
     setLibraryLoading(false)
   }, [serverCaps?.fileLibrary])
+
+  // Force unregister all service workers + clear cache + reload. Nuclear option untuk SW cache stale.
+  const forceReloadPWA = useCallback(async () => {
+    try {
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations()
+        await Promise.all(regs.map((r) => r.unregister()))
+      }
+      if ('caches' in window) {
+        const keys = await caches.keys()
+        await Promise.all(keys.map((k) => caches.delete(k)))
+      }
+    } catch (err) {
+      console.error('Force reload error:', err)
+    }
+    // Reload dengan cache-bust query
+    window.location.href = `/atmaja?_reload=${Date.now()}`
+  }, [])
 
   const handleLibraryUpload = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0) return
@@ -1224,9 +1251,16 @@ export default function Atmaja() {
               </div>
 
               {libraryError && (
-                <p className="mb-3 rounded-md bg-status-review/10 px-3 py-2 text-xs font-bold text-status-review">
-                  {libraryError}
-                </p>
+                <div className="mb-3 rounded-md bg-status-review/10 px-3 py-2">
+                  <p className="text-xs font-bold text-status-review">{libraryError}</p>
+                  <button
+                    type="button"
+                    onClick={() => void forceReloadPWA()}
+                    className="mt-2 inline-flex items-center gap-1 rounded-full bg-status-review px-3 py-1 text-[11px] font-extrabold text-white hover:bg-status-review/80"
+                  >
+                    Force reload PWA (clear cache + reload)
+                  </button>
+                </div>
               )}
 
               {!serverCaps?.fileLibrary && (
@@ -1237,6 +1271,24 @@ export default function Atmaja() {
 
               {serverCaps?.fileLibrary && libraryFiles.length === 0 && !libraryLoading && (
                 <div className="rounded-md bg-bg-soft p-6 text-center text-sm text-text-secondary">
+                  <BookOpen className="mx-auto mb-2 size-6 opacity-40" />
+                  <p>Library kosong. Upload PDF pertama untuk mulai.</p>
+                  <p className="mt-3 text-[11px] text-text-faint">
+                    Atau kalau kamu yakin sudah upload tapi tetap kosong, kemungkinan service worker cache stale.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => void forceReloadPWA()}
+                    className="mt-2 inline-flex items-center gap-1 rounded-full bg-accent px-3 py-1.5 text-[11px] font-extrabold text-white hover:bg-accent-dark"
+                  >
+                    Force reload PWA
+                  </button>
+                </div>
+              )}
+
+              {/* Original empty state (legacy block — keep collapsed since new block above replaces it visually). */}
+              {false && serverCaps?.fileLibrary && libraryFiles.length === 0 && (
+                <div className="hidden">
                   <BookOpen className="mx-auto mb-2 size-6 opacity-40" />
                   Library kosong. Upload PDF pertama untuk mulai.
                 </div>

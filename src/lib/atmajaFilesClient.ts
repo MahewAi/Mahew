@@ -63,10 +63,19 @@ export async function fetchServerCapabilities(): Promise<AtmajaServerCapabilitie
 
 export async function listLibraryFiles(): Promise<AtmajaLibraryListResponse | null> {
   try {
-    const response = await fetch('/api/atmaja/memory?type=files', { cache: 'no-store' })
-    if (!response.ok) return null
+    // Cache-bust dengan timestamp untuk bypass SW + browser cache.
+    const cacheBust = `_=${Date.now()}`
+    const response = await fetch(`/api/atmaja/memory?type=files&${cacheBust}`, {
+      cache: 'no-store',
+      headers: { 'cache-control': 'no-cache', pragma: 'no-cache' },
+    })
+    if (!response.ok) {
+      console.error('[atmajaFilesClient] list HTTP', response.status, await response.text().catch(() => ''))
+      return null
+    }
     return (await response.json()) as AtmajaLibraryListResponse
-  } catch {
+  } catch (error) {
+    console.error('[atmajaFilesClient] list error:', error)
     return null
   }
 }
