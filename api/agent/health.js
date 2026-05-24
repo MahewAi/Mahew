@@ -32,12 +32,13 @@ export default function handler(_req, res) {
         provider: 'OpenRouter',
         endpoint: '/api/atmaja/chat',
         memoryEndpoint: '/api/atmaja/memory',
+        filesEndpoint: '/api/atmaja/files',
         enabled: openRouterChatEnabled && openRouterKeyConfigured,
         keyConfigured: openRouterKeyConfigured,
         model: openRouterModel,
-        // Server endpoint sekarang support vision_inline (image base64 langsung ke Claude),
-        // pdf_native (PDF base64 via OpenRouter file content block, Claude Opus/Sonnet 4.x baca langsung),
-        // text_preview_inline (cuplikan teks file), dan long-term memory file (Vercel KV).
+        // Server endpoint support vision_inline (image base64), pdf_native (PDF base64 via
+        // OpenRouter file content block), text_preview_inline (cuplikan teks file),
+        // long-term memory file (Vercel KV), dan file library persistence (Vercel Blob).
         attachmentsPolicy: 'vision_pdf_native_or_text_preview',
         capabilities: {
           imageVision: true,
@@ -45,12 +46,14 @@ export default function handler(_req, res) {
           textPreview: true,
           longTermMemory: Boolean(process.env.KV_REST_API_URL ?? process.env.KV_URL),
           memoryAutoUpdate: true,
+          fileLibrary: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
           historyMaxMessages: 100,
           historyMaxCharsPerMessage: 15_000,
           maxImageBase64Bytes: 2_100_000,
           maxImagesPerTurn: 2,
           maxPdfBase64Bytes: 3_500_000,
           maxPdfsPerTurn: 1,
+          maxFileAttachedPerTurn: 3,
           maxTextPreviewChars: 30_000,
         },
       },

@@ -1,4 +1,5 @@
 import { readMemory, writeMemory, incrementTurnCounter } from './memory.js'
+import { getFileById, fetchFileBase64 } from './files.js'
 import { isRequestAllowed, getHeader, getRequestHost, parseCsv, getClientIp, consumeRateLimit as sharedConsumeRateLimit } from '../_shared.js'
 
 const jsonHeaders = {
@@ -313,6 +314,37 @@ export default async function handler(req, res) {
   }
 
   const attachments = normalizeAttachments(payload?.attachments)
+
+  // Lapis 3: resolve attachedFileIds → fetch dari Vercel Blob → tambahkan sebagai
+  // synthetic PDF attachment (re-use existing pdf_native pipeline).
+  const attachedFileIds = Array.isArray(payload?.attachedFileIds)
+    ? payload.attachedFileIds.filter((id) => typeof id === 'string').slice(0, 3)
+    : []
+  const fileAttachments = []
+  for (const fileId of attachedFileIds) {
+    try {
+      const file = await getFileById(fileId)
+      if (!file) continue
+      const base64 = await fetchFileBase64(file)
+      if (!base64) continue
+      fileAttachments.push({
+        name: file.name,
+        type: file.contentType,
+        kind: 'document',
+        size: file.size,
+        dataBase64: base64,
+        mime: file.contentType,
+        documentKind: 'pdf',
+        note: `Loaded from library (ID: ${file.id})`,
+      })
+    } catch (error) {
+      console.error('[atmaja-chat] file attachment error:', error?.message ?? error)
+    }
+  }
+
+  // Combine inline attachments (current turn upload) + library file attachments (reference).
+  const combinedAttachments = [...attachments, ...fileAttachments]
+
   // Atmaja /atmaja chat = CEO sintesis = CONTENT tier (per preferensi Matthew).
   // Premium content -> Opus 4.7. Sonnet 4.6 untuk fallback dan untuk orchestration C-suite.
   // openrouter/auto sebelumnya menghasilkan model lemah yang mengembalikan teks kosong.
@@ -355,7 +387,7 @@ export default async function handler(req, res) {
   const messages = [
     { role: 'system', content: buildSystemPrompt(memoryContent) },
     ...normalizeHistory(payload?.history),
-    { role: 'user', content: buildUserContent(userMessage, attachments) },
+    { role: 'user', content: buildUserContent(userMessage, combinedAttachments) },
   ]
 
   // Max output per single call. Opus 4.7 via OpenRouter support up to 8192 standard.
@@ -662,10 +694,11 @@ export default async function handler(req, res) {
     }
 
     // Hitung policy actual berdasarkan apa yang BENERAN dikirim.
-    const imagesSent = attachments.filter((a) => a.dataBase64 && a.documentKind === 'image').length
-    const pdfsSent = attachments.filter((a) => a.dataBase64 && a.documentKind === 'pdf').length
-    const textsSent = attachments.filter((a) => !a.dataBase64 && a.previewText).length
-    const metadataOnlyCount = attachments.filter((a) => !a.dataBase64 && !a.previewText).length
+    const imagesSent = combinedAttachments.filter((a) => a.dataBase64 && a.documentKind === 'image').length
+    const pdfsSent = combinedAttachments.filter((a) => a.dataBase64 && a.documentKind === 'pdf').length
+    const libraryPdfsSent = fileAttachments.length
+    const textsSent = combinedAttachments.filter((a) => !a.dataBase64 && a.previewText).length
+    const metadataOnlyCount = combinedAttachments.filter((a) => !a.dataBase64 && !a.previewText).length
     const policy =
       imagesSent > 0 && pdfsSent > 0
         ? 'multimodal_image_and_pdf'
@@ -703,6 +736,7 @@ export default async function handler(req, res) {
       attachmentsSummary: {
         imagesSent,
         pdfsSent,
+        libraryPdfsSent,
         textsSent,
         metadataOnly: metadataOnlyCount,
       },
