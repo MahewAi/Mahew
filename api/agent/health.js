@@ -32,7 +32,7 @@ export default function handler(_req, res) {
         provider: 'OpenRouter',
         endpoint: '/api/atmaja/chat',
         memoryEndpoint: '/api/atmaja/memory',
-        filesEndpoint: '/api/atmaja/files',
+        filesEndpoint: '/api/atmaja/memory?type=files',
         enabled: openRouterChatEnabled && openRouterKeyConfigured,
         keyConfigured: openRouterKeyConfigured,
         model: openRouterModel,

@@ -63,7 +63,7 @@ export async function fetchServerCapabilities(): Promise<AtmajaServerCapabilitie
 
 export async function listLibraryFiles(): Promise<AtmajaLibraryListResponse | null> {
   try {
-    const response = await fetch('/api/atmaja/files', { cache: 'no-store' })
+    const response = await fetch('/api/atmaja/memory?type=files', { cache: 'no-store' })
     if (!response.ok) return null
     return (await response.json()) as AtmajaLibraryListResponse
   } catch {
@@ -87,7 +87,7 @@ export interface UploadFileResponse {
 
 export async function uploadLibraryFile(payload: UploadFilePayload): Promise<UploadFileResponse> {
   try {
-    const response = await fetch('/api/atmaja/files', {
+    const response = await fetch('/api/atmaja/memory?type=files', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(payload),
@@ -104,7 +104,7 @@ export async function uploadLibraryFile(payload: UploadFilePayload): Promise<Upl
 
 export async function deleteLibraryFile(id: string): Promise<{ ok: boolean; error?: string }> {
   try {
-    const response = await fetch(`/api/atmaja/files?id=${encodeURIComponent(id)}`, {
+    const response = await fetch(`/api/atmaja/memory?type=files&id=${encodeURIComponent(id)}`, {
       method: 'DELETE',
     })
     const data = await response.json()
