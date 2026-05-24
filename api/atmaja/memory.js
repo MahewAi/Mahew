@@ -374,14 +374,36 @@ function generateFileId() {
 
 function estimatePageCount(buffer) {
   try {
+    // PDF biasanya ASCII di metadata, binary di content stream. Latin1 encoding preserve byte.
     const str = buffer.toString('latin1')
+
+    // Method 1: cari /Type /Pages root dengan /Count N (most accurate untuk standard PDF)
     const countMatch = str.match(/\/Type\s*\/Pages[\s\S]{0,500}?\/Count\s+(\d+)/)
     if (countMatch) {
       const n = parseInt(countMatch[1], 10)
       if (n > 0 && n < 10_000) return n
     }
+
+    // Method 2: cari semua /Count integer di file (fallback kalau Method 1 miss karena format)
+    // Ambil Count terbesar yang ditemukan (root pages biasanya yang paling besar)
+    const allCounts = str.match(/\/Count\s+(\d+)/g)
+    if (allCounts && allCounts.length > 0) {
+      const counts = allCounts
+        .map((m) => parseInt(m.replace(/\/Count\s+/, ''), 10))
+        .filter((n) => n > 0 && n < 10_000)
+      if (counts.length > 0) {
+        return Math.max(...counts)
+      }
+    }
+
+    // Method 3: count /Type /Page occurrences (per-page object)
     const pageMatches = str.match(/\/Type\s*\/Page[^s]/g)
     if (pageMatches && pageMatches.length > 0) return pageMatches.length
+
+    // Method 4: count "endobj" with "/Type /Page" nearby (looser pattern untuk PDF dengan whitespace beda)
+    const endobjMatches = str.match(/\/Page\s*\/Parent/g)
+    if (endobjMatches && endobjMatches.length > 0) return endobjMatches.length
+
     return null
   } catch {
     return null

@@ -66,6 +66,12 @@ export default function handler(_req, res) {
           proposals: '/api/atmaja/memory?type=proposals',
         },
       },
+      // Warnings yang client (PWA) bisa display sebagai banner ke Matthew.
+      // Saat ini cek manual via /api/openrouter/credits + thresholds. Real-time
+      // warning generation butuh KV cache supaya tidak hit OpenRouter setiap load.
+      warnings: [
+        // Will be populated di runtime kalau ada (e.g., credit low, env missing)
+      ],
       image: {
         provider: 'OpenAI',
         endpoint: '/api/openai/image',
