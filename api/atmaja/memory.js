@@ -14,7 +14,7 @@
 //   DELETE /api/atmaja/memory?type=files&id=X  → remove from Blob + index + memory
 
 import { kv } from '@vercel/kv'
-import { put, del } from '@vercel/blob'
+import { put, del, get as blobGet } from '@vercel/blob'
 import { isRequestAllowed, getHeader } from '../_shared.js'
 
 const jsonHeaders = {
@@ -169,13 +169,22 @@ export async function getFileById(id) {
 export async function fetchFileBase64(file) {
   if (!file?.blobUrl) return null
   try {
-    const response = await fetch(file.blobUrl)
-    if (!response.ok) {
-      console.error('[atmaja-files] blob fetch failed:', response.status)
+    // Private store — pakai SDK get() bukan plain fetch.
+    // SDK auto-pakai BLOB_READ_WRITE_TOKEN dari env.
+    const result = await blobGet(file.blobUrl, { access: 'private' })
+    if (!result?.stream) {
+      console.error('[atmaja-files] blob get returned no stream')
       return null
     }
-    const arrayBuffer = await response.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
+    // Convert ReadableStream ke Buffer.
+    const chunks = []
+    const reader = result.stream.getReader()
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      chunks.push(value)
+    }
+    const buffer = Buffer.concat(chunks.map((c) => Buffer.from(c)))
     return buffer.toString('base64')
   } catch (error) {
     console.error('[atmaja-files] fetchFileBase64 error:', error?.message ?? error)
@@ -356,8 +365,10 @@ async function handleFiles(req, res) {
     const pageCount = estimatePageCount(buffer)
 
     try {
+      // Private store (lebih aman — Blob URL tidak public-accessible tanpa SDK auth).
+      // PDF Matthew = data bisnis sensitif, jadi private store paling cocok.
       const blob = await put(blobPath, buffer, {
-        access: 'public',
+        access: 'private',
         contentType,
         addRandomSuffix: false,
       })
