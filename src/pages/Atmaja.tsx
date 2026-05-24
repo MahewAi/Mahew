@@ -1,10 +1,20 @@
 import { useState, useMemo, useRef, useEffect, useCallback, type DragEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { Send, Sunrise, ArrowUpRight, Trash2, ChevronDown, FileText, Image as ImageIcon, Loader2, Paperclip, UploadCloud, X } from 'lucide-react'
+import { Send, Sunrise, ArrowUpRight, Trash2, ChevronDown, FileText, Image as ImageIcon, Loader2, Paperclip, UploadCloud, X, Library, BookOpen, Plus } from 'lucide-react'
 import { loadStoredBriefs } from '@/lib/briefStore'
 import { recordInteractionLessons } from '@/lib/learningMemory'
 import { isAtmajaRemoteBridgeAllowed, requestAtmajaReply } from '@/lib/atmajaClient'
+import {
+  fetchServerCapabilities,
+  listLibraryFiles,
+  uploadLibraryFile,
+  deleteLibraryFile,
+  formatFileSize as formatLibFileSize,
+  formatUploadedAt as formatLibUploadedAt,
+  type AtmajaLibraryFile,
+  type AtmajaServerCapabilities,
+} from '@/lib/atmajaFilesClient'
 import { generateImage, parseImageCommand, type OpenAIImageModel } from '@/lib/openaiImageClient'
 import { generateVideo, parseVideoCommand, type OpenAIVideoModel } from '@/lib/openaiVideoClient'
 import { generateMockReply, type ChatMessage } from '@/lib/mockReplies'
@@ -375,14 +385,113 @@ export default function Atmaja() {
   const [draggingFiles, setDraggingFiles] = useState(false)
   const [sending, setSending] = useState(false)
   const [quickOpen, setQuickOpen] = useState(false)
+  // Lapis 3: file library state (persistent PDFs di Vercel Blob)
+  const [serverCaps, setServerCaps] = useState<AtmajaServerCapabilities | null>(null)
+  const [libraryFiles, setLibraryFiles] = useState<AtmajaLibraryFile[]>([])
+  const [libraryOpen, setLibraryOpen] = useState(false)
+  const [libraryLoading, setLibraryLoading] = useState(false)
+  const [libraryUploading, setLibraryUploading] = useState(false)
+  const [libraryError, setLibraryError] = useState('')
+  const [attachedLibraryIds, setAttachedLibraryIds] = useState<string[]>([])
   const listRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const libraryUploadRef = useRef<HTMLInputElement>(null)
   const dragDepthRef = useRef(0)
   const pendingReplyTimerRef = useRef<number | null>(null)
 
   useEffect(() => {
     saveThread(messages)
   }, [messages])
+
+  // Lapis 3: load server capabilities + library files on mount.
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      const caps = await fetchServerCapabilities()
+      if (cancelled) return
+      setServerCaps(caps)
+      if (caps.fileLibrary) {
+        setLibraryLoading(true)
+        const list = await listLibraryFiles()
+        if (cancelled) return
+        if (list?.ok) {
+          setLibraryFiles(list.files)
+        }
+        setLibraryLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const refreshLibrary = useCallback(async () => {
+    if (!serverCaps?.fileLibrary) return
+    setLibraryLoading(true)
+    const list = await listLibraryFiles()
+    if (list?.ok) {
+      setLibraryFiles(list.files)
+    }
+    setLibraryLoading(false)
+  }, [serverCaps?.fileLibrary])
+
+  const handleLibraryUpload = useCallback(async (files: FileList | null) => {
+    if (!files || files.length === 0) return
+    if (!serverCaps?.fileLibrary) {
+      setLibraryError('File library belum tersedia. Setup Vercel Blob storage dulu.')
+      return
+    }
+    const file = files[0]
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+    if (!isPdf) {
+      setLibraryError('Library hanya support PDF saat ini. File lain pakai attachment biasa.')
+      return
+    }
+    if (file.size > 2_621_440) {
+      setLibraryError(`PDF > 2.5 MB terlalu besar. Pecah file dulu.`)
+      return
+    }
+    setLibraryUploading(true)
+    setLibraryError('')
+    try {
+      const dataBase64 = await readFileAsBase64(file)
+      if (!dataBase64) {
+        setLibraryError('Gagal baca file sebagai base64.')
+        return
+      }
+      const result = await uploadLibraryFile({
+        name: file.name,
+        contentType: 'application/pdf',
+        dataBase64,
+      })
+      if (!result.ok) {
+        setLibraryError(`Upload gagal: ${result.error ?? 'unknown error'}`)
+        return
+      }
+      await refreshLibrary()
+    } finally {
+      setLibraryUploading(false)
+    }
+  }, [serverCaps?.fileLibrary, refreshLibrary])
+
+  const handleLibraryDelete = useCallback(async (id: string) => {
+    setLibraryError('')
+    const result = await deleteLibraryFile(id)
+    if (!result.ok) {
+      setLibraryError(`Delete gagal: ${result.error ?? 'unknown error'}`)
+      return
+    }
+    setAttachedLibraryIds((prev) => prev.filter((x) => x !== id))
+    await refreshLibrary()
+  }, [refreshLibrary])
+
+  const toggleAttachedLibrary = useCallback((id: string) => {
+    setAttachedLibraryIds((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id)
+      if (prev.length >= 3) return prev
+      return [...prev, id]
+    })
+  }, [])
 
   // CATATAN: useEffect lama "upgradeActionableReplies" sengaja dihapus.
   // Efek itu mengganti balasan remote Atmaja yang jujur ("saya tidak lihat zip")
@@ -536,7 +645,13 @@ export default function Atmaja() {
             dataBase64: attachment.dataBase64,
             previewText: attachment.previewText,
           })),
+          // Lapis 3: kirim file library IDs yang user pilih untuk attach ke turn ini.
+          // Server fetch dari Vercel Blob + treat as native PDF attachment.
+          attachedFileIds: attachedLibraryIds.length > 0 ? attachedLibraryIds : undefined,
         })
+        // Clear attached library setelah send supaya tidak ke-include lagi di turn berikutnya
+        // (user explicit re-attach kalau mau).
+        setAttachedLibraryIds([])
         const result =
           remoteResult ??
           generateMockReply({
@@ -920,6 +1035,33 @@ export default function Atmaja() {
 
           {attachmentError && <p className="mb-2 px-2 text-[11px] font-bold text-status-review">{attachmentError}</p>}
 
+          {/* Lapis 3: Attached library file chips (PDF dari library yang akan di-include di next message) */}
+          {attachedLibraryIds.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-2 px-2">
+              {attachedLibraryIds.map((id) => {
+                const file = libraryFiles.find((f) => f.id === id)
+                if (!file) return null
+                return (
+                  <span
+                    key={id}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent-bg/60 px-2.5 py-1 text-[11px] font-extrabold text-accent-dark"
+                  >
+                    <BookOpen className="size-3" />
+                    {file.name.length > 30 ? file.name.slice(0, 27) + '...' : file.name}
+                    <button
+                      type="button"
+                      onClick={() => toggleAttachedLibrary(id)}
+                      className="-mr-0.5 ml-0.5 inline-flex size-4 items-center justify-center rounded-full text-accent-dark/70 hover:bg-accent/15 hover:text-accent-dark"
+                      aria-label={`Lepas ${file.name}`}
+                    >
+                      <X className="size-2.5" />
+                    </button>
+                  </span>
+                )
+              })}
+            </div>
+          )}
+
           <div className="flex items-end gap-2">
             <input
               ref={fileInputRef}
@@ -946,6 +1088,30 @@ export default function Atmaja() {
             >
               {readingFiles ? <Loader2 className="size-4 animate-spin" /> : <Paperclip className="size-4" />}
             </button>
+            {/* Lapis 3: Library button — open drawer ke list semua PDF persistent */}
+            {serverCaps?.fileLibrary && (
+              <button
+                type="button"
+                onClick={() => setLibraryOpen(true)}
+                disabled={sending}
+                aria-label={`Library — ${libraryFiles.length} file`}
+                title={`Library Atmaja — ${libraryFiles.length} file PDF`}
+                className={cn(
+                  'relative inline-flex size-11 shrink-0 items-center justify-center rounded-full transition-colors duration-fast',
+                  sending
+                    ? 'bg-bg-soft text-text-faint cursor-not-allowed'
+                    : 'bg-white text-text-secondary shadow-soft hover:text-text-primary',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+                )}
+              >
+                <Library className="size-4" />
+                {libraryFiles.length > 0 && (
+                  <span className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-accent px-1 text-[10px] font-extrabold text-white shadow-soft">
+                    {libraryFiles.length}
+                  </span>
+                )}
+              </button>
+            )}
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -966,11 +1132,11 @@ export default function Atmaja() {
             <button
               type="button"
               onClick={() => send(text)}
-              disabled={(!text.trim() && attachments.length === 0) || sending || readingFiles}
+              disabled={(!text.trim() && attachments.length === 0 && attachedLibraryIds.length === 0) || sending || readingFiles}
               aria-label="Kirim ke Atmaja"
               className={cn(
                 'inline-flex size-11 shrink-0 items-center justify-center rounded-full transition-colors duration-fast',
-                (text.trim() || attachments.length > 0) && !sending && !readingFiles
+                (text.trim() || attachments.length > 0 || attachedLibraryIds.length > 0) && !sending && !readingFiles
                   ? 'bg-accent text-white shadow-glow-accent hover:bg-accent-dark'
                   : 'bg-bg-soft text-text-faint cursor-not-allowed',
               )}
@@ -980,6 +1146,174 @@ export default function Atmaja() {
           </div>
         </div>
       </section>
+
+      {/* Lapis 3: Library Drawer — list + upload + delete persistent PDFs */}
+      <AnimatePresence>
+        {libraryOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center"
+            onClick={() => setLibraryOpen(false)}
+          >
+            <motion.div
+              initial={reduceMotion ? { opacity: 0 } : { y: '100%', opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={reduceMotion ? { opacity: 0 } : { y: '100%', opacity: 0 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              className="relative w-full max-w-2xl rounded-t-3xl bg-white p-5 shadow-2xl sm:max-h-[85vh] sm:rounded-2xl sm:p-6"
+              style={{ maxHeight: '85vh' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-extrabold text-text-primary flex items-center gap-2">
+                    <Library className="size-5 text-accent" />
+                    Library Atmaja
+                  </h2>
+                  <p className="mt-0.5 text-xs text-text-secondary">
+                    PDF tersimpan permanent di Vercel Blob. Attach ke chat tanpa re-upload.
+                    {' '}({libraryFiles.length}/{serverCaps ? 50 : '?'} file)
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setLibraryOpen(false)}
+                  aria-label="Tutup Library"
+                  className="inline-flex size-8 items-center justify-center rounded-full bg-bg-soft text-text-secondary hover:text-text-primary"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+
+              <input
+                ref={libraryUploadRef}
+                type="file"
+                className="sr-only"
+                accept=".pdf,application/pdf"
+                onChange={(event) => {
+                  void handleLibraryUpload(event.target.files)
+                  if (event.target) event.target.value = ''
+                }}
+              />
+              <div className="mb-4 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => libraryUploadRef.current?.click()}
+                  disabled={libraryUploading}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-extrabold transition-colors',
+                    libraryUploading
+                      ? 'bg-bg-soft text-text-faint cursor-not-allowed'
+                      : 'bg-accent text-white shadow-glow-accent hover:bg-accent-dark',
+                  )}
+                >
+                  {libraryUploading ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
+                  {libraryUploading ? 'Uploading...' : 'Upload PDF baru'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void refreshLibrary()}
+                  disabled={libraryLoading}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-2 text-xs font-extrabold text-text-secondary shadow-soft hover:text-text-primary"
+                >
+                  {libraryLoading ? <Loader2 className="size-3.5 animate-spin" /> : 'Refresh'}
+                </button>
+              </div>
+
+              {libraryError && (
+                <p className="mb-3 rounded-md bg-status-review/10 px-3 py-2 text-xs font-bold text-status-review">
+                  {libraryError}
+                </p>
+              )}
+
+              {!serverCaps?.fileLibrary && (
+                <div className="rounded-md bg-bg-soft p-4 text-sm text-text-secondary">
+                  Library belum tersedia. Server butuh setup Vercel Blob storage (BLOB_READ_WRITE_TOKEN env var).
+                </div>
+              )}
+
+              {serverCaps?.fileLibrary && libraryFiles.length === 0 && !libraryLoading && (
+                <div className="rounded-md bg-bg-soft p-6 text-center text-sm text-text-secondary">
+                  <BookOpen className="mx-auto mb-2 size-6 opacity-40" />
+                  Library kosong. Upload PDF pertama untuk mulai.
+                </div>
+              )}
+
+              {serverCaps?.fileLibrary && libraryFiles.length > 0 && (
+                <div className="space-y-2 overflow-y-auto" style={{ maxHeight: '50vh' }}>
+                  {libraryFiles.map((file) => {
+                    const isAttached = attachedLibraryIds.includes(file.id)
+                    const canAttachMore = attachedLibraryIds.length < 3
+                    return (
+                      <div
+                        key={file.id}
+                        className={cn(
+                          'flex items-start justify-between gap-3 rounded-lg border p-3 transition-colors',
+                          isAttached
+                            ? 'border-accent bg-accent-bg/40'
+                            : 'border-white/75 bg-white hover:border-accent/30',
+                        )}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <FileText className="size-4 shrink-0 text-accent" />
+                            <p className="truncate text-sm font-extrabold text-text-primary">{file.name}</p>
+                          </div>
+                          <p className="mt-1 text-[11px] text-text-secondary">
+                            {formatLibFileSize(file.size)} · uploaded {formatLibUploadedAt(file.uploadedAt)}
+                          </p>
+                          {file.description && (
+                            <p className="mt-1 text-[11px] italic text-text-secondary">{file.description}</p>
+                          )}
+                          <p className="mt-1 font-mono text-[10px] text-text-faint">ID: {file.id}</p>
+                        </div>
+                        <div className="flex shrink-0 flex-col gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => toggleAttachedLibrary(file.id)}
+                            disabled={!isAttached && !canAttachMore}
+                            title={!isAttached && !canAttachMore ? 'Max 3 file per turn' : ''}
+                            className={cn(
+                              'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-extrabold transition-colors',
+                              isAttached
+                                ? 'bg-accent text-white hover:bg-accent-dark'
+                                : canAttachMore
+                                  ? 'bg-white text-text-secondary shadow-soft hover:text-text-primary'
+                                  : 'bg-bg-soft text-text-faint cursor-not-allowed',
+                            )}
+                          >
+                            {isAttached ? 'Attached' : 'Attach'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm(`Hapus "${file.name}" dari library? Tidak bisa di-undo.`)) {
+                                void handleLibraryDelete(file.id)
+                              }
+                            }}
+                            className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-extrabold text-status-review shadow-soft hover:bg-status-review/10"
+                          >
+                            <Trash2 className="size-3" />
+                            Hapus
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              <div className="mt-4 border-t border-white/40 pt-3 text-[11px] text-text-secondary">
+                Atmaja tahu daftar file ini dari memory long-term, jadi bisa reference kapan saja.
+                Max 3 file attach per pertanyaan. PDF di-process native (no OCR), text + tabel langsung dibaca Opus 4.7.
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   )
 }

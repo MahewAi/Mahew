@@ -28,6 +28,7 @@ interface RequestAtmajaReplyInput {
   userMessage: string
   history: ChatMessage[]
   attachments?: AtmajaRemoteAttachment[]
+  attachedFileIds?: string[]
 }
 
 // Working memory Atmaja: 100 pesan terakhir, 15K char per pesan.
@@ -72,6 +73,7 @@ export async function requestAtmajaReply(input: RequestAtmajaReplyInput): Promis
         userMessage: input.userMessage,
         history: stripHistory(input.history),
         attachments: stripAttachments(input.attachments),
+        attachedFileIds: Array.isArray(input.attachedFileIds) ? input.attachedFileIds.slice(0, 3) : undefined,
       }),
     })
     const contentType = response.headers.get('content-type') ?? ''

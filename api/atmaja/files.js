@@ -60,6 +60,27 @@ function generateFileId() {
   return `file_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
 }
 
+// Estimate page count dari PDF buffer pakai regex parsing.
+// Method 1: cari /Type /Pages dictionary dengan /Count N (root pages tree).
+// Method 2: fallback — count /Type /Page (per individual page object).
+// Tidak 100% akurat untuk semua PDF (especially encrypted/linearized),
+// tapi cukup untuk display info di UI.
+function estimatePageCount(buffer) {
+  try {
+    const str = buffer.toString('latin1')
+    const countMatch = str.match(/\/Type\s*\/Pages[\s\S]{0,500}?\/Count\s+(\d+)/)
+    if (countMatch) {
+      const n = parseInt(countMatch[1], 10)
+      if (n > 0 && n < 10_000) return n
+    }
+    const pageMatches = str.match(/\/Type\s*\/Page[^s]/g)
+    if (pageMatches && pageMatches.length > 0) return pageMatches.length
+    return null
+  } catch {
+    return null
+  }
+}
+
 export async function readFilesIndex() {
   try {
     const stored = await kv.get(FILES_INDEX_KEY)
@@ -102,7 +123,8 @@ export async function fetchFileBase64(file) {
 async function appendFileToMemory(file) {
   try {
     const memory = await readMemory()
-    const bullet = `- ${file.name} (${(file.size / 1024).toFixed(1)} KB, uploaded ${file.uploadedAt}) — ID: ${file.id}${file.description ? ' — ' + file.description : ''}`
+    const pageInfo = file.pageCount ? `, ${file.pageCount} hal` : ''
+    const bullet = `- ${file.name} (${(file.size / 1024).toFixed(1)} KB${pageInfo}, uploaded ${file.uploadedAt}) — ID: ${file.id}${file.description ? ' — ' + file.description : ''}`
     const sectionHeader = '## Files / Dokumen'
 
     let updated = memory
@@ -167,11 +189,14 @@ export default async function handler(req, res) {
       sendJson(res, 200, { ok: true, file })
       return
     }
+    const totalBytes = index.reduce((sum, f) => sum + (Number(f.size) || 0), 0)
     sendJson(res, 200, {
       ok: true,
       files: index,
       count: index.length,
       max: MAX_FILES_TOTAL,
+      totalBytes,
+      totalMegabytes: Number((totalBytes / (1024 * 1024)).toFixed(2)),
     })
     return
   }
@@ -242,6 +267,7 @@ export default async function handler(req, res) {
 
     const id = generateFileId()
     const blobPath = `atmaja/${id}-${encodeURIComponent(name)}`
+    const pageCount = estimatePageCount(buffer)
 
     try {
       const blob = await put(blobPath, buffer, {
@@ -258,6 +284,7 @@ export default async function handler(req, res) {
         blobUrl: blob.url,
         uploadedAt: new Date().toISOString(),
         description,
+        pageCount,
       }
 
       const newIndex = [...index, fileEntry]
