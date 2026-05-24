@@ -31,17 +31,22 @@ export default function handler(_req, res) {
       chat: {
         provider: 'OpenRouter',
         endpoint: '/api/atmaja/chat',
+        memoryEndpoint: '/api/atmaja/memory',
         enabled: openRouterChatEnabled && openRouterKeyConfigured,
         keyConfigured: openRouterKeyConfigured,
         model: openRouterModel,
         // Server endpoint sekarang support vision_inline (image base64 langsung ke Claude),
         // pdf_native (PDF base64 via OpenRouter file content block, Claude Opus/Sonnet 4.x baca langsung),
-        // dan text_preview_inline (cuplikan teks file).
+        // text_preview_inline (cuplikan teks file), dan long-term memory file (Vercel KV).
         attachmentsPolicy: 'vision_pdf_native_or_text_preview',
         capabilities: {
           imageVision: true,
           pdfNative: true,
           textPreview: true,
+          longTermMemory: Boolean(process.env.KV_REST_API_URL ?? process.env.KV_URL),
+          memoryAutoUpdate: true,
+          historyMaxMessages: 100,
+          historyMaxCharsPerMessage: 15_000,
           maxImageBase64Bytes: 2_100_000,
           maxImagesPerTurn: 2,
           maxPdfBase64Bytes: 3_500_000,

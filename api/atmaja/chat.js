@@ -1,3 +1,5 @@
+import { readMemory, writeMemory, incrementTurnCounter } from './memory.js'
+
 const jsonHeaders = {
   'content-type': 'application/json; charset=utf-8',
   'cache-control': 'no-store',
@@ -196,8 +198,8 @@ function normalizeAttachments(attachments) {
   })
 }
 
-function buildSystemPrompt() {
-  return [
+function buildSystemPrompt(memory) {
+  const baseLines = [
     'Anda adalah Atmaja, CEO AI Department untuk Gerai 1000 Pintu milik Matthew.',
     'Jawab dalam Bahasa Indonesia yang ringkas, langsung, dan membantu mengambil keputusan.',
     'Kalau Matthew meminta pilihan, warna, foto, opsi, atau preferensi, jawab pilihannya dulu sebelum alasan.',
@@ -207,7 +209,23 @@ function buildSystemPrompt() {
     'Untuk file teks/kode/markdown yang sudah diekstrak preview-nya, baca cuplikan yang dikirim dan jawab berdasar isi.',
     'Untuk file docx/xlsx/zip yang hanya kirim metadata, jelaskan jujur kamu belum lihat isi dan tawarkan jalan (ekstrak ke teks, paste isi, atau export ke PDF dulu).',
     'Jaga output agar tidak menyuruh Matthew memindahkan rahasia ke chat. Untuk kredensial, minta disimpan sebagai server environment variable.',
-  ].join('\n')
+  ]
+
+  // Inject memory file kalau ada dan non-default. Memory auto-maintained oleh sistem,
+  // Atmaja BACA tapi TIDAK eksplisit ngutip "berdasarkan memory" ke user (smooth UX).
+  if (memory && typeof memory === 'string' && memory.trim()) {
+    baseLines.push('')
+    baseLines.push('=== MEMORY ATMAJA TENTANG GERAI (long-term, auto-maintained) ===')
+    baseLines.push('Berikut adalah catatan persisten tentang Gerai 1000 Pintu yang Atmaja kumpulkan dari percakapan sebelumnya.')
+    baseLines.push('Pakai info ini sebagai konteks tanpa perlu eksplisit menyebut "berdasarkan memory" — anggap Anda memang ingat secara alami.')
+    baseLines.push('Kalau ada info baru di percakapan ini, sistem akan auto-update memory di background.')
+    baseLines.push('')
+    baseLines.push(memory.trim())
+    baseLines.push('')
+    baseLines.push('=== END MEMORY ===')
+  }
+
+  return baseLines.join('\n')
 }
 
 function buildUserContent(message, attachments) {
@@ -371,8 +389,19 @@ export default async function handler(req, res) {
   const primaryModel = pickModel(payloadModel) ?? pickModel(envModel) ?? CONTENT_PRIMARY_MODEL
 
   const referer = process.env.ATMAJA_OPENROUTER_REFERER ?? process.env.PUBLIC_APP_URL ?? 'https://gerai.mahewwork.com'
+
+  // Lapis 2: read long-term memory dari Vercel KV (Upstash Redis).
+  // Best-effort — kalau KV down atau env missing, tetap lanjut dengan empty memory.
+  let memoryContent = ''
+  try {
+    memoryContent = await readMemory()
+  } catch (error) {
+    console.error('[atmaja-chat] readMemory failed:', error?.message ?? error)
+    memoryContent = ''
+  }
+
   const messages = [
-    { role: 'system', content: buildSystemPrompt() },
+    { role: 'system', content: buildSystemPrompt(memoryContent) },
     ...normalizeHistory(payload?.history),
     { role: 'user', content: buildUserContent(userMessage, attachments) },
   ]
@@ -483,6 +512,154 @@ export default async function handler(req, res) {
     }
   }
 
+  // === MEMORY AUTO-UPDATE (Lapis 2) ===
+  // Setelah Atmaja jawab, call Sonnet 4.6 untuk extract delta (info baru) dari turn ini,
+  // lalu append ke memory file. Format delta: section markers + bullets.
+  // Trivial turns (< 30 char user OR < 200 char Atmaja reply) di-skip untuk hemat cost.
+  async function updateMemoryFromTurn({ userMsg, atmajaReply, currentMemory }) {
+    try {
+      const trimmedUser = String(userMsg ?? '').trim()
+      const trimmedReply = String(atmajaReply ?? '').trim()
+      if (trimmedUser.length < 30 || trimmedReply.length < 200) {
+        return { skipped: true, reason: 'turn_too_short' }
+      }
+
+      const extractorPrompt = [
+        'Anda adalah memory editor untuk Atmaja, CEO AI Gerai 1000 Pintu milik Matthew.',
+        '',
+        'Tugas: ekstrak HANYA info BARU yang penting disimpan ke memory long-term dari turn percakapan berikut.',
+        '',
+        'MEMORY SAAT INI:',
+        '```',
+        String(currentMemory || '').slice(0, 30_000),
+        '```',
+        '',
+        'TURN BARU:',
+        '',
+        'Matthew bilang:',
+        trimmedUser.slice(0, 4_000),
+        '',
+        'Atmaja jawab:',
+        trimmedReply.slice(0, 4_000),
+        '',
+        'OUTPUT format (strict):',
+        '- Kalau ada info baru worth disimpan, output bullets per section dengan header ## SECTION_NAME:',
+        '  ## Strategi & Keputusan',
+        '  - bullet baru 1 (max 200 char, fakta konkrit, no filler)',
+        '  - bullet baru 2',
+        '  ## Brand Canon',
+        '  - bullet baru',
+        '- Section yang valid: Strategi & Keputusan, Brand Canon, Operations & Vendor, Tim & People, Briefs Aktif, TODO / Pending, Misc / Konteks Personal',
+        '- JANGAN duplikasi info yang sudah ada di memory.',
+        '- JANGAN tambah bullet untuk pertanyaan biasa atau jawaban filler.',
+        '- Kalau TIDAK ada info baru worth disimpan, output PERSIS: NONE',
+        '',
+        'OUTPUT (hanya markdown bullets atau NONE, jangan tulis explanation lain):',
+      ].join('\n')
+
+      const extractorResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          'content-type': 'application/json',
+          accept: 'application/json',
+          'http-referer': referer,
+          'x-openrouter-title': 'Gerai 1000 Pintu Atmaja Memory Extractor',
+        },
+        body: JSON.stringify({
+          model: 'anthropic/claude-sonnet-4.6',
+          messages: [{ role: 'user', content: extractorPrompt }],
+          temperature: 0.2,
+          max_tokens: 1500,
+        }),
+      })
+
+      if (!extractorResponse.ok) {
+        return { skipped: true, reason: 'extractor_http_error', status: extractorResponse.status }
+      }
+
+      const extractorBody = await extractorResponse.json()
+      const deltaRaw = String(extractorBody?.choices?.[0]?.message?.content ?? '').trim()
+
+      if (!deltaRaw || deltaRaw === 'NONE' || deltaRaw.toUpperCase() === 'NONE') {
+        return { skipped: true, reason: 'no_new_info' }
+      }
+
+      // Parse delta sections + merge ke current memory.
+      const validSections = [
+        'Strategi & Keputusan',
+        'Brand Canon',
+        'Operations & Vendor',
+        'Tim & People',
+        'Briefs Aktif',
+        'TODO / Pending',
+        'Misc / Konteks Personal',
+      ]
+      const sectionDeltas = {}
+      let currentSection = null
+      for (const rawLine of deltaRaw.split('\n')) {
+        const line = rawLine.trim()
+        if (!line) continue
+        const sectionMatch = line.match(/^##\s+(.+)$/)
+        if (sectionMatch) {
+          const candidate = sectionMatch[1].trim()
+          currentSection = validSections.find((s) => s.toLowerCase() === candidate.toLowerCase()) ?? null
+          if (currentSection && !sectionDeltas[currentSection]) {
+            sectionDeltas[currentSection] = []
+          }
+          continue
+        }
+        if (currentSection && line.startsWith('-')) {
+          sectionDeltas[currentSection].push(line)
+        }
+      }
+
+      if (Object.keys(sectionDeltas).length === 0) {
+        return { skipped: true, reason: 'parse_no_sections' }
+      }
+
+      // Merge deltas ke current memory. Untuk tiap section di delta, append bullet
+      // ke bagian section yang sesuai di current memory. Replace "(belum ada catatan)" stub.
+      let merged = String(currentMemory || '')
+      for (const [section, bullets] of Object.entries(sectionDeltas)) {
+        const sectionHeader = `## ${section}`
+        const sectionStart = merged.indexOf(sectionHeader)
+        if (sectionStart === -1) continue
+
+        const nextSectionStart = merged.indexOf('\n## ', sectionStart + sectionHeader.length)
+        const sectionEnd = nextSectionStart === -1 ? merged.length : nextSectionStart
+        let sectionBlock = merged.slice(sectionStart, sectionEnd)
+
+        // Hapus stub "(belum ada catatan)" kalau ada.
+        sectionBlock = sectionBlock.replace(/^\(belum ada catatan\)\s*$/m, '')
+
+        // Append bullets (deduplikasi sederhana — skip kalau bullet text persis sama).
+        for (const bullet of bullets) {
+          if (!sectionBlock.includes(bullet)) {
+            sectionBlock = sectionBlock.trimEnd() + '\n' + bullet
+          }
+        }
+        sectionBlock = sectionBlock.trimEnd() + '\n\n'
+
+        merged = merged.slice(0, sectionStart) + sectionBlock + merged.slice(sectionEnd).replace(/^\n+/, '')
+      }
+
+      // Update timestamp di header (line "Last updated: ..." kalau ada).
+      const timestamp = new Date().toISOString()
+      if (merged.includes('Last updated:')) {
+        merged = merged.replace(/Last updated:.*$/m, `Last updated: ${timestamp}`)
+      }
+
+      await writeMemory(merged)
+      await incrementTurnCounter()
+      const bulletsAdded = Object.values(sectionDeltas).reduce((sum, arr) => sum + arr.length, 0)
+      return { skipped: false, bulletsAdded, sectionsUpdated: Object.keys(sectionDeltas) }
+    } catch (error) {
+      console.error('[atmaja-chat] updateMemoryFromTurn error:', error?.message ?? error)
+      return { skipped: true, reason: 'exception', error: error?.message ?? 'unknown' }
+    }
+  }
+
   try {
     let { upstream, body, accumulatedText, lastFinishReason, continuations, aggregatedUsage } =
       await callWithAutoContinuation(primaryModel, messages)
@@ -550,6 +727,15 @@ export default async function handler(req, res) {
                 ? 'metadata_only'
                 : 'none'
 
+    // Lapis 2 — auto-update long-term memory (Vercel KV). Synchronous: kasih konfirmasi
+    // ke client memory ke-update atau di-skip. Tambah ~1-3s latency tapi lebih reliable
+    // daripada fire-and-forget (Vercel function bisa kill task setelah sendJson).
+    const memoryUpdate = await updateMemoryFromTurn({
+      userMsg: userMessage,
+      atmajaReply: replyText,
+      currentMemory: memoryContent,
+    })
+
     sendJson(res, 200, {
       ok: true,
       provider: 'OpenRouter',
@@ -568,6 +754,7 @@ export default async function handler(req, res) {
         textsSent,
         metadataOnly: metadataOnlyCount,
       },
+      memoryUpdate,
     })
   } catch (error) {
     sendJson(res, 502, {
