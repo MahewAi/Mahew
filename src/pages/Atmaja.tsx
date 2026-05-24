@@ -1,12 +1,12 @@
 import { useState, useMemo, useRef, useEffect, useCallback, type DragEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { Send, Sunrise, ArrowUpRight, Trash2, ChevronDown, FileText, Image as ImageIcon, Loader2, Paperclip, UploadCloud, X, Library, BookOpen, Plus } from 'lucide-react'
+import { Send, Sunrise, ArrowUpRight, Trash2, ChevronDown, FileText, Image as ImageIcon, Loader2, Paperclip, UploadCloud, X, Library, BookOpen, Plus, Sparkles, Check, AlertTriangle } from 'lucide-react'
 import { loadStoredBriefs } from '@/lib/briefStore'
 import { recordInteractionLessons } from '@/lib/learningMemory'
 import { isAtmajaRemoteBridgeAllowed, requestAtmajaReply } from '@/lib/atmajaClient'
 import {
-  fetchServerCapabilities,
+  fetchServerHealth,
   listLibraryFiles,
   uploadLibraryFile,
   deleteLibraryFile,
@@ -14,7 +14,16 @@ import {
   formatUploadedAt as formatLibUploadedAt,
   type AtmajaLibraryFile,
   type AtmajaServerCapabilities,
+  type AtmajaServerWarning,
 } from '@/lib/atmajaFilesClient'
+import {
+  listProposals,
+  approveProposal,
+  rejectProposal,
+  formatProposalTypeLabel,
+  formatProposalDate,
+  type AtmajaProposal,
+} from '@/lib/atmajaProposalsClient'
 import { generateImage, parseImageCommand, type OpenAIImageModel } from '@/lib/openaiImageClient'
 import { generateVideo, parseVideoCommand, type OpenAIVideoModel } from '@/lib/openaiVideoClient'
 import { generateMockReply, type ChatMessage } from '@/lib/mockReplies'
@@ -387,12 +396,19 @@ export default function Atmaja() {
   const [quickOpen, setQuickOpen] = useState(false)
   // Lapis 3: file library state (persistent PDFs di Vercel Blob)
   const [serverCaps, setServerCaps] = useState<AtmajaServerCapabilities | null>(null)
+  const [serverWarnings, setServerWarnings] = useState<AtmajaServerWarning[]>([])
+  const [warningsDismissed, setWarningsDismissed] = useState<Set<string>>(new Set())
   const [libraryFiles, setLibraryFiles] = useState<AtmajaLibraryFile[]>([])
   const [libraryOpen, setLibraryOpen] = useState(false)
   const [libraryLoading, setLibraryLoading] = useState(false)
   const [libraryUploading, setLibraryUploading] = useState(false)
   const [libraryError, setLibraryError] = useState('')
   const [attachedLibraryIds, setAttachedLibraryIds] = useState<string[]>([])
+  // Skill Proposals state (foundation Self-Evolving Atmaja)
+  const [proposals, setProposals] = useState<AtmajaProposal[]>([])
+  const [proposalsOpen, setProposalsOpen] = useState(false)
+  const [proposalsLoading, setProposalsLoading] = useState(false)
+  const [proposalsError, setProposalsError] = useState('')
   const listRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const libraryUploadRef = useRef<HTMLInputElement>(null)
@@ -409,9 +425,19 @@ export default function Atmaja() {
   useEffect(() => {
     let cancelled = false
     void (async () => {
-      const caps = await fetchServerCapabilities()
+      const snap = await fetchServerHealth()
       if (cancelled) return
+      const caps = snap.capabilities
       setServerCaps(caps)
+      setServerWarnings(snap.warnings ?? [])
+      // Auto-load proposals kalau capability ready
+      if (caps.skillProposals) {
+        void (async () => {
+          const pl = await listProposals('pending')
+          if (cancelled) return
+          if (pl?.ok) setProposals(pl.proposals)
+        })()
+      }
       if (caps.fileLibrary) {
         setLibraryLoading(true)
         const list = await listLibraryFiles()
@@ -554,6 +580,47 @@ export default function Atmaja() {
       return [...prev, id]
     })
   }, [])
+
+  // ============ Proposals handlers ============
+  const refreshProposals = useCallback(async () => {
+    if (!serverCaps?.skillProposals) return
+    setProposalsLoading(true)
+    setProposalsError('')
+    const pl = await listProposals('pending')
+    if (pl?.ok) {
+      setProposals(pl.proposals)
+    } else {
+      setProposalsError('Gagal load proposals. Coba refresh.')
+    }
+    setProposalsLoading(false)
+  }, [serverCaps?.skillProposals])
+
+  const handleApproveProposal = useCallback(async (id: string) => {
+    setProposalsError('')
+    const r = await approveProposal(id)
+    if (r?.ok) {
+      await refreshProposals()
+    } else {
+      setProposalsError('Approve gagal. Coba lagi.')
+    }
+  }, [refreshProposals])
+
+  const handleRejectProposal = useCallback(async (id: string) => {
+    setProposalsError('')
+    const reason = prompt('Alasan reject (opsional, untuk Atmaja learn dari pattern):') || ''
+    const r = await rejectProposal(id, reason)
+    if (r?.ok) {
+      await refreshProposals()
+    } else {
+      setProposalsError('Reject gagal. Coba lagi.')
+    }
+  }, [refreshProposals])
+
+  const dismissWarning = useCallback((warningType: string) => {
+    setWarningsDismissed((prev) => new Set([...prev, warningType]))
+  }, [])
+
+  const visibleWarnings = serverWarnings.filter((w) => !warningsDismissed.has(w.type))
 
   // CATATAN: useEffect lama "upgradeActionableReplies" sengaja dihapus.
   // Efek itu mengganti balasan remote Atmaja yang jujur ("saya tidak lihat zip")
@@ -898,6 +965,35 @@ export default function Atmaja() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 pb-32 pt-safe-top sm:px-6 lg:px-8">
+      {/* Warnings banner — credit low / env missing / dll */}
+      {visibleWarnings.length > 0 && (
+        <div className="mt-3 space-y-2">
+          {visibleWarnings.map((w) => (
+            <div
+              key={w.type}
+              className={cn(
+                'flex items-start gap-3 rounded-lg border px-3 py-2 text-xs',
+                w.severity === 'critical'
+                  ? 'border-status-review bg-status-review/10 text-status-review'
+                  : w.severity === 'warning'
+                    ? 'border-amber-500 bg-amber-500/10 text-amber-800'
+                    : 'border-accent/40 bg-accent-bg/40 text-accent-dark',
+              )}
+            >
+              <AlertTriangle className="size-4 shrink-0 mt-0.5" />
+              <p className="flex-1 font-bold">{w.message}</p>
+              <button
+                type="button"
+                onClick={() => dismissWarning(w.type)}
+                aria-label="Dismiss warning"
+                className="shrink-0 rounded-full p-0.5 hover:bg-white/40"
+              >
+                <X className="size-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
       <header className="relative pb-5 pt-6">
         <div className="relative">
           <div className="flex items-center justify-between gap-3">
@@ -1174,6 +1270,33 @@ export default function Atmaja() {
                 )}
               </button>
             )}
+            {/* Skill Proposals button — Atmaja self-evolving */}
+            {serverCaps?.skillProposals && (
+              <button
+                type="button"
+                onClick={() => {
+                  setProposalsOpen(true)
+                  void refreshProposals()
+                }}
+                disabled={sending}
+                aria-label={`Proposals — ${proposals.length} pending`}
+                title={`Skill Proposals Atmaja — ${proposals.length} pending`}
+                className={cn(
+                  'relative inline-flex size-11 shrink-0 items-center justify-center rounded-full transition-colors duration-fast',
+                  sending
+                    ? 'bg-bg-soft text-text-faint cursor-not-allowed'
+                    : 'bg-white text-text-secondary shadow-soft hover:text-text-primary',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+                )}
+              >
+                <Sparkles className="size-4" />
+                {proposals.length > 0 && (
+                  <span className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-status-review px-1 text-[10px] font-extrabold text-white shadow-soft">
+                    {proposals.length}
+                  </span>
+                )}
+              </button>
+            )}
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -1396,6 +1519,134 @@ export default function Atmaja() {
               <div className="mt-4 border-t border-white/40 pt-3 text-[11px] text-text-secondary">
                 Atmaja tahu daftar file ini dari memory long-term, jadi bisa reference kapan saja.
                 Max 3 file attach per pertanyaan. PDF di-process native (no OCR), text + tabel langsung dibaca Opus 4.7.
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* Skill Proposals Drawer — Self-Evolving Atmaja foundation */}
+        {proposalsOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center"
+            onClick={() => setProposalsOpen(false)}
+          >
+            <motion.div
+              initial={reduceMotion ? { opacity: 0 } : { y: '100%', opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={reduceMotion ? { opacity: 0 } : { y: '100%', opacity: 0 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              className="relative w-full max-w-2xl rounded-t-3xl bg-white p-5 shadow-2xl sm:max-h-[85vh] sm:rounded-2xl sm:p-6"
+              style={{ maxHeight: '85vh' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-extrabold text-text-primary flex items-center gap-2">
+                    <Sparkles className="size-5 text-accent" />
+                    Skill Proposals Atmaja
+                  </h2>
+                  <p className="mt-0.5 text-xs text-text-secondary">
+                    Atmaja propose kapabilitas baru tiap Senin pagi (Workflow #4). Approve untuk implementation pipeline aktif, reject untuk dismiss. ({proposals.length} pending)
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setProposalsOpen(false)}
+                  aria-label="Tutup Proposals"
+                  className="inline-flex size-8 items-center justify-center rounded-full bg-bg-soft text-text-secondary hover:text-text-primary"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => void refreshProposals()}
+                disabled={proposalsLoading}
+                className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-2 text-xs font-extrabold text-text-secondary shadow-soft hover:text-text-primary"
+              >
+                {proposalsLoading ? <Loader2 className="size-3.5 animate-spin" /> : 'Refresh'}
+              </button>
+
+              {proposalsError && (
+                <p className="mb-3 rounded-md bg-status-review/10 px-3 py-2 text-xs font-bold text-status-review">
+                  {proposalsError}
+                </p>
+              )}
+
+              {proposals.length === 0 && !proposalsLoading && (
+                <div className="rounded-md bg-bg-soft p-6 text-center text-sm text-text-secondary">
+                  <Sparkles className="mx-auto mb-2 size-6 opacity-40" />
+                  <p>Belum ada proposal pending.</p>
+                  <p className="mt-2 text-[11px] text-text-faint">
+                    Atmaja akan review memory + chat history setiap Senin 09:00 WITA + generate proposal otomatis kalau detect gap kapabilitas.
+                  </p>
+                </div>
+              )}
+
+              {proposals.length > 0 && (
+                <div className="space-y-3 overflow-y-auto" style={{ maxHeight: '55vh' }}>
+                  {proposals.map((prop) => (
+                    <div
+                      key={prop.id}
+                      className="rounded-lg border border-accent/20 bg-white p-3 shadow-soft"
+                    >
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-accent-bg px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-accent-dark">
+                          {formatProposalTypeLabel(prop.type)}
+                        </span>
+                        <span className="text-[10px] text-text-faint">{formatProposalDate(prop.createdAt)}</span>
+                      </div>
+                      <h3 className="text-sm font-extrabold text-text-primary">{prop.title}</h3>
+                      <p className="mt-1 text-xs text-text-secondary">{prop.description}</p>
+                      {prop.rationale && (
+                        <p className="mt-2 text-[11px] italic text-text-secondary">
+                          <span className="font-bold not-italic">Alasan:</span> {prop.rationale}
+                        </p>
+                      )}
+                      {prop.examples && prop.examples.length > 0 && (
+                        <ul className="mt-2 list-disc pl-4 text-[11px] text-text-secondary">
+                          {prop.examples.map((ex, i) => (
+                            <li key={i}>{ex}</li>
+                          ))}
+                        </ul>
+                      )}
+                      {(prop.estimatedEffort || prop.estimatedCost) && (
+                        <p className="mt-2 text-[11px] text-text-faint">
+                          {prop.estimatedEffort && <span>Effort: {prop.estimatedEffort}</span>}
+                          {prop.estimatedEffort && prop.estimatedCost && <span> · </span>}
+                          {prop.estimatedCost && <span>Cost: {prop.estimatedCost}</span>}
+                        </p>
+                      )}
+                      <div className="mt-3 flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void handleApproveProposal(prop.id)}
+                          className="inline-flex items-center gap-1 rounded-full bg-accent px-3 py-1.5 text-[11px] font-extrabold text-white shadow-soft hover:bg-accent-dark"
+                        >
+                          <Check className="size-3" />
+                          Approve
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleRejectProposal(prop.id)}
+                          className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-[11px] font-extrabold text-status-review shadow-soft hover:bg-status-review/10"
+                        >
+                          <X className="size-3" />
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-4 border-t border-white/40 pt-3 text-[11px] text-text-secondary">
+                Approved proposals di-track untuk implementation. Phase 2 (auto-implement via Claude API + GitHub PR) butuh setup GitHub PAT. Sekarang Phase 1: kamu approve, Atmaja note untuk implementasi manual nanti.
               </div>
             </motion.div>
           </motion.div>

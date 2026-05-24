@@ -3,7 +3,43 @@ const jsonHeaders = {
   'cache-control': 'no-store',
 }
 
-export default function handler(_req, res) {
+// Threshold untuk credit low warning. Adjustable via env var.
+const CREDIT_LOW_THRESHOLD_USD = Number(process.env.OPENROUTER_CREDIT_LOW_THRESHOLD ?? 20)
+// Credit info di-cache supaya tidak hit OpenRouter setiap health check (rate limit + cost).
+let cachedCreditInfo = null
+let cachedCreditAt = 0
+const CREDIT_CACHE_TTL_MS = 5 * 60_000 // 5 menit
+
+async function getOpenRouterCreditInfo() {
+  const now = Date.now()
+  if (cachedCreditInfo && now - cachedCreditAt < CREDIT_CACHE_TTL_MS) {
+    return cachedCreditInfo
+  }
+  const apiKey = process.env.OPENROUTER_MANAGEMENT_KEY ?? process.env.OPENROUTER_API_KEY
+  if (!apiKey) return null
+  try {
+    const upstream = await fetch('https://openrouter.ai/api/v1/credits', {
+      headers: { authorization: `Bearer ${apiKey}`, accept: 'application/json' },
+    })
+    if (!upstream.ok) return null
+    const data = await upstream.json()
+    const total = Number(data?.data?.total_credits ?? 0)
+    const used = Number(data?.data?.total_usage ?? 0)
+    const info = {
+      totalCredits: total,
+      totalUsage: used,
+      remainingCredits: Math.max(0, total - used),
+      checkedAt: new Date().toISOString(),
+    }
+    cachedCreditInfo = info
+    cachedCreditAt = now
+    return info
+  } catch {
+    return null
+  }
+}
+
+export default async function handler(_req, res) {
   const hasWebhook = Boolean(process.env.ATMAJA_BRIEF_WEBHOOK_URL)
   const hasToken = Boolean(process.env.ATMAJA_BRIDGE_TOKEN)
   const openRouterChatEnabled = process.env.ATMAJA_OPENROUTER_ENABLED === 'true'
@@ -14,6 +50,34 @@ export default function handler(_req, res) {
     .split(',')
     .map((host) => host.trim())
     .filter(Boolean)
+
+  // Build warnings array — checked + populated kalau ada concern
+  const warnings = []
+  const creditInfo = await getOpenRouterCreditInfo()
+  if (creditInfo && creditInfo.remainingCredits < CREDIT_LOW_THRESHOLD_USD) {
+    warnings.push({
+      severity: creditInfo.remainingCredits < 5 ? 'critical' : 'warning',
+      type: 'openrouter_credit_low',
+      message: `OpenRouter credit sisa $${creditInfo.remainingCredits.toFixed(2)} di bawah threshold $${CREDIT_LOW_THRESHOLD_USD}. Top-up di https://openrouter.ai/credits sebelum chat habis.`,
+      remainingCredits: creditInfo.remainingCredits,
+      totalCredits: creditInfo.totalCredits,
+      checkedAt: creditInfo.checkedAt,
+    })
+  }
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    warnings.push({
+      severity: 'info',
+      type: 'blob_not_configured',
+      message: 'Vercel Blob belum di-setup. PDF library + memory backup tidak aktif. Setup di Vercel dashboard → Storage → Blob.',
+    })
+  }
+  if (!process.env.KV_REST_API_URL && !process.env.KV_URL) {
+    warnings.push({
+      severity: 'critical',
+      type: 'kv_not_configured',
+      message: 'Vercel KV belum di-setup. Long-term memory + file library + proposals TIDAK akan jalan. Setup di Vercel dashboard → Storage → KV.',
+    })
+  }
 
   res.writeHead(200, jsonHeaders)
   res.end(
@@ -66,12 +130,9 @@ export default function handler(_req, res) {
           proposals: '/api/atmaja/memory?type=proposals',
         },
       },
-      // Warnings yang client (PWA) bisa display sebagai banner ke Matthew.
-      // Saat ini cek manual via /api/openrouter/credits + thresholds. Real-time
-      // warning generation butuh KV cache supaya tidak hit OpenRouter setiap load.
-      warnings: [
-        // Will be populated di runtime kalau ada (e.g., credit low, env missing)
-      ],
+      // Warnings real-time, populated di runtime berdasar credit check + env state.
+      // Cached 5 menit supaya tidak hit OpenRouter setiap health probe.
+      warnings,
       image: {
         provider: 'OpenAI',
         endpoint: '/api/openai/image',

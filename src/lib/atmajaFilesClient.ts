@@ -21,12 +21,23 @@ export interface AtmajaLibraryListResponse {
   totalBytes?: number
 }
 
+export interface AtmajaServerWarning {
+  severity: 'info' | 'warning' | 'critical'
+  type: string
+  message: string
+  remainingCredits?: number
+  totalCredits?: number
+  checkedAt?: string
+}
+
 export interface AtmajaServerCapabilities {
   fileLibrary: boolean
   longTermMemory: boolean
   memoryAutoUpdate: boolean
+  memoryBackup: boolean
   pdfNative: boolean
   imageVision: boolean
+  skillProposals: boolean
   historyMaxMessages: number
   maxFileAttachedPerTurn: number
 }
@@ -35,29 +46,47 @@ const DEFAULT_CAPABILITIES: AtmajaServerCapabilities = {
   fileLibrary: false,
   longTermMemory: false,
   memoryAutoUpdate: false,
+  memoryBackup: false,
   pdfNative: false,
   imageVision: false,
+  skillProposals: false,
   historyMaxMessages: 10,
   maxFileAttachedPerTurn: 0,
 }
 
+export interface ServerHealthSnapshot {
+  capabilities: AtmajaServerCapabilities
+  warnings: AtmajaServerWarning[]
+}
+
 export async function fetchServerCapabilities(): Promise<AtmajaServerCapabilities> {
+  const snap = await fetchServerHealth()
+  return snap.capabilities
+}
+
+export async function fetchServerHealth(): Promise<ServerHealthSnapshot> {
   try {
     const response = await fetch('/api/agent/health', { cache: 'no-store' })
-    if (!response.ok) return DEFAULT_CAPABILITIES
+    if (!response.ok) return { capabilities: DEFAULT_CAPABILITIES, warnings: [] }
     const data = await response.json()
     const caps = data?.chat?.capabilities ?? {}
+    const warnings: AtmajaServerWarning[] = Array.isArray(data?.warnings) ? data.warnings : []
     return {
-      fileLibrary: Boolean(caps.fileLibrary),
-      longTermMemory: Boolean(caps.longTermMemory),
-      memoryAutoUpdate: Boolean(caps.memoryAutoUpdate),
-      pdfNative: Boolean(caps.pdfNative),
-      imageVision: Boolean(caps.imageVision),
-      historyMaxMessages: Number(caps.historyMaxMessages) || 10,
-      maxFileAttachedPerTurn: Number(caps.maxFileAttachedPerTurn) || 0,
+      capabilities: {
+        fileLibrary: Boolean(caps.fileLibrary),
+        longTermMemory: Boolean(caps.longTermMemory),
+        memoryAutoUpdate: Boolean(caps.memoryAutoUpdate),
+        memoryBackup: Boolean(caps.memoryBackup),
+        pdfNative: Boolean(caps.pdfNative),
+        imageVision: Boolean(caps.imageVision),
+        skillProposals: Boolean(caps.skillProposals),
+        historyMaxMessages: Number(caps.historyMaxMessages) || 10,
+        maxFileAttachedPerTurn: Number(caps.maxFileAttachedPerTurn) || 0,
+      },
+      warnings,
     }
   } catch {
-    return DEFAULT_CAPABILITIES
+    return { capabilities: DEFAULT_CAPABILITIES, warnings: [] }
   }
 }
 

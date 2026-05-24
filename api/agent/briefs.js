@@ -309,7 +309,10 @@ export default async function handler(req, res) {
     if (action === 'list' || action === '') {
       return handleList(req, res, url)
     }
-    sendJson(res, 400, { ok: false, error: 'unknown_action', note: 'GET hanya support ?action=list' })
+    if (action === 'digest') {
+      return handleDigestRead(req, res, url)
+    }
+    sendJson(res, 400, { ok: false, error: 'unknown_action', note: 'GET support ?action=list | ?action=digest' })
     return
   }
 
@@ -322,9 +325,111 @@ export default async function handler(req, res) {
     if (action === 'result') {
       return handleResult(req, res)
     }
+    if (action === 'digest-save') {
+      return handleDigestSave(req, res)
+    }
     // Default POST = submit brief (backward compat)
     return handleSubmit(req, res)
   }
 
   sendJson(res, 405, { ok: false, error: 'method_not_allowed' })
+}
+
+// ============================================================================
+// DIGEST OPERATIONS — channel output untuk n8n Workflow #2 Daily Digest
+// ============================================================================
+// Pattern: n8n Daily Digest cron 07:00 WITA → call Atmaja sintesa →
+// POST hasil ke /api/agent/briefs?action=digest-save dengan bearer.
+// Matthew lihat di PWA via GET ?action=digest (bisa same-origin atau bearer).
+//
+// Storage: in-memory globalThis (sama dengan briefStore) + Vercel KV persistent
+// untuk cross-instance + history.
+
+const DIGEST_LATEST_KEY = 'atmaja:digest:matthew:latest'
+const DIGEST_HISTORY_KEY = 'atmaja:digest:matthew:history'
+const DIGEST_MAX_HISTORY = 14
+const DIGEST_MAX_BYTES = 100_000
+
+async function handleDigestSave(req, res) {
+  if (!isAuthorizedN8n(req)) {
+    sendJson(res, 401, { ok: false, error: 'n8n_token_required', note: 'Header: Authorization: Bearer <N8N_WEBHOOK_TOKEN>' })
+    return
+  }
+
+  let payload
+  try {
+    payload = await readBody(req, DIGEST_MAX_BYTES)
+  } catch (error) {
+    sendJson(res, error.statusCode ?? 400, {
+      ok: false,
+      error: error.message === 'payload_too_large' ? 'payload_too_large' : 'invalid_json',
+    })
+    return
+  }
+
+  const digest = {
+    date: String(payload?.date ?? new Date().toISOString().slice(0, 10)).slice(0, 50),
+    digest: String(payload?.digest ?? '').slice(0, 20_000),
+    model: String(payload?.model ?? 'unknown').slice(0, 100),
+    briefCount: Number.isFinite(Number(payload?.briefCount)) ? Number(payload.briefCount) : 0,
+    completedAt: new Date().toISOString(),
+    note: String(payload?.note ?? '').slice(0, 500),
+  }
+
+  if (!digest.digest || digest.digest.length < 20) {
+    sendJson(res, 400, { ok: false, error: 'digest_text_required_min_20chars' })
+    return
+  }
+
+  // Best-effort save to Vercel KV. Fallback to in-memory globalThis kalau KV unavailable.
+  try {
+    const kvModule = await import('@vercel/kv').catch(() => null)
+    if (kvModule?.kv) {
+      await kvModule.kv.set(DIGEST_LATEST_KEY, digest)
+      // History: prepend baru, keep last N
+      const stored = await kvModule.kv.get(DIGEST_HISTORY_KEY)
+      const history = Array.isArray(stored) ? stored : []
+      // Dedup by date — replace kalau date sama, else prepend
+      const filtered = history.filter((d) => d.date !== digest.date)
+      const newHistory = [digest, ...filtered].slice(0, DIGEST_MAX_HISTORY)
+      await kvModule.kv.set(DIGEST_HISTORY_KEY, newHistory)
+    } else {
+      // Fallback in-memory
+      globalThis.__geraiDigestLatest = digest
+    }
+  } catch (error) {
+    console.error('[briefs-digest] save error (fallback to memory):', error?.message ?? error)
+    globalThis.__geraiDigestLatest = digest
+  }
+
+  sendJson(res, 200, { ok: true, digest, storedAt: new Date().toISOString() })
+}
+
+async function handleDigestRead(req, res, url) {
+  const includeHistory = url.searchParams.get('history') === '1'
+  let latest = null
+  let history = []
+
+  try {
+    const kvModule = await import('@vercel/kv').catch(() => null)
+    if (kvModule?.kv) {
+      latest = await kvModule.kv.get(DIGEST_LATEST_KEY)
+      if (includeHistory) {
+        const stored = await kvModule.kv.get(DIGEST_HISTORY_KEY)
+        history = Array.isArray(stored) ? stored : []
+      }
+    } else {
+      latest = globalThis.__geraiDigestLatest ?? null
+    }
+  } catch (error) {
+    console.error('[briefs-digest] read error:', error?.message ?? error)
+    latest = globalThis.__geraiDigestLatest ?? null
+  }
+
+  sendJson(res, 200, {
+    ok: true,
+    latest,
+    history: includeHistory ? history : undefined,
+    note: latest ? null : 'Belum ada digest. Daily digest workflow akan generate setiap 07:00 WITA.',
+  })
 }
