@@ -1,0 +1,730 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gerai 1000 Pintu — AI Department Arsitektur & Roadmap</title>
+<style>
+  :root {
+    --accent: #B8956B;
+    --accent-dark: #8a6e4f;
+    --accent-bg: #f5ede0;
+    --text: #1F1A14;
+    --text-secondary: #4a4339;
+    --text-faint: #8a7d6e;
+    --bg: #FAF8F4;
+    --bg-soft: #f0ebe1;
+    --border: #e0d6c4;
+    --success: #2d6a4f;
+    --warning: #b8860b;
+    --danger: #a52a2a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.6;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 60px;
+    font-size: 14px;
+  }
+  h1, h2, h3, h4 { color: var(--text); font-weight: 800; line-height: 1.25; }
+  h1 { font-size: 32px; margin: 0 0 8px; border-bottom: 3px solid var(--accent); padding-bottom: 16px; }
+  h1 + p { font-size: 16px; color: var(--text-secondary); margin-top: 0; font-weight: 600; }
+  h2 { font-size: 24px; margin: 40px 0 16px; padding-top: 16px; border-top: 2px solid var(--border); color: var(--accent-dark); }
+  h3 { font-size: 18px; margin: 28px 0 12px; }
+  h4 { font-size: 15px; margin: 20px 0 8px; color: var(--text-secondary); }
+  p { margin: 12px 0; }
+  strong { color: var(--text); font-weight: 700; }
+  em { color: var(--text-secondary); }
+  blockquote {
+    border-left: 4px solid var(--accent);
+    background: var(--accent-bg);
+    padding: 12px 20px;
+    margin: 16px 0;
+    color: var(--text-secondary);
+    font-size: 13px;
+  }
+  code {
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', Consolas, monospace;
+    background: var(--bg-soft);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+    color: var(--accent-dark);
+  }
+  pre {
+    background: var(--text);
+    color: #f5ede0;
+    padding: 16px 20px;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  pre code { background: transparent; color: inherit; padding: 0; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 16px 0;
+    font-size: 13px;
+    background: white;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th { background: var(--accent-bg); font-weight: 700; color: var(--accent-dark); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover { background: rgba(184, 149, 107, 0.04); }
+  hr {
+    border: 0;
+    border-top: 1px solid var(--border);
+    margin: 32px 0;
+  }
+  ul, ol { padding-left: 28px; margin: 12px 0; }
+  li { margin: 4px 0; }
+  a { color: var(--accent-dark); text-decoration: none; border-bottom: 1px dotted var(--accent); }
+  a:hover { color: var(--accent); }
+  .mermaid {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 24px;
+    margin: 20px 0;
+    text-align: center;
+  }
+  .toc {
+    background: var(--bg-soft);
+    border-left: 4px solid var(--accent);
+    padding: 16px 24px;
+    margin: 24px 0;
+    border-radius: 0 6px 6px 0;
+  }
+  .toc h2 { border: none; padding: 0; margin: 0 0 12px; font-size: 16px; }
+  .toc ol { margin: 0; padding-left: 20px; }
+  .toc li { margin: 2px 0; font-size: 13px; }
+  .meta-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px 20px;
+    margin: 16px 0;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  }
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .badge-success { background: rgba(45, 106, 79, 0.15); color: var(--success); }
+  .badge-warning { background: rgba(184, 134, 11, 0.15); color: var(--warning); }
+  .badge-danger { background: rgba(165, 42, 42, 0.15); color: var(--danger); }
+  .footer-meta {
+    margin-top: 60px;
+    padding: 20px;
+    border-top: 2px solid var(--border);
+    color: var(--text-faint);
+    font-size: 12px;
+    text-align: center;
+    font-style: italic;
+  }
+  @media print {
+    body { max-width: none; padding: 20px 30px; font-size: 11px; }
+    h1 { font-size: 22px; page-break-before: avoid; }
+    h2 { font-size: 16px; page-break-before: auto; page-break-after: avoid; }
+    h3 { page-break-after: avoid; }
+    table, .mermaid, pre { page-break-inside: avoid; }
+    a { color: var(--accent-dark); border: none; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Gerai 1000 Pintu — AI Department</h1>
+<p>Arsitektur, Memori, Workflow, dan Roadmap Pengembangan</p>
+
+<div class="meta-card">
+<table style="border:none; box-shadow:none; margin:0;">
+  <tbody>
+    <tr style="border:none;"><td style="padding:4px 0; border:none;"><strong>Versi</strong></td><td style="padding:4px 0; border:none;">1.0</td></tr>
+    <tr style="border:none;"><td style="padding:4px 0; border:none;"><strong>Tanggal</strong></td><td style="padding:4px 0; border:none;">24 Mei 2026</td></tr>
+    <tr style="border:none;"><td style="padding:4px 0; border:none;"><strong>Pemilik</strong></td><td style="padding:4px 0; border:none;">Matthew (mattlouai@gmail.com)</td></tr>
+    <tr style="border:none;"><td style="padding:4px 0; border:none;"><strong>Status</strong></td><td style="padding:4px 0; border:none;"><span class="badge badge-success">Production live</span> di <a href="https://gerai.mahewwork.com">gerai.mahewwork.com</a></td></tr>
+    <tr style="border:none;"><td style="padding:4px 0; border:none;"><strong>Mode</strong></td><td style="padding:4px 0; border:none;">Solo-tenant — hanya Matthew yang pakai</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="toc">
+<h2>Daftar Isi</h2>
+<ol>
+<li>Ringkasan Eksekutif</li>
+<li>Identitas &amp; Konteks Bisnis</li>
+<li>Arsitektur Saat Ini (Live)</li>
+<li>Memory Stack 3-Lapis</li>
+<li>Security Architecture</li>
+<li>AI Personas</li>
+<li>n8n Workflow Orchestration</li>
+<li>Reference Lengkap (Endpoints, URL, IDs)</li>
+<li>Roadmap &amp; Arah Pengembangan</li>
+<li>Gap Analysis — Yang Masih Kurang</li>
+<li>Skill Assistant yang Tersedia</li>
+<li>Operating Procedures</li>
+<li>Lampiran (Cost, Token Reference)</li>
+</ol>
+</div>
+
+<h2>1. Ringkasan Eksekutif</h2>
+<p><strong>Gerai 1000 Pintu</strong> adalah platform retail destination "Dunia Pintu Indonesia" yang dibangun Matthew sebagai solo founder. Untuk mengoperasikan bisnis multi-pilar (Product, Knowledge, Service) dengan tim kecil (lean store 2 orang per toko + Door Expert generalist terpusat), Matthew bangun <strong>AI Department</strong> sebagai partner berpikir yang menggantikan fungsi tim level menengah-atas.</p>
+
+<p><strong>AI Department</strong> = Atmaja (CEO) + 4 C-suite (orchestrator) + 12 specialist, berjalan di atas stack web app modern (Vite/React PWA + Vercel serverless + OpenRouter LLM).</p>
+
+<p><strong>Status saat ini (24 Mei 2026):</strong></p>
+<ul>
+<li><span class="badge badge-success">Live</span> PWA, Atmaja chat dengan vision + native PDF reading</li>
+<li><span class="badge badge-success">Live</span> Memory persistent 3-lapis (working memory 100 pesan, long-term file KV, PDF library Blob)</li>
+<li><span class="badge badge-success">Live</span> 2 n8n workflow (Brief Lifecycle synchronous + Daily Digest scheduled)</li>
+<li><span class="badge badge-success">Live</span> 12 endpoint server-hardened (strict origin + bearer auth)</li>
+<li><span class="badge badge-warning">Pending</span> 2FA, channel output Daily Digest, workflow #3-5</li>
+</ul>
+
+<p><strong>Cost steady-state estimate:</strong> $30-45 per bulan untuk solo intensive use.</p>
+
+<h2>2. Identitas &amp; Konteks Bisnis</h2>
+
+<h3>2.1 Bisnis Gerai 1000 Pintu</h3>
+<table>
+<thead><tr><th>Aspek</th><th>Detail</th></tr></thead>
+<tbody>
+<tr><td>Nama lengkap</td><td>Gerai 1000 Pintu</td></tr>
+<tr><td>Tagline</td><td>Dunia Pintu Indonesia</td></tr>
+<tr><td>Entitas hukum</td><td>PT Selaras Lawang Sewu (SLS)</td></tr>
+<tr><td>Brand pertama</td><td>AMK (di bawah SLS)</td></tr>
+<tr><td>Lokasi pilot</td><td>Balikpapan, Kalimantan Timur</td></tr>
+<tr><td>Founder</td><td>Matthew</td></tr>
+<tr><td>Tim</td><td>Solo (Matthew) + AI Department</td></tr>
+<tr><td>3 Pilar</td><td>Product (katalog) · Knowledge (edukasi) · Service (Door Expert + Cash &amp; Delivery)</td></tr>
+<tr><td>Differentiator</td><td>Lean Store 2 orang, Self-Ordering Kiosk, Konsultasi Terpusat</td></tr>
+<tr><td>Brand canon</td><td>Calm refined premium curated retail. NO em-dash. "Tempat" bukan "rumah". Nama "Gerai 1000 Pintu" lengkap.</td></tr>
+<tr><td>Target Q3 2026</td><td>Launching AMK wave 1 di Balikpapan minggu ke-2 Juli</td></tr>
+<tr><td>Vendor pintu kayu</td><td>PT Selaras Lawang Sewu (lead time 21 hari, NET 30)</td></tr>
+<tr><td>Budget marketing wave 1</td><td>Rp 50 juta (Meta Ads + IG influencer mikro Kaltim)</td></tr>
+</tbody>
+</table>
+
+<h3>2.2 Aplikasi Gerai</h3>
+<table>
+<thead><tr><th>Aspek</th><th>Detail</th></tr></thead>
+<tbody>
+<tr><td>Production URL</td><td><a href="https://gerai.mahewwork.com">gerai.mahewwork.com</a></td></tr>
+<tr><td>Repo</td><td>github.com/MahewAi/Mahew (private, branch main)</td></tr>
+<tr><td>Tech stack</td><td>Vite + React 18 + TypeScript + Tailwind CSS + framer-motion</td></tr>
+<tr><td>Hosting</td><td>Vercel (Hobby plan, Fluid Compute enabled)</td></tr>
+<tr><td>Auto-deploy</td><td>Push ke main → Vercel build + deploy ~1 menit</td></tr>
+<tr><td>PWA features</td><td>Service worker (Workbox), manifest, offline cache</td></tr>
+<tr><td>Mobile-first</td><td>Iya — primary target Matthew gunakan dari iPhone/iPad</td></tr>
+</tbody>
+</table>
+
+<h3>2.3 AI Department (Struktur Organisasi)</h3>
+<div class="mermaid">
+graph TB
+    Atmaja[Atmaja CEO<br/>Opus 4.7<br/>Content tier]
+    COO[COO<br/>Sonnet 4.6<br/>Operations]
+    CMO[CMO<br/>Sonnet 4.6<br/>Marketing]
+    CFO[CFO<br/>Sonnet 4.6<br/>Finance]
+    CCO[CCO<br/>Sonnet 4.6<br/>Creative]
+
+    Atmaja --> COO
+    Atmaja --> CMO
+    Atmaja --> CFO
+    Atmaja --> CCO
+
+    COO --> HR[HR Systems]
+    COO --> Prod[Production Mgr]
+    COO --> Cur[Curator]
+
+    CMO --> Brand[Brand Strategist]
+    CMO --> Market[Market Researcher]
+    CMO --> Sales[Sales Strategist]
+
+    CCO --> Innov[Innovation Scout]
+    CCO --> BizD[Business Designer]
+    CCO --> Doc[Document Writer]
+    CCO --> Edit[Editorial]
+    CCO --> Web[Web Researcher]
+
+    CFO --> Fin[Financial Analyst]
+</div>
+
+<h2>3. Arsitektur Saat Ini (Live)</h2>
+
+<h3>3.1 Diagram Tingkat Tinggi</h3>
+<div class="mermaid">
+graph TB
+    subgraph User[USER]
+        Browser[Matthew PWA Browser]
+    end
+
+    subgraph Vercel[VERCEL Production]
+        FE[Vite Build<br/>Static + SW]
+        subgraph Functions[12 Serverless Functions]
+            ChatEP[chat]
+            MemEP[memory + files]
+            ReplyEP[agent reply]
+            BriefsEP[agent briefs]
+            HealthEP[health]
+            ImageEP[image]
+            VideoEP[video x3]
+            CreditsEP[credits x2]
+            SyncEP[knowledge sync]
+        end
+        subgraph Storage[Vercel Storage]
+            KV[(KV Upstash<br/>Redis)]
+            Blob[(Blob<br/>Private)]
+        end
+    end
+
+    subgraph AI[AI Provider]
+        OpenRouter[OpenRouter Gateway]
+        OpenAI[OpenAI Image+Video]
+        OpenRouter --> Anthropic[Claude Opus 4.7<br/>+ Sonnet 4.6]
+    end
+
+    subgraph Auto[Automation Layer]
+        N8N[n8n Cloud]
+        WF1[Workflow 1<br/>Brief Lifecycle]
+        WF2[Workflow 2<br/>Daily Digest]
+    end
+
+    Browser --> FE
+    Browser --> ChatEP
+    Browser --> MemEP
+    Browser --> BriefsEP
+
+    ChatEP --> OpenRouter
+    ChatEP --> KV
+    ChatEP --> Blob
+
+    ReplyEP --> OpenRouter
+    BriefsEP --> WF1
+    WF1 --> ReplyEP
+    WF1 --> ChatEP
+    WF1 --> BriefsEP
+
+    WF2 --> BriefsEP
+    WF2 --> ChatEP
+
+    ImageEP --> OpenAI
+    VideoEP --> OpenAI
+</div>
+
+<h3>3.2 Komponen Per Layer</h3>
+
+<p><strong>Frontend (Vite + React):</strong> Path <code>src/</code>, entry <code>src/main.tsx</code>, routes <code>/</code>, <code>/atmaja</code>, <code>/inbox</code>. Key components <code>Atmaja.tsx</code> (chat dengan library drawer), <code>Inbox.tsx</code> (briefs list). Lib helpers <code>atmajaClient.ts</code>, <code>atmajaFilesClient.ts</code>, <code>briefStore.ts</code>, <code>learningMemory.ts</code>.</p>
+
+<p><strong>Backend (Vercel Serverless Functions):</strong> Total <strong>12 functions</strong> (Hobby plan cap). Daftar lengkap di section 8.</p>
+
+<p><strong>AI Runtime:</strong> Primary gateway OpenRouter, model floor <strong>anthropic/claude-sonnet-4.6</strong> minimum. Opus 4.7 untuk content tier (Atmaja synthesis), Sonnet 4.6 untuk orchestration (C-suite + memory extractor). Native PDF reading via OpenRouter file content block.</p>
+
+<p><strong>Storage:</strong> Vercel KV (Upstash Redis) untuk memory file + index + counters; Vercel Blob (private) untuk PDF binary; localStorage browser untuk chat thread + brief list per device.</p>
+
+<p><strong>Orchestration:</strong> n8n Cloud (<code>mahewai.app.n8n.cloud</code>), 2 workflow live, 3 planned. Sudah OAuth via MCP.</p>
+
+<h3>3.3 Data Flow: Brief Lifecycle</h3>
+<div class="mermaid">
+sequenceDiagram
+    participant M as Matthew PWA
+    participant App as api/agent/briefs
+    participant N8N as n8n Webhook
+    participant Reply as api/agent/reply
+    participant Atmaja as api/atmaja/chat
+
+    M->>App: POST submit brief
+    App->>N8N: forward + bearer
+    N8N->>Reply: COO call parallel
+    N8N->>Reply: CMO call parallel
+    N8N->>Reply: CFO call parallel
+    N8N->>Reply: CCO call parallel
+    Reply-->>N8N: 4 replies Sonnet 4.6
+    N8N->>N8N: aggregate
+    N8N->>Atmaja: synthesis prompt
+    Atmaja-->>N8N: synthesis Opus 4.7
+    N8N->>App: callback POST result + bearer
+    App-->>M: sync response
+</div>
+
+<h3>3.4 Data Flow: Atmaja Chat dengan Memory + PDF</h3>
+<div class="mermaid">
+sequenceDiagram
+    participant M as Matthew PWA
+    participant Chat as api/atmaja/chat
+    participant KV as Vercel KV
+    participant Blob as Vercel Blob
+    participant OR as OpenRouter Opus
+
+    M->>Chat: POST chat<br/>message+history+fileIds
+    Chat->>KV: read memory file
+    Chat->>KV: get file metadata by IDs
+    Chat->>Blob: fetch PDF bytes per ID
+    Chat->>OR: messages with memory+history+PDF
+    OR-->>Chat: reply Opus 4.7
+    Chat->>OR: extract delta Sonnet 4.6
+    Chat->>KV: write updated memory
+    Chat-->>M: reply + memoryUpdate stats
+</div>
+
+<h2>4. Memory Stack 3-Lapis</h2>
+
+<p>Atmaja punya memory yang efektif kayak Claude.ai — terus berkembang dan tidak hilang antar sesi. Implementasi: 3 lapis terpisah dengan tanggung jawab berbeda.</p>
+
+<h3>4.1 Lapis 1 — Working Memory (Per Session)</h3>
+<table>
+<thead><tr><th>Property</th><th>Value</th></tr></thead>
+<tbody>
+<tr><td>Storage</td><td>localStorage browser + payload chat</td></tr>
+<tr><td>Capacity</td><td>100 pesan terakhir × 15.000 karakter per pesan</td></tr>
+<tr><td>Persist</td><td>Survives close tab/browser/OS restart (browser yang sama)</td></tr>
+<tr><td>Cross-device</td><td>TIDAK (per device)</td></tr>
+<tr><td>Implementation</td><td><code>api/atmaja/chat.js</code> normalizeHistory() + <code>src/lib/atmajaClient.ts</code> stripHistory()</td></tr>
+</tbody>
+</table>
+<p><strong>Effect:</strong> Dalam 1 hari kerja, Atmaja tidak lupa konteks yang baru dibahas di session aktif.</p>
+
+<h3>4.2 Lapis 2 — Long-term Memory File (Cross-Session)</h3>
+<table>
+<thead><tr><th>Property</th><th>Value</th></tr></thead>
+<tbody>
+<tr><td>Storage</td><td>Vercel KV (Upstash Redis)</td></tr>
+<tr><td>Key</td><td><code>atmaja:memory:matthew</code> (+ :version + :turns)</td></tr>
+<tr><td>Format</td><td>Markdown file, sectioned by topic</td></tr>
+<tr><td>Capacity</td><td>50.000 karakter total</td></tr>
+<tr><td>Auto-update</td><td>Iya — tiap turn substantive, Sonnet 4.6 extract delta + append</td></tr>
+<tr><td>Skip trivial</td><td>User &lt; 30 char ATAU Atmaja reply &lt; 200 char → skip extractor</td></tr>
+<tr><td>Persistence</td><td>Permanent across device/browser/session</td></tr>
+<tr><td>Endpoint</td><td><code>GET/PUT/DELETE /api/atmaja/memory</code></td></tr>
+</tbody>
+</table>
+
+<h3>4.3 Lapis 3 — File Library (PDF Persistence)</h3>
+<table>
+<thead><tr><th>Property</th><th>Value</th></tr></thead>
+<tbody>
+<tr><td>Storage</td><td>Vercel Blob (private store)</td></tr>
+<tr><td>Index</td><td>Vercel KV key <code>atmaja:files:matthew:index</code></td></tr>
+<tr><td>Capacity</td><td>50 files max × 2.6 MB raw PDF each</td></tr>
+<tr><td>Auth fetch</td><td>SDK get() dengan access:'private' + BLOB_READ_WRITE_TOKEN</td></tr>
+<tr><td>Endpoint</td><td><code>GET/POST/DELETE /api/atmaja/memory?type=files</code></td></tr>
+<tr><td>Reference dari chat</td><td>Payload field <code>attachedFileIds: ['file_xxx']</code> (max 3 per turn)</td></tr>
+<tr><td>Auto-metadata</td><td>page count (regex parser), uploaded timestamp, size, description</td></tr>
+<tr><td>Memory integration</td><td>Auto-append entry ke section "## Files / Dokumen"</td></tr>
+</tbody>
+</table>
+
+<h2>5. Security Architecture</h2>
+
+<h3>5.1 Auth Pattern (api/_shared.js)</h3>
+<p>Semua 12 endpoint pakai shared helper <code>isRequestAllowed(req)</code>:</p>
+<ol>
+<li><strong>Path 1:</strong> Bearer token valid → allowed (server-to-server, admin curl, n8n callback)</li>
+<li><strong>Path 2:</strong> Browser same-origin (gerai.mahewwork.com) atau configured allowlist → allowed</li>
+<li><strong>Else:</strong> 403 reject dengan reason</li>
+</ol>
+
+<h3>5.2 Endpoint Hardening (All 12 Endpoints)</h3>
+<table>
+<thead><tr><th>Endpoint</th><th>Method</th><th>Auth</th><th>Rate Limit</th></tr></thead>
+<tbody>
+<tr><td><code>/api/atmaja/chat</code></td><td>POST</td><td>bearer OR same-origin</td><td>12/min/IP</td></tr>
+<tr><td><code>/api/atmaja/memory</code></td><td>GET/PUT/DELETE</td><td>bearer OR same-origin</td><td>—</td></tr>
+<tr><td><code>/api/atmaja/memory?type=files</code></td><td>POST/GET/DELETE</td><td>bearer OR same-origin</td><td>—</td></tr>
+<tr><td><code>/api/agent/reply</code></td><td>POST</td><td>bearer OR same-origin</td><td>24/min/IP</td></tr>
+<tr><td><code>/api/agent/briefs</code></td><td>POST</td><td>bearer OR same-origin</td><td>20/min/IP</td></tr>
+<tr><td><code>/api/agent/briefs?action=result</code></td><td>POST</td><td>bearer only</td><td>30/min/IP</td></tr>
+<tr><td><code>/api/agent/briefs?action=list</code></td><td>GET</td><td>bearer only</td><td>—</td></tr>
+<tr><td><code>/api/agent/health</code></td><td>GET</td><td>public</td><td>—</td></tr>
+<tr><td><code>/api/knowledge/sync</code></td><td>POST/GET</td><td>bearer</td><td>20/min/IP</td></tr>
+<tr><td><code>/api/openai/image</code></td><td>POST</td><td>bearer OR same-origin</td><td>6/min/IP</td></tr>
+<tr><td><code>/api/openai/video/*</code></td><td>various</td><td>bearer OR same-origin</td><td>varies</td></tr>
+<tr><td>credits endpoints</td><td>GET</td><td>bearer OR same-origin</td><td>—</td></tr>
+</tbody>
+</table>
+
+<h3>5.3 Content Security Policy</h3>
+<p><code>vercel.json</code> configures CSP strict: <code>default-src 'self'</code>, no inline scripts, no external CDNs in connect-src, frame/object/form-action all none.</p>
+
+<h2>6. AI Personas</h2>
+
+<h3>6.1 Atmaja CEO</h3>
+<table>
+<thead><tr><th>Property</th><th>Value</th></tr></thead>
+<tbody>
+<tr><td>Role</td><td>CEO AI Department, partner berpikir Matthew</td></tr>
+<tr><td>Model</td><td>anthropic/claude-opus-4.7 (content tier)</td></tr>
+<tr><td>Fallback</td><td>anthropic/claude-sonnet-4.6</td></tr>
+<tr><td>Max tokens per call</td><td>8.192</td></tr>
+<tr><td>Auto-continuation</td><td>Iya — sampai 24.576 tokens total (3 calls) per turn</td></tr>
+<tr><td>Vision</td><td>Aktif (JPG/PNG/WEBP/GIF)</td></tr>
+<tr><td>PDF native reading</td><td>Aktif via OpenRouter file content block</td></tr>
+<tr><td>Long-term memory</td><td>Read tiap call, auto-update tiap turn</td></tr>
+<tr><td>System prompt</td><td>Bahasa Indonesia, ringkas langsung, brand canon Gerai</td></tr>
+</tbody>
+</table>
+
+<h3>6.2 4 C-suite + 12 Specialist</h3>
+<p>Semua di tier orchestration (Sonnet 4.6). Endpoint <code>/api/agent/reply</code>, route by <code>role</code> parameter. 4 C-suite: COO/CMO/CFO/CCO. 12 specialist: HR Systems, Production Manager, Curator, Brand Strategist, Market Researcher, Sales Strategist, Innovation Scout, Business Designer, Financial Analyst, Document Writer, Editorial, Web Researcher.</p>
+
+<h2>7. n8n Workflow Orchestration</h2>
+
+<h3>7.1 Workflow #1 — Brief Lifecycle (LIVE v3)</h3>
+<table>
+<thead><tr><th>Property</th><th>Value</th></tr></thead>
+<tbody>
+<tr><td>ID</td><td><code>hrhkPoiON79oO7un</code></td></tr>
+<tr><td>Trigger</td><td>POST webhook <code>https://mahewai.app.n8n.cloud/webhook/gerai-brief-submit</code></td></tr>
+<tr><td>Nodes</td><td>11 + 3 sticky note</td></tr>
+<tr><td>Body shape</td><td>Direct atau payload-wrapped (dual support)</td></tr>
+<tr><td>Retry</td><td>3× delay 5s di semua HTTP node</td></tr>
+<tr><td>Smoke test result</td><td>Pass 30.3s end-to-end</td></tr>
+<tr><td>Cost per execution</td><td>~$0.03 (4× Sonnet 4.6 + 1× Opus 4.7)</td></tr>
+</tbody>
+</table>
+
+<h3>7.2 Workflow #2 — Daily Digest (LIVE, channel pending)</h3>
+<table>
+<thead><tr><th>Property</th><th>Value</th></tr></thead>
+<tbody>
+<tr><td>ID</td><td><code>mUdhpkz8zmNVDbM6</code></td></tr>
+<tr><td>Trigger</td><td>Cron <code>0 0 23 * * *</code> UTC = 07:00 WITA</td></tr>
+<tr><td>Nodes</td><td>6: Schedule → Fetch Briefs → Build Prompt → Skip If Empty → Atmaja Digest → Format Output</td></tr>
+<tr><td>Output channel</td><td><strong>BELUM ADA</strong> (pending Matthew pilih)</td></tr>
+<tr><td>Cost per execution</td><td>~$0.005 (1× Opus 4.7)</td></tr>
+</tbody>
+</table>
+
+<h3>7.3 Planned (Belum dibuat)</h3>
+<table>
+<thead><tr><th>Workflow</th><th>Trigger</th><th>Purpose</th><th>Effort</th></tr></thead>
+<tbody>
+<tr><td>#3 Notion Knowledge Sync</td><td>Notion webhook</td><td>Pull brand canon + SOP dari Notion ke server cache</td><td>1-2 jam</td></tr>
+<tr><td>#4 Image Generation Batch</td><td>Manual/cron</td><td>Generate catalog images via gpt-image-2</td><td>2-3 jam</td></tr>
+<tr><td>#5 Market Radar</td><td>Cron Senin 06:00 WITA</td><td>Pull kompetitor + tren via Tavily/Brightdata</td><td>2-3 jam</td></tr>
+</tbody>
+</table>
+
+<h2>9. Roadmap &amp; Arah Pengembangan</h2>
+
+<h3>9.1 Short-term (1-2 minggu) — Quick Wins</h3>
+<table>
+<thead><tr><th>Priority</th><th>Item</th><th>Effort</th><th>Cost impact</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><strong>2FA Vercel + n8n + GitHub</strong></td><td>15 menit total</td><td>Free</td></tr>
+<tr><td>2</td><td><strong>Channel output Daily Digest</strong> — pilih: callback app endpoint, atau email/Telegram/PWA push</td><td>1-2 jam (callback paling cepat)</td><td>Free-$5/bulan</td></tr>
+<tr><td>3</td><td><strong>Rotate token</strong> N8N_WEBHOOK_TOKEN baru</td><td>30 menit</td><td>Free</td></tr>
+<tr><td>4</td><td><strong>Workflow #3 Notion Knowledge Sync</strong></td><td>1-2 jam</td><td>Free (Notion gratis)</td></tr>
+</tbody>
+</table>
+
+<h3>9.2 Medium-term (1-3 bulan) — Capability Expansion</h3>
+<table>
+<thead><tr><th>Item</th><th>Effort</th></tr></thead>
+<tbody>
+<tr><td>Workflow #4 Image Gen Batch — bulk product catalog images via gpt-image-2</td><td>2-3 jam</td></tr>
+<tr><td>Workflow #5 Market Radar — Tavily/Brightdata pull Senin 06:00</td><td>2-3 jam</td></tr>
+<tr><td>Persona hot-swap — brand canon di KV/Notion, bukan hardcoded di kode</td><td>1 hari</td></tr>
+<tr><td>Cost tracking dashboard — real-time di PWA</td><td>1 hari</td></tr>
+<tr><td>Backup memory file — daily auto-backup ke Blob</td><td>4 jam</td></tr>
+<tr><td>Multi-thread chat per topik — strategi/vendor/brand terpisah</td><td>2 hari</td></tr>
+</tbody>
+</table>
+
+<h3>9.3 Long-term (3-12 bulan) — Strategic Expansion</h3>
+<table>
+<thead><tr><th>Item</th><th>Effort</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td>Vector DB + RAG — Upstash Vector untuk semantic search memory + PDF</td><td>1 minggu</td><td>Free tier 10K vectors</td></tr>
+<tr><td>Image generation aktif di PWA — quick command /image</td><td>3 hari</td><td>$0.04/image</td></tr>
+<tr><td>Sora 2 video gen di PWA</td><td>3 hari</td><td>$1.00/4s video</td></tr>
+<tr><td>Multi-language EN/ID untuk customer luar</td><td>1 minggu</td><td>Free</td></tr>
+<tr><td>Storefront e-commerce dengan payment</td><td>2 minggu</td><td>Butuh Stripe/Xendit</td></tr>
+<tr><td>Upgrade Vercel Hobby → Pro</td><td>Instant</td><td>$20/bulan, >12 functions</td></tr>
+</tbody>
+</table>
+
+<h2>10. Gap Analysis — Yang Masih Kurang</h2>
+
+<h3>10.1 Security Gaps</h3>
+<table>
+<thead><tr><th>Gap</th><th>Risiko</th><th>Severity</th><th>Fix</th></tr></thead>
+<tbody>
+<tr><td>2FA belum aktif di Vercel + n8n + GitHub</td><td>Account compromise = token leak</td><td><span class="badge badge-danger">HIGH</span></td><td>Aktifkan 2FA (5 menit)</td></tr>
+<tr><td>1 token forever, belum ada rotation policy</td><td>Kalau leak, exposure permanent</td><td><span class="badge badge-warning">MEDIUM</span></td><td>Rotate per 3 bulan</td></tr>
+<tr><td>Memory file tidak ada backup</td><td>Data loss kalau KV down</td><td><span class="badge badge-warning">MEDIUM</span></td><td>Daily backup ke Blob</td></tr>
+<tr><td>Tidak ada audit log siapa akses apa kapan</td><td>Tidak ke-detect incident</td><td><span class="badge badge-warning">LOW</span></td><td>Vercel logs ada, enrich kalau perlu</td></tr>
+<tr><td>Brand canon hardcoded di code</td><td>Update brand = git push + redeploy</td><td><span class="badge badge-warning">LOW</span></td><td>Workflow #3 Notion sync</td></tr>
+</tbody>
+</table>
+
+<h3>10.2 Operational Gaps</h3>
+<table>
+<thead><tr><th>Gap</th><th>Severity</th><th>Fix</th></tr></thead>
+<tbody>
+<tr><td>Daily Digest tidak ada channel output</td><td><span class="badge badge-warning">MEDIUM</span></td><td>Pilih channel (rekomendasi callback)</td></tr>
+<tr><td>Tidak ada cost dashboard real-time</td><td><span class="badge badge-warning">MEDIUM</span></td><td>Build di PWA</td></tr>
+<tr><td>Tidak ada error alerting</td><td><span class="badge badge-warning">LOW</span></td><td>Enable Vercel notifications</td></tr>
+<tr><td>Tidak ada monitoring uptime external</td><td><span class="badge badge-warning">LOW</span></td><td>Better Uptime / Uptime Robot free</td></tr>
+</tbody>
+</table>
+
+<h3>10.3 Feature Gaps</h3>
+<table>
+<thead><tr><th>Gap</th><th>Severity</th><th>Fix</th></tr></thead>
+<tbody>
+<tr><td>Cross-device sync</td><td><span class="badge badge-warning">MEDIUM</span></td><td>Memory KV sudah cross-device, tinggal thread sync</td></tr>
+<tr><td>Multi-thread chat per topik</td><td><span class="badge badge-warning">LOW</span></td><td>UI redesign PWA</td></tr>
+<tr><td>Search di memory file</td><td><span class="badge badge-warning">LOW</span></td><td>Pagination atau Vector DB</td></tr>
+<tr><td>Bulk PDF upload</td><td><span class="badge badge-warning">LOW</span></td><td>Multi-file picker</td></tr>
+<tr><td>Image generation di PWA UI</td><td><span class="badge badge-warning">MEDIUM</span></td><td>Endpoint ada, UI belum</td></tr>
+</tbody>
+</table>
+
+<h3>10.4 Architectural Gaps</h3>
+<table>
+<thead><tr><th>Gap</th><th>Severity</th><th>Fix</th></tr></thead>
+<tbody>
+<tr><td>Hobby plan = 12 functions limit (sudah mentok)</td><td><span class="badge badge-warning">MEDIUM</span></td><td>Upgrade Pro $20/bulan atau konsolidasi lebih agresif</td></tr>
+<tr><td>Tidak ada test suite</td><td><span class="badge badge-warning">MEDIUM</span></td><td>Vitest unit tests per endpoint</td></tr>
+<tr><td>Tidak ada CI/CD checks</td><td><span class="badge badge-warning">LOW</span></td><td>GitHub Actions pre-merge</td></tr>
+</tbody>
+</table>
+
+<h2>11. Skill Assistant (Claude) yang Tersedia</h2>
+
+<h3>11.1 Akses Infra Gerai</h3>
+<table>
+<thead><tr><th>Akses</th><th>Capability</th></tr></thead>
+<tbody>
+<tr><td>Repo Gerai (PC ini)</td><td>Read + edit + commit + push ke MahewAi/Mahew main branch</td></tr>
+<tr><td>Vercel project</td><td>Trigger redeploy via push, monitor via API curl</td></tr>
+<tr><td>Vercel KV</td><td>Memory storage + file index R/W</td></tr>
+<tr><td>Vercel Blob</td><td>PDF storage R/W via SDK</td></tr>
+<tr><td>n8n MCP</td><td>Create/update/test/publish workflow via SDK (OAuth-ed)</td></tr>
+<tr><td>OpenRouter</td><td>Opus 4.7 + Sonnet 4.6 runtime</td></tr>
+<tr><td>GitHub</td><td>Git operations, gh CLI untuk PR/issue</td></tr>
+</tbody>
+</table>
+
+<h3>11.2 Engineering Capabilities</h3>
+<ul>
+<li>TypeScript/JavaScript editing (React, Node, ES modules)</li>
+<li>Vite + React 18 patterns</li>
+<li>Serverless function design (Vercel runtime)</li>
+<li>API design (REST, auth, rate limiting)</li>
+<li>Database integration (KV, Blob)</li>
+<li>LLM integration (OpenRouter, Anthropic patterns)</li>
+<li>Security audit + hardening</li>
+<li>Testing (typecheck, smoke test via curl)</li>
+<li>Git workflow</li>
+</ul>
+
+<h3>11.3 Domain Skill Ter-load (Claude Code Skills)</h3>
+<p><strong>Relevan untuk Gerai:</strong> engineering:* (architecture, code-review, debug, testing-strategy, incident-response, tech-debt); brand-voice:* (discover-brand, enforce-voice, generate-guidelines); design:* (design-critique, design-system, ux-copy, accessibility-review); marketing:* (brand-review, campaign-plan, draft-content, email-sequence, seo-audit); product-management:* (write-spec, roadmap-update, brainstorming); sales:* (call-prep, account-research, draft-outreach); searchfit-seo:* (SEO audit); productivity:* (task-management, memory-management).</p>
+
+<p><strong>Available kalau scope expand:</strong> customer-support:*, human-resources:*, finance:*, legal:*, operations:*, claude-api, update-config, security-review.</p>
+
+<h3>11.4 MCP Plugin Available</h3>
+<table>
+<thead><tr><th>MCP</th><th>Status</th><th>Use case Gerai</th></tr></thead>
+<tbody>
+<tr><td>n8n</td><td>OAuth ✓ (in use)</td><td>Workflow automation</td></tr>
+<tr><td>Notion</td><td>Available</td><td>Workflow #3 Knowledge Sync, brand canon source of truth</td></tr>
+<tr><td>ClickUp</td><td>Available</td><td>Task management Gerai expansion</td></tr>
+<tr><td>Sanity</td><td>Available</td><td>CMS alternatif</td></tr>
+<tr><td>Figma</td><td>Available</td><td>Design file integration</td></tr>
+<tr><td>Box</td><td>Available</td><td>Document storage alternatif</td></tr>
+<tr><td>Postiz</td><td>Available</td><td>Social media posting IG/Twitter</td></tr>
+<tr><td>Cloudinary</td><td>Available</td><td>Image CDN + transformation</td></tr>
+<tr><td>Brightdata</td><td>Available</td><td>Web scraping Workflow #5 Market Radar</td></tr>
+<tr><td>Zoom</td><td>Available</td><td>Door Expert konsultasi via Zoom (per BP bab 6)</td></tr>
+<tr><td>Searchfit SEO</td><td>Available</td><td>SEO audit komprehensif</td></tr>
+<tr><td>Adobe</td><td>Available</td><td>Creative tools (Photoshop, Illustrator)</td></tr>
+</tbody>
+</table>
+
+<h3>11.5 Yang TIDAK Saya Punya</h3>
+<ul>
+<li>Akses Vercel dashboard UI (saya tidak bisa klik tombol, Matthew yang lakukan)</li>
+<li>Akses email Matthew</li>
+<li>Akses payment gateway</li>
+<li>Akses social media accounts (perlu connect via MCP)</li>
+<li>Cross-device memory (saya context per PC ini)</li>
+<li>Authority untuk approve/reject decisions — saya advisor, Matthew yang decide</li>
+</ul>
+
+<h2>13. Lampiran</h2>
+
+<h3>A. Cost Estimation Bulanan</h3>
+<table>
+<thead><tr><th>Component</th><th>Monthly cost</th></tr></thead>
+<tbody>
+<tr><td>Vercel Hobby plan</td><td>$0</td></tr>
+<tr><td>Vercel KV free tier</td><td>$0</td></tr>
+<tr><td>Vercel Blob storage (1 GB)</td><td>$0.15</td></tr>
+<tr><td>OpenRouter Atmaja Opus 4.7</td><td>$15-30</td></tr>
+<tr><td>OpenRouter Sonnet 4.6 (extractor + C-suite)</td><td>$5-15</td></tr>
+<tr><td>OpenAI Image gen</td><td>$0-20 kalau dipakai</td></tr>
+<tr><td>OpenAI Video gen Sora 2</td><td>$0-50 kalau dipakai</td></tr>
+<tr><td>n8n Cloud Starter</td><td>$0 kalau &lt;5K execution/bulan</td></tr>
+<tr><td>GitHub private repo</td><td>$0</td></tr>
+<tr><td>Domain mahewwork.com</td><td>$1/bulan</td></tr>
+<tr><td><strong>Total realistic</strong></td><td><strong>$25-45/bulan</strong></td></tr>
+<tr><td><strong>Worst case heavy AI</strong></td><td><strong>$80-100/bulan</strong></td></tr>
+</tbody>
+</table>
+
+<h3>B. Quick Reference Card</h3>
+<p><strong>Bookmark ini:</strong></p>
+<ul>
+<li>PWA: <a href="https://gerai.mahewwork.com/atmaja">gerai.mahewwork.com/atmaja</a></li>
+<li>Vercel: <a href="https://vercel.com/mahewais-projects/gerai-app">vercel.com/mahewais-projects/gerai-app</a></li>
+<li>n8n: <a href="https://mahewai.app.n8n.cloud">mahewai.app.n8n.cloud</a></li>
+<li>GitHub: <a href="https://github.com/MahewAi/Mahew">github.com/MahewAi/Mahew</a></li>
+</ul>
+
+<div class="footer-meta">
+Dokumen disusun oleh Claude (Opus 4.7) sebagai bagian dari kerjaan setup AI Department Matthew.<br>
+Untuk update versi dengan info terbaru: minta Claude session aktif untuk regenerate.<br>
+Versi 1.0 · 24 Mei 2026 · Production state snapshot.
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'neutral',
+    themeVariables: {
+      primaryColor: '#f5ede0',
+      primaryTextColor: '#1F1A14',
+      primaryBorderColor: '#B8956B',
+      lineColor: '#8a7d6e',
+      secondaryColor: '#FAF8F4',
+      tertiaryColor: '#f0ebe1'
+    }
+  });
+</script>
+
+</body>
+</html>
