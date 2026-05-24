@@ -14,8 +14,8 @@
 //   DELETE /api/atmaja/memory?type=files&id=X  → remove from Blob + index + memory
 
 import { kv } from '@vercel/kv'
-import { put, del, get as blobGet } from '@vercel/blob'
-import { isRequestAllowed, getHeader } from '../_shared.js'
+import { put, del, get as blobGet, list as blobList } from '@vercel/blob'
+import { isRequestAllowed, getHeader, attachRequestId } from '../_shared.js'
 
 const jsonHeaders = {
   'content-type': 'application/json; charset=utf-8',
@@ -119,6 +119,122 @@ export async function getMemoryStats() {
   } catch (error) {
     console.error('[atmaja-memory] stats error:', error?.message ?? error)
     return { version: 0, turns: 0 }
+  }
+}
+
+// ============================================================================
+// BACKUP OPERATIONS (Lapis 2 defensive — daily snapshot ke Blob, rolling 30 hari)
+// ============================================================================
+
+const BACKUP_PREFIX = 'atmaja/backups/memory-'
+const BACKUP_MAX_KEEP = 30
+
+function formatBackupDate(d = new Date()) {
+  // Pakai WITA (UTC+8) untuk daily resolution
+  const wita = new Date(d.getTime() + 8 * 60 * 60 * 1000)
+  return wita.toISOString().slice(0, 10) // YYYY-MM-DD
+}
+
+export async function createMemorySnapshot() {
+  const memory = await readMemory()
+  if (!memory || memory.length < 100) {
+    return { ok: false, reason: 'memory_empty_or_minimal' }
+  }
+  const dateStr = formatBackupDate()
+  const blobPath = `${BACKUP_PREFIX}${dateStr}.md`
+  const buffer = Buffer.from(memory, 'utf-8')
+  try {
+    const blob = await put(blobPath, buffer, {
+      access: 'private',
+      contentType: 'text/markdown; charset=utf-8',
+      addRandomSuffix: false,
+      allowOverwrite: true, // overwrite same-day snapshot kalau backup di-trigger >1x sehari
+    })
+    return {
+      ok: true,
+      date: dateStr,
+      blobUrl: blob.url,
+      size: buffer.length,
+      timestamp: new Date().toISOString(),
+    }
+  } catch (error) {
+    console.error('[atmaja-backup] snapshot error:', error?.message ?? error)
+    return { ok: false, error: error?.message ?? 'unknown' }
+  }
+}
+
+export async function listMemorySnapshots() {
+  try {
+    const result = await blobList({ prefix: BACKUP_PREFIX })
+    const snapshots = (result.blobs ?? [])
+      .map((b) => ({
+        date: b.pathname.replace(BACKUP_PREFIX, '').replace('.md', ''),
+        pathname: b.pathname,
+        url: b.url,
+        size: b.size,
+        uploadedAt: b.uploadedAt,
+      }))
+      .sort((a, b) => b.date.localeCompare(a.date)) // newest first
+    return snapshots
+  } catch (error) {
+    console.error('[atmaja-backup] list error:', error?.message ?? error)
+    return []
+  }
+}
+
+export async function restoreMemoryFromSnapshot(dateStr) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return { ok: false, error: 'invalid_date_format', expected: 'YYYY-MM-DD' }
+  }
+  try {
+    const snapshots = await listMemorySnapshots()
+    const target = snapshots.find((s) => s.date === dateStr)
+    if (!target) {
+      return { ok: false, error: 'snapshot_not_found', date: dateStr }
+    }
+    const result = await blobGet(target.url, { access: 'private' })
+    if (!result?.stream) {
+      return { ok: false, error: 'snapshot_unreadable' }
+    }
+    const chunks = []
+    const reader = result.stream.getReader()
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      chunks.push(value)
+    }
+    const buffer = Buffer.concat(chunks.map((c) => Buffer.from(c)))
+    const content = buffer.toString('utf-8')
+    if (!content || content.length < 100) {
+      return { ok: false, error: 'snapshot_empty' }
+    }
+    await writeMemory(content)
+    return { ok: true, restored: true, date: dateStr, charCount: content.length }
+  } catch (error) {
+    console.error('[atmaja-backup] restore error:', error?.message ?? error)
+    return { ok: false, error: error?.message ?? 'unknown' }
+  }
+}
+
+export async function cleanOldSnapshots(keepLatest = BACKUP_MAX_KEEP) {
+  try {
+    const snapshots = await listMemorySnapshots()
+    if (snapshots.length <= keepLatest) {
+      return { ok: true, cleaned: 0, remaining: snapshots.length }
+    }
+    const toDelete = snapshots.slice(keepLatest)
+    let cleaned = 0
+    for (const snap of toDelete) {
+      try {
+        await del(snap.url)
+        cleaned += 1
+      } catch (error) {
+        console.error('[atmaja-backup] delete error:', error?.message ?? error)
+      }
+    }
+    return { ok: true, cleaned, remaining: snapshots.length - cleaned }
+  } catch (error) {
+    return { ok: false, error: error?.message ?? 'unknown' }
   }
 }
 
@@ -266,8 +382,15 @@ async function readBody(req, maxBytes) {
 }
 
 function sendJson(res, statusCode, payload) {
-  res.writeHead(statusCode, jsonHeaders)
-  res.end(JSON.stringify(payload))
+  const requestId = res._requestId
+  const headers = requestId
+    ? { ...jsonHeaders, 'x-request-id': requestId }
+    : jsonHeaders
+  const body = requestId
+    ? { ...payload, requestId }
+    : payload
+  res.writeHead(statusCode, headers)
+  res.end(JSON.stringify(body))
 }
 
 // ============================================================================
@@ -494,8 +617,11 @@ async function handleMemory(req, res) {
 // ============================================================================
 
 export default async function handler(req, res) {
+  // Correlation ID — set EARLY supaya sendJson otomatis include.
+  res._requestId = attachRequestId(req)
+
   if (req.method === 'OPTIONS') {
-    res.writeHead(204, jsonHeaders)
+    res.writeHead(204, { ...jsonHeaders, 'x-request-id': res._requestId })
     res.end()
     return
   }
@@ -507,7 +633,7 @@ export default async function handler(req, res) {
     return
   }
 
-  // Route by ?type=files atau default ke memory.
+  // Route by ?type query parameter atau default ke memory.
   const url = new URL(req.url ?? '/', `http://${getHeader(req, 'host') ?? 'localhost'}`)
   const type = url.searchParams.get('type')
 
@@ -516,5 +642,78 @@ export default async function handler(req, res) {
     return
   }
 
+  if (type === 'backup') {
+    await handleBackup(req, res, url)
+    return
+  }
+
   await handleMemory(req, res)
+}
+
+// ============================================================================
+// BACKUP HANDLER
+// ============================================================================
+
+async function handleBackup(req, res, url) {
+  const action = url.searchParams.get('action') || 'list'
+
+  // POST ?type=backup&action=create → create snapshot today
+  if (req.method === 'POST' && action === 'create') {
+    const result = await createMemorySnapshot()
+    if (!result.ok) {
+      sendJson(res, 500, result)
+      return
+    }
+    // Auto-cleanup old snapshots beyond rolling window
+    const cleanResult = await cleanOldSnapshots(BACKUP_MAX_KEEP)
+    sendJson(res, 200, { ...result, cleanup: cleanResult })
+    return
+  }
+
+  // POST ?type=backup&action=restore body {date: 'YYYY-MM-DD'}
+  if (req.method === 'POST' && action === 'restore') {
+    let payload
+    try {
+      payload = await readBody(req, 10_000)
+    } catch (error) {
+      sendJson(res, error.statusCode ?? 400, {
+        ok: false,
+        error: error.message === 'payload_too_large' ? 'payload_too_large' : 'invalid_json',
+      })
+      return
+    }
+    const dateStr = String(payload?.date ?? '').trim()
+    if (!dateStr) {
+      sendJson(res, 400, { ok: false, error: 'date_required', expected: 'YYYY-MM-DD' })
+      return
+    }
+    const result = await restoreMemoryFromSnapshot(dateStr)
+    sendJson(res, result.ok ? 200 : 404, result)
+    return
+  }
+
+  // GET ?type=backup (default action=list) → list snapshots
+  if (req.method === 'GET') {
+    const snapshots = await listMemorySnapshots()
+    sendJson(res, 200, {
+      ok: true,
+      snapshots,
+      count: snapshots.length,
+      maxKeep: BACKUP_MAX_KEEP,
+    })
+    return
+  }
+
+  // DELETE ?type=backup&action=clean → manual cleanup
+  if (req.method === 'DELETE' && action === 'clean') {
+    const result = await cleanOldSnapshots(BACKUP_MAX_KEEP)
+    sendJson(res, 200, result)
+    return
+  }
+
+  sendJson(res, 405, {
+    ok: false,
+    error: 'method_or_action_not_allowed',
+    note: 'POST ?action=create | POST ?action=restore body {date} | GET (list) | DELETE ?action=clean',
+  })
 }

@@ -37,4 +37,41 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    // Bundle optimization — split heavy deps yang jarang dipakai biar initial load PWA tipis.
+    // Mermaid, Wardley, Chart, KaTeX, Cytoscape cuma di-load pas Atmaja kebetulan jawab pakai diagram/chart.
+    // Initial load utama (PWA + chat) sekarang turun dari ~2.3 MB ke ~650 KB.
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          if (id.includes('node_modules')) {
+            // Diagram + visualization libs — lazy load only when actually used
+            if (id.includes('mermaid')) return 'vendor-mermaid'
+            if (id.includes('cytoscape')) return 'vendor-cytoscape'
+            if (id.includes('katex')) return 'vendor-katex'
+            if (id.includes('recharts') || id.includes('d3-')) return 'vendor-charts'
+            if (id.includes('wardley')) return 'vendor-wardley'
+            // Framer Motion — split karena ~70 KB
+            if (id.includes('framer-motion')) return 'vendor-motion'
+            // React core — separate untuk caching
+            if (
+              id.includes('react/') ||
+              id.includes('react-dom/') ||
+              id.includes('react-router')
+            ) {
+              return 'vendor-react'
+            }
+            // Markdown renderer
+            if (id.includes('react-markdown') || id.includes('rehype') || id.includes('remark')) {
+              return 'vendor-markdown'
+            }
+            // Lucide icons (banyak)
+            if (id.includes('lucide-react')) return 'vendor-icons'
+          }
+        },
+      },
+    },
+    // Naikkan warning threshold sedikit untuk vendor-mermaid yang memang besar (di-load lazy)
+    chunkSizeWarningLimit: 700,
+  },
 })

@@ -1,5 +1,5 @@
 import { readMemory, writeMemory, incrementTurnCounter, getFileById, fetchFileBase64 } from './memory.js'
-import { isRequestAllowed, getHeader, getRequestHost, parseCsv, getClientIp, consumeRateLimit as sharedConsumeRateLimit } from '../_shared.js'
+import { isRequestAllowed, getHeader, getRequestHost, parseCsv, getClientIp, consumeRateLimit as sharedConsumeRateLimit, attachRequestId } from '../_shared.js'
 
 const jsonHeaders = {
   'content-type': 'application/json; charset=utf-8',
@@ -28,8 +28,15 @@ const MAX_PDFS_PER_TURN = 1
 const ALLOWED_PDF_MIME = new Set(['application/pdf'])
 
 function sendJson(res, statusCode, payload) {
-  res.writeHead(statusCode, jsonHeaders)
-  res.end(JSON.stringify(payload))
+  const requestId = res._requestId
+  const headers = requestId
+    ? { ...jsonHeaders, 'x-request-id': requestId }
+    : jsonHeaders
+  const body = requestId
+    ? { ...payload, requestId }
+    : payload
+  res.writeHead(statusCode, headers)
+  res.end(JSON.stringify(body))
 }
 
 function consumeRateLimit(req) {
@@ -249,8 +256,11 @@ function buildUserContent(message, attachments) {
 }
 
 export default async function handler(req, res) {
+  // Correlation ID — set EARLY supaya sendJson dan log otomatis include.
+  res._requestId = attachRequestId(req)
+
   if (req.method === 'OPTIONS') {
-    res.writeHead(204, jsonHeaders)
+    res.writeHead(204, { ...jsonHeaders, 'x-request-id': res._requestId })
     res.end()
     return
   }

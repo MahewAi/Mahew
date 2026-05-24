@@ -72,6 +72,34 @@ export function isRequestAllowed(req) {
   }
 }
 
+// Request ID helper untuk correlation ID + debugging.
+// Pattern usage di handler:
+//   res._requestId = attachRequestId(req)
+//   // existing sendJson + console.* otomatis include ID kalau res._requestId set
+export function attachRequestId(req) {
+  // Honor incoming x-request-id (untuk distributed trace) atau generate baru
+  const incoming = String(req.headers?.['x-request-id'] ?? '').trim()
+  if (incoming && /^[A-Za-z0-9_-]{6,80}$/.test(incoming)) return incoming
+  return `req-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+}
+
+// Wrap sendJson logic dengan request ID injection.
+// Caller: const sendJson = makeSendJsonWithId(req, res, baseHeaders)
+export function makeSendJsonWithId(req, res, baseHeaders = {}) {
+  const requestId = attachRequestId(req)
+  res._requestId = requestId
+  return function sendJsonWithId(statusCode, payload) {
+    res.writeHead(statusCode, {
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': 'no-store',
+      'x-request-id': requestId,
+      ...baseHeaders,
+    })
+    res.end(JSON.stringify({ ...payload, requestId }))
+    return requestId
+  }
+}
+
 // Rate limit helper (per-IP, in-memory). Caller provides Map + max.
 // Default window 60s.
 export function consumeRateLimit(req, bucketMap, max, windowMs = 60_000) {
