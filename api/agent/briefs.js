@@ -2,15 +2,17 @@
 // Single file karena Vercel Hobby plan limit 12 serverless functions per project.
 //
 // Actions:
-//   POST /api/agent/briefs                  → submit brief (original, forward ke webhook runtime)
+//   POST /api/agent/briefs                  → submit brief (forward ke webhook runtime)
 //   POST /api/agent/briefs?action=result    → n8n callback setelah workflow done
 //   GET  /api/agent/briefs?action=list      → list briefs (untuk n8n Daily Digest)
 //                                             Optional: &status=<filter>&since=<ts>
 //
-// Auth:
-//   POST (submit)         : origin allowlist + rate limit (no token, app same-origin call)
-//   POST (action=result)  : bearer N8N_WEBHOOK_TOKEN
+// Auth (post-hardening):
+//   POST (submit)         : strict origin OR bearer (anti curl abuse) + rate limit
+//   POST (action=result)  : bearer N8N_WEBHOOK_TOKEN (server-to-server n8n callback)
 //   GET  (action=list)    : bearer N8N_WEBHOOK_TOKEN
+
+import { isRequestAllowed } from '../_shared.js'
 
 const jsonHeaders = {
   'content-type': 'application/json; charset=utf-8',
@@ -57,18 +59,8 @@ function getClientIp(req) {
   )
 }
 
-function isOriginAllowed(req) {
-  const origin = getHeader(req, 'origin')
-  if (!origin) return true
-  try {
-    const originUrl = new URL(origin)
-    const requestHost = getRequestHost(req)
-    const configuredOrigins = parseCsv(process.env.GERAI_ALLOWED_ORIGINS)
-    return originUrl.host === requestHost || configuredOrigins.includes(originUrl.origin)
-  } catch {
-    return false
-  }
-}
+// Note: isOriginAllowed legacy diganti dengan isRequestAllowed dari _shared.js
+// (strict: no Origin AND no bearer = reject). Tetap dipakai di handleSubmit.
 
 function isAuthorizedN8n(req) {
   const expected = process.env.N8N_WEBHOOK_TOKEN
@@ -304,8 +296,9 @@ export default async function handler(req, res) {
     return
   }
 
-  if (!isOriginAllowed(req)) {
-    sendJson(res, 403, { ok: false, error: 'origin_not_allowed' })
+  const auth = isRequestAllowed(req)
+  if (!auth.allowed) {
+    sendJson(res, 403, { ok: false, error: 'request_not_allowed', reason: auth.reason })
     return
   }
 

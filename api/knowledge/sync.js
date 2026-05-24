@@ -3,12 +3,14 @@
 // ke server. Akan dipakai untuk hot-swap persona prompt + brand canon tanpa redeploy.
 //
 // Body: { kind: 'persona'|'brand'|'sop'|'context', role?: string, content: string }
-// Auth: bearer N8N_WEBHOOK_TOKEN.
+// Auth: bearer N8N_WEBHOOK_TOKEN (POST + GET).
 // Storage: in-memory cache (key: `${kind}:${role||'_global'}`). Reset on cold start.
 //
 // Untuk MVP, persona prompt server (api/atmaja/chat.js + api/agent/reply.js) BELUM
 // baca dari cache ini. Itu Task berikutnya (Task: persona hot-swap). Endpoint ini
 // dulu jadi receiver, tested via curl.
+
+import { isRequestAllowed } from '../_shared.js'
 
 const jsonHeaders = {
   'content-type': 'application/json; charset=utf-8',
@@ -48,18 +50,7 @@ function parseCsv(value) {
   return String(value ?? '').split(',').map((item) => item.trim()).filter(Boolean)
 }
 
-function isOriginAllowed(req) {
-  const origin = getHeader(req, 'origin')
-  if (!origin) return true
-  try {
-    const originUrl = new URL(origin)
-    const requestHost = getHeader(req, 'x-forwarded-host') ?? getHeader(req, 'host') ?? ''
-    const configuredOrigins = parseCsv(process.env.GERAI_ALLOWED_ORIGINS)
-    return originUrl.host === requestHost || configuredOrigins.includes(originUrl.origin)
-  } catch {
-    return false
-  }
-}
+// Note: isOriginAllowed legacy diganti dengan isRequestAllowed dari _shared.js (strict).
 
 function isAuthorizedN8n(req) {
   const expected = process.env.N8N_WEBHOOK_TOKEN
@@ -153,8 +144,9 @@ export default async function handler(req, res) {
     sendJson(res, 405, { ok: false, error: 'method_not_allowed' })
     return
   }
-  if (!isOriginAllowed(req)) {
-    sendJson(res, 403, { ok: false, error: 'origin_not_allowed' })
+  const reqAuth = isRequestAllowed(req)
+  if (!reqAuth.allowed) {
+    sendJson(res, 403, { ok: false, error: 'request_not_allowed', reason: reqAuth.reason })
     return
   }
   if (!isAuthorizedN8n(req)) {

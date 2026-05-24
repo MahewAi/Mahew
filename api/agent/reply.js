@@ -1,6 +1,8 @@
 // Generic agent reply endpoint — handles C-suite + specialist + Atmaja chat surfaces.
 // Tier-aware model selection dengan minimum floor Sonnet 4.6 (per preferensi Matthew).
 
+import { isRequestAllowed, getHeader, consumeRateLimit as sharedConsumeRateLimit } from '../_shared.js'
+
 const jsonHeaders = {
   'content-type': 'application/json; charset=utf-8',
   'cache-control': 'no-store',
@@ -87,60 +89,14 @@ function buildSystemPrompt(role, briefContext) {
   return lines.join('\n')
 }
 
-// === HELPERS (sama dengan atmaja/chat.js, dipisah supaya self-contained) ===
+// === HELPERS — pakai shared module untuk konsistensi security check antar endpoint ===
 function sendJson(res, statusCode, payload) {
   res.writeHead(statusCode, jsonHeaders)
   res.end(JSON.stringify(payload))
 }
 
-function getHeader(req, name) {
-  const value = req.headers?.[name.toLowerCase()]
-  return Array.isArray(value) ? value[0] : value
-}
-
-function parseCsv(value) {
-  return String(value ?? '')
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
-}
-
-function getRequestHost(req) {
-  return getHeader(req, 'x-forwarded-host') ?? getHeader(req, 'host') ?? ''
-}
-
-function getClientIp(req) {
-  return (
-    getHeader(req, 'x-forwarded-for')?.split(',')[0]?.trim() ??
-    req.socket?.remoteAddress ??
-    'unknown'
-  )
-}
-
-function isOriginAllowed(req) {
-  const origin = getHeader(req, 'origin')
-  if (!origin) return true
-  try {
-    const originUrl = new URL(origin)
-    const requestHost = getRequestHost(req)
-    const configuredOrigins = parseCsv(process.env.GERAI_ALLOWED_ORIGINS)
-    return originUrl.host === requestHost || configuredOrigins.includes(originUrl.origin)
-  } catch {
-    return false
-  }
-}
-
 function consumeRateLimit(req) {
-  const ip = getClientIp(req)
-  const now = Date.now()
-  const bucket = recentRequestsByIp.get(ip) ?? { count: 0, resetAt: now + RATE_LIMIT_WINDOW_MS }
-  if (bucket.resetAt <= now) {
-    bucket.count = 0
-    bucket.resetAt = now + RATE_LIMIT_WINDOW_MS
-  }
-  bucket.count += 1
-  recentRequestsByIp.set(ip, bucket)
-  return bucket.count <= RATE_LIMIT_MAX
+  return sharedConsumeRateLimit(req, recentRequestsByIp, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS)
 }
 
 function readBody(req) {
@@ -290,8 +246,9 @@ export default async function handler(req, res) {
     sendJson(res, 503, { ok: false, error: 'openrouter_key_missing' })
     return
   }
-  if (!isOriginAllowed(req)) {
-    sendJson(res, 403, { ok: false, error: 'origin_not_allowed' })
+  const auth = isRequestAllowed(req)
+  if (!auth.allowed) {
+    sendJson(res, 403, { ok: false, error: 'request_not_allowed', reason: auth.reason })
     return
   }
   if (!consumeRateLimit(req)) {

@@ -1,6 +1,8 @@
 // GET /api/openai/video/status?id=video_xxx
 // Polls OpenAI untuk status video job. Client poll endpoint ini setiap 3-5s.
 
+import { isRequestAllowed } from '../../_shared.js'
+
 const jsonHeaders = {
   'content-type': 'application/json; charset=utf-8',
   'cache-control': 'no-store',
@@ -20,18 +22,7 @@ function parseCsv(value) {
   return String(value ?? '').split(',').map((item) => item.trim()).filter(Boolean)
 }
 
-function isOriginAllowed(req) {
-  const origin = getHeader(req, 'origin')
-  if (!origin) return true
-  try {
-    const originUrl = new URL(origin)
-    const requestHost = getHeader(req, 'x-forwarded-host') ?? getHeader(req, 'host') ?? ''
-    const configuredOrigins = parseCsv(process.env.GERAI_ALLOWED_ORIGINS)
-    return originUrl.host === requestHost || configuredOrigins.includes(originUrl.origin)
-  } catch {
-    return false
-  }
-}
+// isOriginAllowed legacy diganti pakai isRequestAllowed dari _shared.js (strict mode).
 
 export default async function handler(req, res) {
   if (req.method && req.method !== 'GET') {
@@ -42,8 +33,9 @@ export default async function handler(req, res) {
     sendJson(res, 503, { ok: false, error: 'openai_key_missing' })
     return
   }
-  if (!isOriginAllowed(req)) {
-    sendJson(res, 403, { ok: false, error: 'origin_not_allowed' })
+  const auth = isRequestAllowed(req)
+  if (!auth.allowed) {
+    sendJson(res, 403, { ok: false, error: 'request_not_allowed', reason: auth.reason })
     return
   }
 

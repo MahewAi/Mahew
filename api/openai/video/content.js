@@ -2,6 +2,8 @@
 // Proxy MP4 binary dari OpenAI ke client. Client pasang URL ini ke <video src=".." />.
 // Server-side fetch + re-stream supaya client tidak butuh expose OpenAI auth.
 
+import { isRequestAllowed } from '../../_shared.js'
+
 function getHeader(req, name) {
   const value = req.headers?.[name.toLowerCase()]
   return Array.isArray(value) ? value[0] : value
@@ -11,18 +13,7 @@ function parseCsv(value) {
   return String(value ?? '').split(',').map((item) => item.trim()).filter(Boolean)
 }
 
-function isOriginAllowed(req) {
-  const origin = getHeader(req, 'origin')
-  if (!origin) return true
-  try {
-    const originUrl = new URL(origin)
-    const requestHost = getHeader(req, 'x-forwarded-host') ?? getHeader(req, 'host') ?? ''
-    const configuredOrigins = parseCsv(process.env.GERAI_ALLOWED_ORIGINS)
-    return originUrl.host === requestHost || configuredOrigins.includes(originUrl.origin)
-  } catch {
-    return false
-  }
-}
+// isOriginAllowed legacy diganti pakai isRequestAllowed dari _shared.js (strict mode).
 
 export default async function handler(req, res) {
   if (req.method && req.method !== 'GET') {
@@ -35,9 +26,10 @@ export default async function handler(req, res) {
     res.end(JSON.stringify({ ok: false, error: 'openai_key_missing' }))
     return
   }
-  if (!isOriginAllowed(req)) {
+  const auth = isRequestAllowed(req)
+  if (!auth.allowed) {
     res.writeHead(403, { 'content-type': 'application/json' })
-    res.end(JSON.stringify({ ok: false, error: 'origin_not_allowed' }))
+    res.end(JSON.stringify({ ok: false, error: 'request_not_allowed', reason: auth.reason }))
     return
   }
 

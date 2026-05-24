@@ -3,6 +3,8 @@
 // Untuk DALL-E 3 (yang return URL), server fetch dulu lalu inline jadi base64
 // supaya client tidak depend ke URL ephemeral yang expire 1 jam.
 
+import { isRequestAllowed, consumeRateLimit as sharedConsumeRateLimit } from '../_shared.js'
+
 const jsonHeaders = {
   'content-type': 'application/json; charset=utf-8',
   'cache-control': 'no-store',
@@ -79,30 +81,8 @@ function getClientIp(req) {
   )
 }
 
-function isOriginAllowed(req) {
-  const origin = getHeader(req, 'origin')
-  if (!origin) return true
-  try {
-    const originUrl = new URL(origin)
-    const requestHost = getRequestHost(req)
-    const configuredOrigins = parseCsv(process.env.GERAI_ALLOWED_ORIGINS)
-    return originUrl.host === requestHost || configuredOrigins.includes(originUrl.origin)
-  } catch {
-    return false
-  }
-}
-
 function consumeRateLimit(req) {
-  const ip = getClientIp(req)
-  const now = Date.now()
-  const bucket = recentRequestsByIp.get(ip) ?? { count: 0, resetAt: now + RATE_LIMIT_WINDOW_MS }
-  if (bucket.resetAt <= now) {
-    bucket.count = 0
-    bucket.resetAt = now + RATE_LIMIT_WINDOW_MS
-  }
-  bucket.count += 1
-  recentRequestsByIp.set(ip, bucket)
-  return bucket.count <= RATE_LIMIT_MAX
+  return sharedConsumeRateLimit(req, recentRequestsByIp, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS)
 }
 
 function readBody(req) {
@@ -186,8 +166,9 @@ export default async function handler(req, res) {
     })
     return
   }
-  if (!isOriginAllowed(req)) {
-    sendJson(res, 403, { ok: false, error: 'origin_not_allowed' })
+  const auth = isRequestAllowed(req)
+  if (!auth.allowed) {
+    sendJson(res, 403, { ok: false, error: 'request_not_allowed', reason: auth.reason })
     return
   }
   if (!consumeRateLimit(req)) {

@@ -1,3 +1,5 @@
+import { isRequestAllowed } from '../_shared.js'
+
 const jsonHeaders = {
   'content-type': 'application/json; charset=utf-8',
   'cache-control': 'no-store',
@@ -11,6 +13,12 @@ function sendJson(res, statusCode, payload) {
 export default async function handler(req, res) {
   if (req.method && req.method !== 'GET') {
     sendJson(res, 405, { provider: 'OpenRouter', status: 'error', note: 'Method not allowed.' })
+    return
+  }
+
+  const auth = isRequestAllowed(req)
+  if (!auth.allowed) {
+    sendJson(res, 403, { provider: 'OpenRouter', status: 'error', error: 'request_not_allowed', reason: auth.reason })
     return
   }
 

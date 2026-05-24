@@ -6,6 +6,8 @@
 // Sora 2: async generation, butuh ~30-60s untuk 4s video.
 // Vercel function exit cepat setelah trigger; client yang handle polling loop.
 
+import { isRequestAllowed, consumeRateLimit as sharedConsumeRateLimit } from '../../_shared.js'
+
 const jsonHeaders = {
   'content-type': 'application/json; charset=utf-8',
   'cache-control': 'no-store',
@@ -59,18 +61,7 @@ function getClientIp(req) {
   )
 }
 
-function isOriginAllowed(req) {
-  const origin = getHeader(req, 'origin')
-  if (!origin) return true
-  try {
-    const originUrl = new URL(origin)
-    const requestHost = getRequestHost(req)
-    const configuredOrigins = parseCsv(process.env.GERAI_ALLOWED_ORIGINS)
-    return originUrl.host === requestHost || configuredOrigins.includes(originUrl.origin)
-  } catch {
-    return false
-  }
-}
+// isOriginAllowed legacy diganti pakai isRequestAllowed dari _shared.js (strict mode).
 
 function consumeRateLimit(req) {
   const ip = getClientIp(req)
@@ -146,8 +137,9 @@ export default async function handler(req, res) {
     sendJson(res, 503, { ok: false, error: 'openai_key_missing' })
     return
   }
-  if (!isOriginAllowed(req)) {
-    sendJson(res, 403, { ok: false, error: 'origin_not_allowed' })
+  const auth = isRequestAllowed(req)
+  if (!auth.allowed) {
+    sendJson(res, 403, { ok: false, error: 'request_not_allowed', reason: auth.reason })
     return
   }
   if (!consumeRateLimit(req)) {
