@@ -5,6 +5,7 @@ import { Send, Sunrise, ArrowUpRight, Trash2, ChevronDown, FileText, Image as Im
 import { loadStoredBriefs } from '@/lib/briefStore'
 import { recordInteractionLessons } from '@/lib/learningMemory'
 import { isAtmajaRemoteBridgeAllowed, requestAtmajaReply } from '@/lib/atmajaClient'
+import { MarkdownBlock } from '@/components/blocks/MarkdownBlock'
 import {
   fetchServerHealth,
   listLibraryFiles,
@@ -1691,13 +1692,16 @@ function MessageBubble({ message, reduceMotion }: { message: AtmajaMessage; redu
         <div
           className={cn(
             'px-4 py-3 text-[15px] leading-relaxed shadow-card',
-            'whitespace-pre-line',
             isMatthew
-              ? 'rounded-[18px] rounded-br-md bg-accent text-white'
+              ? 'rounded-[18px] rounded-br-md bg-accent text-white whitespace-pre-line'
               : 'rounded-[18px] rounded-bl-md bg-white/82 text-text-primary',
           )}
         >
-          {message.text}
+          {isMatthew ? (
+            message.text
+          ) : (
+            <MarkdownBlock content={message.text} className="atmaja-bubble-markdown" />
+          )}
           {message.attachments && message.attachments.length > 0 && (
             <div className="mt-3 grid gap-2">
               {message.attachments.map((attachment) => (
