@@ -41,9 +41,12 @@ export function hasValidBearerToken(req) {
 }
 
 // Hardened origin check + bearer bypass.
-// - Bearer token valid = allowed (server-to-server flow, n8n callback, admin curl)
-// - Browser with valid Origin header (same-host atau configured allowlist) = allowed
-// - Request tanpa Origin DAN tanpa bearer = REJECTED (anti curl abuse)
+// Modern browsers TIDAK send Origin header untuk same-origin GET requests (Fetch spec).
+// Yang RELIABLE untuk verify same-origin:
+// 1. Bearer token (server-to-server)
+// 2. Sec-Fetch-Site: same-origin (modern browsers always send, Chrome 76+/FF 90+/Safari 16+)
+// 3. Origin header same-host (cross-origin atau non-GET requests)
+// 4. Referer header same-host (fallback untuk older browsers)
 //
 // Return { allowed: boolean, reason: string }
 export function isRequestAllowed(req) {
@@ -51,25 +54,52 @@ export function isRequestAllowed(req) {
     return { allowed: true, reason: 'bearer_token' }
   }
 
-  const origin = getHeader(req, 'origin')
-  if (!origin) {
-    return { allowed: false, reason: 'no_origin_no_bearer' }
+  // Modern fetch metadata header — paling reliable untuk same-origin verification
+  const fetchSite = String(getHeader(req, 'sec-fetch-site') ?? '').toLowerCase()
+  if (fetchSite === 'same-origin' || fetchSite === 'same-site') {
+    return { allowed: true, reason: 'sec_fetch_same_origin' }
   }
 
-  try {
-    const originUrl = new URL(origin)
-    const requestHost = getRequestHost(req)
-    if (originUrl.host === requestHost) {
-      return { allowed: true, reason: 'origin_same_host' }
+  const requestHost = getRequestHost(req)
+
+  // Origin header check (cross-origin atau non-GET dengan Origin set)
+  const origin = getHeader(req, 'origin')
+  if (origin) {
+    try {
+      const originUrl = new URL(origin)
+      if (originUrl.host === requestHost) {
+        return { allowed: true, reason: 'origin_same_host' }
+      }
+      const configuredOrigins = parseCsv(process.env.GERAI_ALLOWED_ORIGINS)
+      if (configuredOrigins.includes(originUrl.origin)) {
+        return { allowed: true, reason: 'origin_configured' }
+      }
+      return { allowed: false, reason: 'origin_not_allowed' }
+    } catch {
+      return { allowed: false, reason: 'origin_invalid' }
     }
-    const configuredOrigins = parseCsv(process.env.GERAI_ALLOWED_ORIGINS)
-    if (configuredOrigins.includes(originUrl.origin)) {
-      return { allowed: true, reason: 'origin_configured' }
-    }
-    return { allowed: false, reason: 'origin_not_allowed' }
-  } catch {
-    return { allowed: false, reason: 'origin_invalid' }
   }
+
+  // Referer fallback — kalau Sec-Fetch-Site + Origin keduanya absent (older browser atau curl with Referer)
+  const referer = getHeader(req, 'referer')
+  if (referer) {
+    try {
+      const refererUrl = new URL(referer)
+      if (refererUrl.host === requestHost) {
+        return { allowed: true, reason: 'referer_same_host' }
+      }
+    } catch {
+      // ignore invalid referer
+    }
+  }
+
+  // sec-fetch-site: 'none' artinya direct navigation (URL bar/bookmark). Allow untuk health endpoint,
+  // sisanya tergantung handler-nya yang decide.
+  if (fetchSite === 'none') {
+    return { allowed: false, reason: 'direct_navigation_no_bearer' }
+  }
+
+  return { allowed: false, reason: 'no_auth_signal' }
 }
 
 // Request ID helper untuk correlation ID + debugging.
