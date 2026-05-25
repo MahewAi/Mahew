@@ -336,11 +336,18 @@ export function exportMessageAsPdf({ contentHtml, title, subtitle }: ExportPdfOp
 
   // === IFRAME APPROACH (works in PWA standalone) ===
   // Create hidden iframe, write HTML, trigger print via iframe.contentWindow.print()
+  // CRITICAL: cleanup iframe + restore focus to chat textarea IMMEDIATELY setelah
+  // print() return (sync di Chrome). Tidak boleh leave iframe focused — kalau iya,
+  // typing user akan masuk ke iframe content, bukan chat input.
   console.info('[exportPdf] starting export via iframe approach...')
+
+  // Capture current focused element supaya bisa restore setelah print
+  const previouslyFocused = document.activeElement as HTMLElement | null
 
   try {
     const iframe = document.createElement('iframe')
     iframe.setAttribute('aria-hidden', 'true')
+    iframe.setAttribute('tabindex', '-1')
     iframe.title = 'PDF preview'
     iframe.style.position = 'fixed'
     iframe.style.left = '-99999px'
@@ -349,6 +356,8 @@ export function exportMessageAsPdf({ contentHtml, title, subtitle }: ExportPdfOp
     iframe.style.height = '1123px' // A4 height at 96 DPI
     iframe.style.border = '0'
     iframe.style.opacity = '0'
+    iframe.style.pointerEvents = 'none'
+    iframe.style.visibility = 'hidden'
     document.body.appendChild(iframe)
 
     const idoc = iframe.contentDocument || iframe.contentWindow?.document
@@ -364,6 +373,43 @@ export function exportMessageAsPdf({ contentHtml, title, subtitle }: ExportPdfOp
 
     let printed = false
 
+    // Cleanup helper: hapus iframe + restore focus ke previous focused element
+    // (biasanya chat textarea). Penting supaya typing user tidak nyangkut di iframe.
+    const cleanup = () => {
+      try {
+        // Blur iframe + clear content supaya tidak bisa capture input
+        iframe.contentWindow?.blur?.()
+        if (iframe.contentDocument?.body) {
+          iframe.contentDocument.body.innerHTML = ''
+        }
+      } catch {
+        // ignore
+      }
+      try {
+        document.body.removeChild(iframe)
+      } catch {
+        // ignore
+      }
+      // Restore focus ke chat input atau body
+      try {
+        if (previouslyFocused && document.body.contains(previouslyFocused)) {
+          previouslyFocused.focus()
+        } else {
+          // Cari textarea chat sebagai fallback target
+          const chatInput = document.querySelector(
+            'textarea[placeholder*="Tanya"], textarea[placeholder*="Atmaja"]',
+          )
+          if (chatInput instanceof HTMLElement) {
+            chatInput.focus()
+          } else {
+            window.focus()
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+
     const triggerPrint = () => {
       if (printed) return
       printed = true
@@ -371,25 +417,32 @@ export function exportMessageAsPdf({ contentHtml, title, subtitle }: ExportPdfOp
         const win = iframe.contentWindow
         if (!win) {
           console.warn('[exportPdf] iframe.contentWindow null')
+          cleanup()
           downloadAsHtmlFile(html, safeTitle)
           return
         }
-        win.focus()
-        // Slight delay supaya font load + render selesai
+        // Print: di Chrome desktop sync (block sampai user close dialog),
+        // di Firefox/Safari kadang async. Cleanup setelah print return.
         win.print()
+        console.info('[exportPdf] print() returned, cleaning up...')
       } catch (err) {
         console.error('[exportPdf] iframe.print() failed:', err)
+        cleanup()
         downloadAsHtmlFile(html, safeTitle)
+        return
       }
-      // Cleanup iframe setelah print dialog handled (timeout supaya tidak hapus
-      // sebelum print actually trigger)
+      // Cleanup IMMEDIATELY setelah print() — restore focus ke chat input.
+      // Di sync print() (Chrome), ini run after user close dialog.
+      // Di async print() (Firefox), dialog still appears karena sudah ke-trigger,
+      // tapi iframe focus ter-release dengan cepat.
+      cleanup()
+      // Safety net: kalau cleanup gagal pertama kali, retry setelah 5s
       window.setTimeout(() => {
-        try {
-          document.body.removeChild(iframe)
-        } catch {
-          // ignore
+        if (document.body.contains(iframe)) {
+          console.warn('[exportPdf] cleanup retry')
+          cleanup()
         }
-      }, 60_000) // 60s — generous untuk user yang lambat decision
+      }, 5000)
     }
 
     // Wait iframe load + fonts ready
