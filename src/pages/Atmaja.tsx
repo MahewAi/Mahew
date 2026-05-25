@@ -4,7 +4,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { Send, Sunrise, ArrowUpRight, Trash2, ChevronDown, FileText, Image as ImageIcon, Loader2, Paperclip, UploadCloud, X, Library, BookOpen, Plus, Sparkles, Check, AlertTriangle, Mic, MicOff, Camera, CalendarClock, Pause, Play } from 'lucide-react'
 import { loadStoredBriefs } from '@/lib/briefStore'
 import { recordInteractionLessons } from '@/lib/learningMemory'
-import { isAtmajaRemoteBridgeAllowed, requestAtmajaReply } from '@/lib/atmajaClient'
+import { isAtmajaRemoteBridgeAllowed, requestAtmajaReplyWithError } from '@/lib/atmajaClient'
 import { MarkdownBlock } from '@/components/blocks/MarkdownBlock'
 import {
   fetchServerHealth,
@@ -52,7 +52,7 @@ import {
 } from '@/lib/atmajaDocClient'
 import { generateImage, parseImageCommand, type OpenAIImageModel } from '@/lib/openaiImageClient'
 import { generateVideo, parseVideoCommand, type OpenAIVideoModel } from '@/lib/openaiVideoClient'
-import { generateMockReply, type ChatMessage } from '@/lib/mockReplies'
+import { type ChatMessage } from '@/lib/mockReplies'
 import { cn } from '@/lib/utils'
 
 type AttachmentKind = 'image' | 'text' | 'document'
@@ -148,14 +148,29 @@ function loadThread(): AtmajaMessage[] {
   return initialThread
 }
 
-function saveThread(messages: AtmajaMessage[]) {
+function saveThread(messages: AtmajaMessage[]): { ok: boolean; error?: string } {
   try {
     // 300 pesan terakhir disimpan client-side. PDF base64 + previewText sudah di-strip
     // di stripAttachmentForStorage, jadi quota localStorage aman (text 300 pesan ~600 KB).
     localStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-300).map(stripMessageForStorage)))
-  } catch {
-    // ignore (quota or disabled)
+    return { ok: true }
+  } catch (err) {
+    // FIX (CRITICAL #2): expose error supaya UI bisa kasih feedback ke user
+    // (quota exceeded, localStorage disabled di private mode, dll)
+    const errorMsg = err instanceof Error ? err.message : 'storage_unknown'
+    console.error('[saveThread] failed:', errorMsg)
+    return { ok: false, error: errorMsg }
   }
+}
+
+// FIX (CRITICAL #2): wrapper supaya callers tidak crash + bisa optional toast
+function saveThreadSafe(messages: AtmajaMessage[]): boolean {
+  const result = saveThread(messages)
+  if (!result.ok) {
+    // Mute toast spam — log only. UI tetap render messages via React state.
+    console.warn('[saveThread] localStorage save failed:', result.error, '(messages still in React state)')
+  }
+  return result.ok
 }
 
 function stripMessageForStorage(message: AtmajaMessage): AtmajaMessage {
@@ -858,7 +873,8 @@ export default function Atmaja() {
       void (async () => {
         pendingReplyTimerRef.current = null
         const modelText = buildAttachmentPrompt(userMsg.text, userMsg.attachments ?? [])
-        const remoteResult = await requestAtmajaReply({
+        const attachedIdsAtTime = attachedLibraryIds
+        const remoteResultEnvelope = await requestAtmajaReplyWithError({
           userMessage: userMsg.text,
           history: historySnapshot,
           attachments: userMsg.attachments?.map((attachment) => ({
@@ -867,24 +883,36 @@ export default function Atmaja() {
             size: attachment.size,
             kind: attachment.kind,
             note: attachment.note,
-            // Sertakan bytes/preview supaya Atmaja BISA lihat (vision) dan baca isi teks.
             dataBase64: attachment.dataBase64,
             previewText: attachment.previewText,
           })),
-          // Lapis 3: kirim file library IDs yang user pilih untuk attach ke turn ini.
-          // Server fetch dari Vercel Blob + treat as native PDF attachment.
-          attachedFileIds: attachedLibraryIds.length > 0 ? attachedLibraryIds : undefined,
+          attachedFileIds: attachedIdsAtTime.length > 0 ? attachedIdsAtTime : undefined,
         })
-        // Clear attached library setelah send supaya tidak ke-include lagi di turn berikutnya
-        // (user explicit re-attach kalau mau).
-        setAttachedLibraryIds([])
-        const result =
-          remoteResult ??
-          generateMockReply({
-            userMessage: modelText,
-            history: historySnapshot,
-            speaker: 'atmaja',
+
+        // Handle error path with informative feedback to user.
+        // FIX (HIGH #6): Hanya clear attachedLibraryIds kalau success, supaya kalau
+        // error user bisa retry tanpa harus re-attach file
+        if (!remoteResultEnvelope.ok) {
+          const errReply: AtmajaMessage = {
+            id: `m-err-${Date.now()}`,
+            author: 'ceo',
+            text: `_${remoteResultEnvelope.message}_\n\n(Error: \`${remoteResultEnvelope.errorKind}\`${remoteResultEnvelope.httpStatus ? `, HTTP ${remoteResultEnvelope.httpStatus}` : ''})`,
+            timeAgo: 'Baru saja',
+          }
+          setMessages((prev) => {
+            const userIndex = prev.findIndex((message) => message.id === userMsg.id)
+            if (userIndex >= 0 && prev[userIndex + 1]?.author === 'ceo') return prev
+            const nextMessages = [...prev, errReply]
+            saveThreadSafe(nextMessages)
+            return nextMessages
           })
+          setSending(false)
+          return
+        }
+
+        // Success — sekarang aman clear attached library IDs (user explicit re-attach kalau mau).
+        setAttachedLibraryIds([])
+        const result = remoteResultEnvelope.reply
 
         if ('resetThread' in result && result.resetThread) {
           const resetMessages: AtmajaMessage[] = [
@@ -1032,7 +1060,12 @@ export default function Atmaja() {
           continuous: boolean
           interimResults: boolean
           lang: string
-          onresult: ((event: { results: ArrayLike<{ 0: { transcript: string }; isFinal: boolean }> }) => void) | null
+          onresult:
+            | ((event: {
+                resultIndex: number
+                results: ArrayLike<{ 0: { transcript: string }; isFinal: boolean }>
+              }) => void)
+            | null
           onerror: ((event: { error: string }) => void) | null
           onend: (() => void) | null
           start: () => void
@@ -1061,10 +1094,15 @@ export default function Atmaja() {
       recognition.continuous = false
       recognition.interimResults = true
       recognition.lang = 'id-ID'
+      // FIX (HIGH #7): Track text BEFORE voice session + the full combined transcript
+      // to prevent duplication. Each interim result replaces (not appends) the last interim.
+      const baseTextBeforeVoice = text
       let finalTranscript = ''
       recognition.onresult = (event) => {
         let interim = ''
-        for (let i = 0; i < event.results.length; i += 1) {
+        // Hanya iterate dari resultIndex untuk avoid double-counting events
+        // (some browsers replay all results in each event)
+        for (let i = event.resultIndex; i < event.results.length; i += 1) {
           const result = event.results[i]
           const transcript = result[0].transcript
           if (result.isFinal) {
@@ -1075,11 +1113,9 @@ export default function Atmaja() {
         }
         const combined = (finalTranscript + interim).trim()
         if (combined) {
-          setText((prev) => {
-            // Replace any previous in-progress voice text. Marker: prev ends with space + interim.
-            const trimmedPrev = prev.trim()
-            return trimmedPrev ? `${trimmedPrev} ${combined}` : combined
-          })
+          // Replace voice portion entirely, preserve text user typed before voice started
+          const base = baseTextBeforeVoice.trim()
+          setText(base ? `${base} ${combined}` : combined)
         }
       }
       recognition.onerror = (event) => {
@@ -1102,8 +1138,13 @@ export default function Atmaja() {
   }, [voiceListening])
 
   const handleFileSelect = async (files: FileList | null) => {
+    // FIX (HIGH #5): Clear stale attachment error di awal setiap call,
+    // supaya error message dari run sebelumnya tidak lingering
+    setAttachmentError('')
+
     const selectedFiles = Array.from(files ?? [])
     if (fileInputRef.current) fileInputRef.current.value = ''
+    if (cameraInputRef.current) cameraInputRef.current.value = ''
     if (selectedFiles.length === 0 || readingFiles) return
 
     const remainingSlots = MAX_ATTACHMENTS - attachments.length
@@ -1113,11 +1154,19 @@ export default function Atmaja() {
     }
 
     setReadingFiles(true)
-    setAttachmentError(selectedFiles.length > remainingSlots ? `Hanya ${remainingSlots} file pertama yang ditambahkan.` : '')
+    // Set warning hanya kalau ada file extra yang di-skip
+    if (selectedFiles.length > remainingSlots) {
+      setAttachmentError(`Hanya ${remainingSlots} file pertama yang ditambahkan.`)
+    }
 
     try {
       const nextAttachments = await Promise.all(selectedFiles.slice(0, remainingSlots).map(buildAttachment))
       setAttachments((current) => [...current, ...nextAttachments])
+    } catch (err) {
+      console.error('[handleFileSelect] failed:', err)
+      setAttachmentError(
+        err instanceof Error ? `Gagal baca file: ${err.message}` : 'Gagal baca file. Coba lagi.',
+      )
     } finally {
       setReadingFiles(false)
     }

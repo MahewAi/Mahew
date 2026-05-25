@@ -257,12 +257,23 @@ export async function exportMessageAsPdf(options: ExportPdfOptions): Promise<boo
     try { document.body.removeChild(generatingToast) } catch {}
   }
 
+  // FIX (MEDIUM #16): Add timeout supaya spinner tidak hang forever
+  // kalau html2pdf.js load gagal (network down, CDN issue)
+  const TIMEOUT_MS = 45_000 // 45s — cukup untuk dokumen besar (10-20s typical)
+  let timedOut = false
+  const timeoutHandle = window.setTimeout(() => {
+    timedOut = true
+    cleanup()
+    showResultToast('PDF generation timeout (45s). Coba lagi atau dokumen lebih kecil.', true)
+  }, TIMEOUT_MS)
+
   try {
     // Beri waktu DOM untuk render (fonts, layout) sebelum capture
     await new Promise((r) => window.setTimeout(r, 200))
 
     // Lazy import html2pdf (cached setelah first call)
     const html2pdfModule = await import('html2pdf.js')
+    if (timedOut) return false
     const html2pdf = (html2pdfModule.default ?? html2pdfModule) as unknown as () => {
       from: (el: HTMLElement) => {
         set: (opts: Record<string, unknown>) => {
@@ -296,10 +307,14 @@ export async function exportMessageAsPdf(options: ExportPdfOptions): Promise<boo
       })
       .save()
 
+    if (timedOut) return false
+    window.clearTimeout(timeoutHandle)
     cleanup()
     showResultToast('PDF berhasil di-download')
     return true
   } catch (err) {
+    if (timedOut) return false
+    window.clearTimeout(timeoutHandle)
     console.error('[exportPdf] html2pdf failed:', err)
     cleanup()
     showResultToast('Gagal generate PDF, coba lagi', true)
