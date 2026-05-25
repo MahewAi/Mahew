@@ -1,5 +1,97 @@
 import { readMemory, writeMemory, incrementTurnCounter, getFileById, fetchFileBase64 } from './memory.js'
 import { isRequestAllowed, getHeader, getRequestHost, parseCsv, getClientIp, consumeRateLimit as sharedConsumeRateLimit, attachRequestId } from '../_shared.js'
+import { kv } from '@vercel/kv'
+
+// ============================================================================
+// LIVE EXECUTION TRACE (n8n-style workflow tracker)
+// Setiap step major (intake → memory → atmaja_thinking → output) ditulis ke KV.
+// Frontend AI Dept tab poll endpoint /api/atmaja/memory?type=trace untuk live view.
+// ============================================================================
+
+const TRACE_CURRENT_KEY = 'atmaja:trace:matthew:current'
+const TRACE_HISTORY_KEY = 'atmaja:trace:matthew:history'
+const TRACE_HISTORY_MAX = 8
+
+// Define semua possible steps + node mapping ke LiveDepartmentMap nodes.
+// Status: 'pending' (belum), 'running' (sedang), 'done' (selesai), 'skipped' (di-skip)
+const TRACE_STEPS_TEMPLATE = [
+  { id: 'intake', label: 'Brief diterima', node: 'intake', status: 'pending' },
+  { id: 'memory_loaded', label: 'Memory dimuat', node: 'memory', status: 'pending' },
+  { id: 'files_loaded', label: 'File library dimuat', node: 'memory', status: 'pending' },
+  { id: 'atmaja_thinking', label: 'Atmaja menyusun jawaban', node: 'atmaja', status: 'pending' },
+  { id: 'response_received', label: 'Jawaban tersusun', node: 'contract', status: 'pending' },
+  { id: 'output_sent', label: 'Output dikirim ke Matthew', node: 'contract', status: 'pending' },
+  { id: 'memory_updating', label: 'Memory di-update', node: 'memory', status: 'pending' },
+]
+
+function makeNewTrace({ sessionId, requestId, userMessagePreview }) {
+  return {
+    sessionId,
+    requestId,
+    startedAt: new Date().toISOString(),
+    completedAt: null,
+    status: 'running',
+    userMessagePreview: String(userMessagePreview || '').slice(0, 120),
+    currentStep: null,
+    steps: TRACE_STEPS_TEMPLATE.map((s) => ({ ...s })),
+    responsePreview: null,
+    totalDurationMs: null,
+    model: null,
+    error: null,
+  }
+}
+
+// Write trace ke KV. Best-effort, jangan throw kalau gagal (chat lebih penting).
+async function writeTrace(trace) {
+  try {
+    await kv.set(TRACE_CURRENT_KEY, trace)
+  } catch (error) {
+    console.error('[trace] write failed:', error?.message ?? error)
+  }
+}
+
+// Update step status + auto-write. Called at each checkpoint.
+async function traceStep(trace, stepId, status, extra = {}) {
+  if (!trace) return
+  const idx = trace.steps.findIndex((s) => s.id === stepId)
+  if (idx < 0) return
+  trace.steps[idx] = {
+    ...trace.steps[idx],
+    status,
+    at: new Date().toISOString(),
+    ...extra,
+  }
+  if (status === 'running') trace.currentStep = stepId
+  await writeTrace(trace)
+}
+
+// Finalize trace + push to history. Called at end of handler.
+async function finalizeTrace(trace, { status, responsePreview, model, error }) {
+  if (!trace) return
+  trace.status = status || 'completed'
+  trace.completedAt = new Date().toISOString()
+  trace.totalDurationMs = new Date(trace.completedAt).getTime() - new Date(trace.startedAt).getTime()
+  if (responsePreview) trace.responsePreview = String(responsePreview).slice(0, 240)
+  if (model) trace.model = model
+  if (error) trace.error = String(error).slice(0, 200)
+  trace.currentStep = null
+  // Mark all 'running' or 'pending' as either 'done' or 'skipped' depending on context
+  for (const step of trace.steps) {
+    if (step.status === 'running') step.status = 'done'
+    if (step.status === 'pending') step.status = 'skipped'
+  }
+  await writeTrace(trace)
+  // Push to history (keep last N)
+  try {
+    const existing = (await kv.get(TRACE_HISTORY_KEY)) ?? []
+    const arr = Array.isArray(existing) ? existing : []
+    arr.unshift(trace)
+    const trimmed = arr.slice(0, TRACE_HISTORY_MAX)
+    await kv.set(TRACE_HISTORY_KEY, trimmed)
+  } catch (error) {
+    console.error('[trace] history push failed:', error?.message ?? error)
+  }
+}
 
 const jsonHeaders = {
   'content-type': 'application/json; charset=utf-8',
@@ -327,6 +419,15 @@ export default async function handler(req, res) {
     return
   }
 
+  // === TRACE: Initialize session + intake ===
+  const sessionId = `ses-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const trace = makeNewTrace({
+    sessionId,
+    requestId: res._requestId,
+    userMessagePreview: userMessage,
+  })
+  await traceStep(trace, 'intake', 'done', { detail: `${userMessage.length} char prompt diterima` })
+
   const attachments = normalizeAttachments(payload?.attachments)
 
   // Lapis 3: resolve attachedFileIds → fetch dari Vercel Blob → tambahkan sebagai
@@ -335,6 +436,9 @@ export default async function handler(req, res) {
     ? payload.attachedFileIds.filter((id) => typeof id === 'string').slice(0, 3)
     : []
   const fileAttachments = []
+  if (attachedFileIds.length > 0) {
+    await traceStep(trace, 'files_loaded', 'running')
+  }
   for (const fileId of attachedFileIds) {
     try {
       const file = await getFileById(fileId)
@@ -354,6 +458,11 @@ export default async function handler(req, res) {
     } catch (error) {
       console.error('[atmaja-chat] file attachment error:', error?.message ?? error)
     }
+  }
+  if (attachedFileIds.length > 0) {
+    await traceStep(trace, 'files_loaded', 'done', { detail: `${fileAttachments.length} file PDF dimuat` })
+  } else {
+    await traceStep(trace, 'files_loaded', 'skipped', { detail: 'Tidak ada file dilampirkan' })
   }
 
   // Combine inline attachments (current turn upload) + library file attachments (reference).
@@ -390,6 +499,7 @@ export default async function handler(req, res) {
 
   // Lapis 2: read long-term memory dari Vercel KV (Upstash Redis).
   // Best-effort — kalau KV down atau env missing, tetap lanjut dengan empty memory.
+  await traceStep(trace, 'memory_loaded', 'running')
   let memoryContent = ''
   try {
     memoryContent = await readMemory()
@@ -397,6 +507,9 @@ export default async function handler(req, res) {
     console.error('[atmaja-chat] readMemory failed:', error?.message ?? error)
     memoryContent = ''
   }
+  await traceStep(trace, 'memory_loaded', 'done', {
+    detail: `${memoryContent.length} char dari Business Memory`,
+  })
 
   const messages = [
     { role: 'system', content: buildSystemPrompt(memoryContent) },
@@ -659,12 +772,17 @@ export default async function handler(req, res) {
   }
 
   try {
+    await traceStep(trace, 'atmaja_thinking', 'running', { detail: `Model: ${primaryModel}` })
     let { upstream, body, accumulatedText, lastFinishReason, continuations, aggregatedUsage } =
       await callWithAutoContinuation(primaryModel, messages)
     let usedModel = primaryModel
     let fallbackTried = false
 
     if (!upstream.ok) {
+      await finalizeTrace(trace, {
+        status: 'error',
+        error: `OpenRouter HTTP ${upstream.status}: ${body?.error?.message ?? 'failed'}`,
+      })
       sendJson(res, upstream.status, {
         ok: false,
         error: 'openrouter_error',
@@ -690,7 +808,15 @@ export default async function handler(req, res) {
       aggregatedUsage = retry.aggregatedUsage
     }
 
+    await traceStep(trace, 'atmaja_thinking', 'done', {
+      detail: `Selesai (${continuations} continuation, ${aggregatedUsage?.completion_tokens ?? 0} token jawaban)`,
+    })
+
     if (typeof replyText !== 'string' || !replyText.trim()) {
+      await finalizeTrace(trace, {
+        status: 'error',
+        error: 'OpenRouter response kosong setelah retry',
+      })
       sendJson(res, 502, {
         ok: false,
         error: 'empty_openrouter_reply',
@@ -700,6 +826,10 @@ export default async function handler(req, res) {
       })
       return
     }
+
+    await traceStep(trace, 'response_received', 'done', {
+      detail: `${replyText.length} char dari ${usedModel}`,
+    })
 
     // Truncation indicator: muncul HANYA kalau sudah max continuation tapi masih kepotong.
     const finalTruncated = isTruncated(lastFinishReason)
@@ -729,10 +859,29 @@ export default async function handler(req, res) {
     // Lapis 2 — auto-update long-term memory (Vercel KV). Synchronous: kasih konfirmasi
     // ke client memory ke-update atau di-skip. Tambah ~1-3s latency tapi lebih reliable
     // daripada fire-and-forget (Vercel function bisa kill task setelah sendJson).
+    await traceStep(trace, 'memory_updating', 'running')
     const memoryUpdate = await updateMemoryFromTurn({
       userMsg: userMessage,
       atmajaReply: replyText,
       currentMemory: memoryContent,
+    })
+    if (memoryUpdate?.skipped) {
+      await traceStep(trace, 'memory_updating', 'skipped', {
+        detail: `Skipped: ${memoryUpdate.reason}`,
+      })
+    } else {
+      await traceStep(trace, 'memory_updating', 'done', {
+        detail: `${memoryUpdate?.bulletsAdded ?? 0} catatan baru ditambahkan`,
+      })
+    }
+
+    await traceStep(trace, 'output_sent', 'done', {
+      detail: `${replyText.trim().length} char dikirim ke Matthew`,
+    })
+    await finalizeTrace(trace, {
+      status: 'completed',
+      responsePreview: replyText.trim().slice(0, 240),
+      model: usedModel,
     })
 
     sendJson(res, 200, {
@@ -755,8 +904,13 @@ export default async function handler(req, res) {
         metadataOnly: metadataOnlyCount,
       },
       memoryUpdate,
+      sessionId,
     })
   } catch (error) {
+    await finalizeTrace(trace, {
+      status: 'error',
+      error: error instanceof Error ? error.message : 'unknown_error',
+    })
     sendJson(res, 502, {
       ok: false,
       error: 'openrouter_unreachable',

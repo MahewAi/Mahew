@@ -3,12 +3,14 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   Activity,
+  AlertCircle,
   BarChart3,
   BrainCircuit,
   CalendarClock,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
+  Circle,
   CircleDashed,
   CreditCard,
   Database,
@@ -20,7 +22,9 @@ import {
   Layers3,
   Library,
   ListChecks,
+  Loader2,
   MessageSquare,
+  Minus,
   Network,
   PlugZap,
   Plus,
@@ -31,6 +35,7 @@ import {
   Timer,
   WalletCards,
   Workflow,
+  Zap,
 } from 'lucide-react'
 import { BriefDetailSheet } from '@/components/brief/BriefDetailSheet'
 import { ComposeSheet, simulateAiResponse } from '@/components/brief/ComposeSheet'
@@ -78,6 +83,14 @@ import {
   type ProviderCreditSnapshot,
 } from '@/lib/costLedger'
 import { loadStoredBriefs, saveStoredBriefs } from '@/lib/briefStore'
+import {
+  fetchTrace,
+  formatDuration,
+  formatRelativeTime,
+  formatAbsoluteTime,
+  type AtmajaTrace,
+  type TraceStep,
+} from '@/lib/atmajaTraceClient'
 import {
   getLearningSnapshot,
   recordBriefApprovalLesson,
@@ -548,6 +561,31 @@ function DepartmentArchitectureSection({
   })
   const [statsLoaded, setStatsLoaded] = useState(false)
   const [showArchitecture, setShowArchitecture] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
+  const [currentTrace, setCurrentTrace] = useState<AtmajaTrace | null>(null)
+  const [traceHistory, setTraceHistory] = useState<AtmajaTrace[]>([])
+  const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null)
+
+  // Live polling trace — 1.5s saat ada session running, 5s saat idle.
+  useEffect(() => {
+    let cancelled = false
+    let timer: number | null = null
+    const tick = async () => {
+      const r = await fetchTrace()
+      if (cancelled) return
+      if (r?.ok) {
+        setCurrentTrace(r.current)
+        setTraceHistory(r.history ?? [])
+      }
+      const isRunning = r?.current?.status === 'running'
+      timer = window.setTimeout(tick, isRunning ? 1500 : 5000)
+    }
+    void tick()
+    return () => {
+      cancelled = true
+      if (timer != null) window.clearTimeout(timer)
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -612,25 +650,105 @@ function DepartmentArchitectureSection({
     { id: 'cco', name: 'CCO', role: 'Creative', mandate: 'Narrative & brand', color: 'role-cco' },
   ]
 
+  const viewTrace = selectedHistoryId
+    ? traceHistory.find((t) => t.sessionId === selectedHistoryId) ?? null
+    : currentTrace
+
   return (
-    <section className="mt-4 space-y-3" aria-label="AI Department operations dashboard">
+    <section className="mt-4 space-y-3" aria-label="AI Department live execution trace">
       {/* Header */}
       <div className="rounded-2xl border border-white/55 bg-white/55 p-4 shadow-card backdrop-blur-md">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-label-caps text-accent-dark">AI Department</p>
             <h1 className="mt-1 text-[26px] font-extrabold leading-[1.1] tracking-[-0.01em] text-text-primary">
-              Operasi & status
+              Live Execution Trace
             </h1>
             <p className="mt-2 max-w-[420px] text-[13px] font-medium leading-relaxed text-text-secondary">
-              Health real-time, quick action ke Atmaja, dan ringkasan aktivitas C-level. Untuk struktur arsitektur, buka panel di bawah.
+              Lacak proses Atmaja dari saat Matthew kirim prompt sampai jawaban kembali, step-by-step real-time seperti n8n workflow.
             </p>
           </div>
           <span className="inline-flex size-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-accent to-accent-dark text-white shadow-card">
-            <Activity className="size-5" />
+            <Zap className="size-5" />
           </span>
         </div>
       </div>
+
+      {/* LIVE EXECUTION TRACE (primary feature) */}
+      <LiveTraceCard
+        trace={viewTrace}
+        isHistoryView={Boolean(selectedHistoryId)}
+        onBackToLive={selectedHistoryId ? () => setSelectedHistoryId(null) : undefined}
+      />
+
+      {/* History Sessions (collapsible) */}
+      {traceHistory.length > 0 && (
+        <div className="rounded-2xl border border-white/55 bg-white/40 shadow-soft backdrop-blur-md">
+          <button
+            type="button"
+            onClick={() => setShowHistory((v) => !v)}
+            className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+            aria-expanded={showHistory}
+          >
+            <div className="flex items-center gap-3">
+              <span className="inline-flex size-9 items-center justify-center rounded-lg bg-accent-bg text-accent-dark">
+                <Activity className="size-4" />
+              </span>
+              <div>
+                <p className="text-[13px] font-extrabold text-text-primary">Riwayat eksekusi</p>
+                <p className="text-[11px] font-semibold text-text-muted">
+                  {traceHistory.length} sesi terakhir
+                </p>
+              </div>
+            </div>
+            <ChevronDown
+              className={cn(
+                'size-4 text-text-faint transition-transform duration-fast',
+                showHistory && 'rotate-180',
+              )}
+            />
+          </button>
+          {showHistory && (
+            <div className="border-t border-white/55 px-3 pb-3 pt-3 space-y-1.5">
+              {traceHistory.map((t) => (
+                <button
+                  key={t.sessionId}
+                  type="button"
+                  onClick={() => setSelectedHistoryId(t.sessionId)}
+                  className={cn(
+                    'group flex w-full items-start gap-3 rounded-xl border px-3 py-2 text-left transition-colors duration-fast',
+                    selectedHistoryId === t.sessionId
+                      ? 'border-accent bg-accent-bg/60'
+                      : 'border-white/60 bg-white/70 hover:border-accent/40 hover:bg-white',
+                  )}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      'mt-1 inline-flex size-2 shrink-0 rounded-full',
+                      t.status === 'completed'
+                        ? 'bg-status-final shadow-[0_0_6px_rgba(61,111,88,0.5)]'
+                        : t.status === 'error'
+                          ? 'bg-status-review'
+                          : 'bg-amber-500',
+                    )}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[12px] font-extrabold text-text-primary">
+                      {t.userMessagePreview || '(no prompt)'}
+                    </p>
+                    <p className="mt-0.5 text-[11px] font-semibold text-text-muted">
+                      {formatRelativeTime(t.startedAt)} · {formatDuration(t.totalDurationMs)} ·{' '}
+                      {t.model?.split('/').pop() ?? '-'}
+                    </p>
+                  </div>
+                  <ChevronRight className="size-4 shrink-0 self-center text-text-faint group-hover:text-accent-dark" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Service Health Grid */}
       <div className="rounded-2xl border border-white/55 bg-white/55 p-3.5 shadow-soft backdrop-blur-md">
@@ -840,6 +958,214 @@ function WorkMapDashboardSection({ plans }: { plans: CLevelPlan[] }) {
       ))}
     </section>
   )
+}
+
+function LiveTraceCard({
+  trace,
+  isHistoryView,
+  onBackToLive,
+}: {
+  trace: AtmajaTrace | null
+  isHistoryView: boolean
+  onBackToLive?: () => void
+}) {
+  if (!trace) {
+    return (
+      <div className="rounded-2xl border border-white/55 bg-white/55 p-5 shadow-soft backdrop-blur-md">
+        <div className="flex flex-col items-center text-center">
+          <span className="inline-flex size-12 items-center justify-center rounded-xl bg-accent-bg text-accent-dark">
+            <Zap className="size-5" />
+          </span>
+          <p className="mt-3 text-sm font-extrabold text-text-primary">Belum ada eksekusi tercatat</p>
+          <p className="mt-1 max-w-[380px] text-[12px] font-semibold leading-relaxed text-text-muted">
+            Setiap kali Matthew chat Atmaja, tab ini akan otomatis menampilkan step-by-step proses real-time.
+            Coba kirim prompt di tab Atmaja, lalu kembali ke sini.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  const statusColor =
+    trace.status === 'running'
+      ? 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.55)]'
+      : trace.status === 'completed'
+        ? 'bg-status-final shadow-[0_0_10px_rgba(61,111,88,0.55)]'
+        : 'bg-status-review shadow-[0_0_10px_rgba(168,89,116,0.55)]'
+
+  const statusLabel =
+    trace.status === 'running' ? 'Sedang berjalan' : trace.status === 'completed' ? 'Selesai' : 'Error'
+
+  const completedSteps = trace.steps.filter((s) => s.status === 'done').length
+  const totalSteps = trace.steps.filter((s) => s.status !== 'skipped').length
+  const runningStep = trace.steps.find((s) => s.status === 'running')
+
+  return (
+    <div className="rounded-2xl border border-white/55 bg-white/65 p-4 shadow-card backdrop-blur-md">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span aria-hidden="true" className={cn('inline-flex size-2.5 shrink-0 rounded-full', statusColor)} />
+            <p className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-text-secondary">
+              {isHistoryView ? 'Riwayat' : 'Sesi saat ini'} · {statusLabel}
+            </p>
+            {trace.status === 'running' && (
+              <Loader2 className="size-3 animate-spin text-amber-600" />
+            )}
+          </div>
+          <p className="mt-2 text-[15px] font-extrabold leading-snug text-text-primary line-clamp-2">
+            {trace.userMessagePreview || '(prompt kosong)'}
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-semibold text-text-muted">
+            <span>Mulai: {formatAbsoluteTime(trace.startedAt)}</span>
+            {trace.totalDurationMs != null && <span>Durasi: {formatDuration(trace.totalDurationMs)}</span>}
+            {trace.model && <span>Model: {trace.model.split('/').pop()}</span>}
+            <span>
+              Step: {completedSteps} / {totalSteps}
+            </span>
+          </div>
+        </div>
+        {isHistoryView && onBackToLive && (
+          <button
+            type="button"
+            onClick={onBackToLive}
+            className="shrink-0 rounded-full bg-accent-bg px-2.5 py-1 text-[10px] font-extrabold text-accent-dark hover:bg-accent/15"
+          >
+            Kembali live
+          </button>
+        )}
+      </div>
+
+      {/* Step pills timeline */}
+      <div className="mt-4">
+        <div className="grid gap-1.5 sm:grid-cols-7">
+          {trace.steps.map((step) => {
+            return <TraceStepPill key={step.id} step={step} />
+          })}
+        </div>
+      </div>
+
+      {/* Active step detail */}
+      {runningStep && trace.status === 'running' && (
+        <div className="mt-3 rounded-xl border border-amber-500/30 bg-amber-50/70 px-3.5 py-2.5">
+          <div className="flex items-center gap-2">
+            <Loader2 className="size-3.5 animate-spin text-amber-600" />
+            <p className="text-[12px] font-extrabold text-amber-900">{runningStep.label}</p>
+          </div>
+          {runningStep.detail && (
+            <p className="mt-1 text-[11px] font-semibold text-amber-800">{runningStep.detail}</p>
+          )}
+        </div>
+      )}
+
+      {/* Error message */}
+      {trace.status === 'error' && trace.error && (
+        <div className="mt-3 rounded-xl border border-status-review/40 bg-status-review-bg/70 px-3.5 py-2.5">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="size-3.5 shrink-0 text-status-review mt-0.5" />
+            <div className="min-w-0">
+              <p className="text-[12px] font-extrabold text-status-review">Error</p>
+              <p className="mt-0.5 text-[11px] font-semibold text-text-secondary break-words">{trace.error}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Response preview (when completed) */}
+      {trace.status === 'completed' && trace.responsePreview && (
+        <div className="mt-3 rounded-xl border border-status-final/30 bg-status-final-bg/50 px-3.5 py-2.5">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="size-3.5 text-status-final" />
+            <p className="text-[11px] font-extrabold uppercase tracking-[0.06em] text-status-final">
+              Output (preview)
+            </p>
+          </div>
+          <p className="mt-1.5 text-[12px] font-medium leading-relaxed text-text-primary line-clamp-3">
+            {trace.responsePreview}
+          </p>
+        </div>
+      )}
+
+      {/* All steps detail (expandable) */}
+      <details className="mt-3 group">
+        <summary className="cursor-pointer list-none rounded-lg bg-bg-soft/50 px-3 py-2 text-[11px] font-extrabold text-text-secondary hover:bg-bg-soft/80">
+          <span className="inline-flex items-center gap-1">
+            Detail tiap step
+            <ChevronDown className="size-3 transition-transform group-open:rotate-180" />
+          </span>
+        </summary>
+        <ul className="mt-2 space-y-1">
+          {trace.steps.map((step) => (
+            <li
+              key={step.id}
+              className="flex items-start gap-2 rounded-lg bg-white/40 px-2.5 py-1.5 text-[11px]"
+            >
+              <TraceStepIcon status={step.status} />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-extrabold text-text-primary">{step.label}</p>
+                  {step.at && (
+                    <span className="text-[10px] font-semibold text-text-faint">
+                      {formatAbsoluteTime(step.at)}
+                    </span>
+                  )}
+                </div>
+                {step.detail && (
+                  <p className="mt-0.5 text-[10px] font-semibold text-text-muted">{step.detail}</p>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </details>
+    </div>
+  )
+}
+
+function TraceStepPill({ step }: { step: TraceStep }) {
+  const isDone = step.status === 'done'
+  const isRunning = step.status === 'running'
+  const isSkipped = step.status === 'skipped'
+  return (
+    <div
+      className={cn(
+        'rounded-lg border px-2 py-2 transition-colors duration-fast',
+        isDone
+          ? 'border-status-final/40 bg-status-final-bg/60'
+          : isRunning
+            ? 'border-amber-500/50 bg-amber-50 shadow-[0_0_12px_rgba(245,158,11,0.25)] animate-pulse'
+            : isSkipped
+              ? 'border-white/50 bg-white/30 opacity-50'
+              : 'border-white/60 bg-white/50',
+      )}
+      title={step.detail || step.label}
+    >
+      <div className="flex items-center gap-1.5">
+        <TraceStepIcon status={step.status} />
+        <p className="truncate text-[10px] font-extrabold uppercase tracking-[0.05em] text-text-secondary">
+          {step.id.replace(/_/g, ' ').slice(0, 12)}
+        </p>
+      </div>
+      <p
+        className={cn(
+          'mt-1 truncate text-[11px] font-bold',
+          isDone ? 'text-status-final' : isRunning ? 'text-amber-700' : isSkipped ? 'text-text-faint' : 'text-text-muted',
+        )}
+      >
+        {step.label}
+      </p>
+    </div>
+  )
+}
+
+function TraceStepIcon({ status }: { status: TraceStep['status'] }) {
+  if (status === 'done')
+    return <CheckCircle2 className="size-3.5 shrink-0 text-status-final" aria-label="Selesai" />
+  if (status === 'running')
+    return <Loader2 className="size-3.5 shrink-0 animate-spin text-amber-600" aria-label="Berjalan" />
+  if (status === 'skipped') return <Minus className="size-3.5 shrink-0 text-text-faint" aria-label="Skipped" />
+  return <Circle className="size-3.5 shrink-0 text-text-faint" aria-label="Pending" />
 }
 
 function HealthTile({

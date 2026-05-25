@@ -805,7 +805,41 @@ export default async function handler(req, res) {
     return
   }
 
+  if (type === 'trace') {
+    await handleTrace(req, res)
+    return
+  }
+
   await handleMemory(req, res)
+}
+
+// ============================================================================
+// TRACE HANDLER — Live execution trace (n8n-style workflow viewer)
+// Returns current session (running/completed terakhir) + history N session terbaru
+// ============================================================================
+
+const TRACE_CURRENT_KEY = 'atmaja:trace:matthew:current'
+const TRACE_HISTORY_KEY = 'atmaja:trace:matthew:history'
+
+async function handleTrace(req, res) {
+  if (req.method !== 'GET') {
+    sendJson(res, 405, { ok: false, error: 'method_not_allowed' })
+    return
+  }
+  try {
+    const [current, history] = await Promise.all([
+      kv.get(TRACE_CURRENT_KEY).catch(() => null),
+      kv.get(TRACE_HISTORY_KEY).catch(() => null),
+    ])
+    sendJson(res, 200, {
+      ok: true,
+      current: current ?? null,
+      history: Array.isArray(history) ? history : [],
+    })
+  } catch (error) {
+    console.error('[trace] handleTrace error:', error?.message ?? error)
+    sendJson(res, 500, { ok: false, error: 'trace_read_failed' })
+  }
 }
 
 // ============================================================================
