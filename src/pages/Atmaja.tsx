@@ -36,6 +36,8 @@ import {
   type AtmajaSchedule,
 } from '@/lib/atmajaSchedulerClient'
 import { browseUrl, parseBrowseCommand, buildBrowseMessage } from '@/lib/atmajaBrowseClient'
+import { parseInsightMarkers } from '@/lib/atmajaInsightClient'
+import { exportMessageAsPdf, deriveTitleFromMessage } from '@/lib/exportPdf'
 import { generateImage, parseImageCommand, type OpenAIImageModel } from '@/lib/openaiImageClient'
 import { generateVideo, parseVideoCommand, type OpenAIVideoModel } from '@/lib/openaiVideoClient'
 import { generateMockReply, type ChatMessage } from '@/lib/mockReplies'
@@ -887,10 +889,11 @@ export default function Atmaja() {
 
         const visuals = buildVisualsForReply(modelText, result.text, userMsg.attachments ?? [])
 
-        // Parse [ATMAJA_SCHEDULE_CREATE] markers — auto-create schedule in KV when Atmaja
-        // detects Matthew minta reminder/jadwal. Markers stripped from display text.
+        // Parse markers: schedule + insight. Strip dari display text supaya tidak
+        // tampil sebagai bracket text di chat bubble.
         const scheduleResult = parseScheduleMarkers(result.text)
-        const displayText = withVisualFollowUp(scheduleResult.cleanedText, modelText, visuals)
+        const insightResult = parseInsightMarkers(scheduleResult.cleanedText)
+        const displayText = withVisualFollowUp(insightResult.cleanedText, modelText, visuals)
         const reply: AtmajaMessage = {
           id: `m-${Date.now() + 1}`,
           author: 'ceo',
@@ -2125,6 +2128,7 @@ export default function Atmaja() {
 
 function MessageBubble({ message, reduceMotion }: { message: AtmajaMessage; reduceMotion: boolean }) {
   const isMatthew = message.author === 'matthew'
+  const contentRef = useRef<HTMLDivElement>(null)
 
   return (
     <motion.div
@@ -2166,7 +2170,9 @@ function MessageBubble({ message, reduceMotion }: { message: AtmajaMessage; redu
           {isMatthew ? (
             message.text
           ) : (
-            <MarkdownBlock content={message.text} className="atmaja-bubble-markdown" />
+            <div ref={contentRef}>
+              <MarkdownBlock content={message.text} className="atmaja-bubble-markdown" />
+            </div>
           )}
           {message.attachments && message.attachments.length > 0 && (
             <div className="mt-3 grid gap-2">
@@ -2190,9 +2196,33 @@ function MessageBubble({ message, reduceMotion }: { message: AtmajaMessage; redu
             ))}
           </div>
         )}
-        <p className={cn('mt-1 px-1 text-[10px] text-text-faint', isMatthew && 'text-right')}>
-          {message.timeAgo}
-        </p>
+        <div className={cn('mt-1 flex items-center gap-2 px-1', isMatthew && 'flex-row-reverse')}>
+          <p className="text-[10px] text-text-faint">{message.timeAgo}</p>
+          {/* Export PDF — hanya untuk Atmaja messages, dan kalau message text cukup panjang (avoid noise di reply pendek) */}
+          {!isMatthew && message.text.trim().length > 80 && (
+            <button
+              type="button"
+              onClick={() => {
+                const html = contentRef.current?.innerHTML ?? ''
+                if (!html.trim()) {
+                  alert('Belum ada konten siap di-export.')
+                  return
+                }
+                exportMessageAsPdf({
+                  contentHtml: html,
+                  title: deriveTitleFromMessage(message.text),
+                  subtitle: `Dari chat Atmaja, ${message.timeAgo}`,
+                })
+              }}
+              title="Simpan jawaban Atmaja sebagai PDF"
+              aria-label="Simpan PDF"
+              className="inline-flex items-center gap-1 rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-extrabold text-accent-dark shadow-soft transition-colors duration-fast hover:bg-white hover:text-text-primary"
+            >
+              <FileText className="size-2.5" />
+              Simpan PDF
+            </button>
+          )}
+        </div>
       </div>
     </motion.div>
   )
