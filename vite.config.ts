@@ -26,6 +26,24 @@ export default defineConfig({
         // Update PWA langsung aktif setelah service worker baru terunduh.
         skipWaiting: true,
         clientsClaim: true,
+        // CRITICAL: exclude /api/ routes dari SPA navigation fallback.
+        // Tanpa ini, SW intercept fetch /api/atmaja/memory?type=files dan
+        // return cached index.html (SPA fallback), bikin Library + Proposals
+        // tampil kosong padahal server return data correct.
+        navigateFallbackDenylist: [
+          /^\/api\//,
+          /^\/sw\.js$/,
+          /^\/workbox-/,
+        ],
+        // Runtime caching untuk /api/ — NetworkOnly (never cache, never fallback).
+        // Pastikan setiap GET ke /api/ langsung ke server, no SW interference.
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/gerai\.mahewwork\.com\/api\//,
+            handler: 'NetworkOnly',
+            options: { fetchOptions: { cache: 'no-store' } },
+          },
+        ],
       },
       devOptions: {
         enabled: false,
