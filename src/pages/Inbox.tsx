@@ -576,6 +576,8 @@ function WorkMapDashboardSection({ plans }: { plans: CLevelPlan[] }) {
 }
 
 function LiveDepartmentMap() {
+  // Redesigned: clean tier-based glass card grid, brand canon (brass + ivory),
+  // inspired by Aether Management atmospheric layout. Lebih sederhana, premium feel.
   type MapNode = {
     id: string
     label: string
@@ -583,116 +585,100 @@ function LiveDepartmentMap() {
     status: string
     activity: string
     output: string
-    x: number
-    y: number
-    w: number
-    h: number
-    tone?: 'primary' | 'accent'
+    tier: 1 | 2 | 3 | 4
   }
   const mapNodes: MapNode[] = [
-    { id: 'intake', label: 'Brief Intake', owner: 'Atmaja', status: 'Signal intake', activity: 'Membaca brief Matthew, konteks bisnis, constraint, dan tujuan keputusan sebelum dibagi ke council.', output: 'Problem frame dan planning question.', x: 38, y: 52, w: 118, h: 42, tone: 'accent' },
-    { id: 'atmaja', label: 'Atmaja CEO', owner: 'Atmaja', status: 'Chief planner', activity: 'Mengorkestrasi C-level, memberi push-back, menyatukan trade-off, dan menentukan kapan perlu approval Matthew.', output: 'Master planning frame dan decision gate.', x: 220, y: 46, w: 142, h: 50, tone: 'primary' },
-    { id: 'council', label: 'C-Level Council', owner: 'Atmaja', status: 'Delegation hub', activity: 'Membagi pekerjaan ke COO, CMO, CFO, dan CCO sesuai domain keputusan.', output: 'Lane kerja C-level yang siap dieksekusi agent.', x: 436, y: 52, w: 148, h: 42, tone: 'primary' },
-    { id: 'coo', label: 'COO', owner: 'Operations', status: 'Ops system', activity: 'Merancang SOP, staffing, vendor, fulfillment, timeline, dan dependency operasional.', output: 'Operating roadmap dan blocker list.', x: 654, y: 28, w: 82, h: 38 },
-    { id: 'cmo', label: 'CMO', owner: 'Marketing', status: 'Growth system', activity: 'Merancang positioning, market thesis, channel, funnel, dan innovation signal.', output: 'Market map dan growth plan.', x: 654, y: 86, w: 82, h: 38 },
-    { id: 'cfo', label: 'CFO', owner: 'Finance', status: 'Capital system', activity: 'Mengunci ROI, budget, pricing, margin, runway, dan scenario guardrail.', output: 'Financial decision frame.', x: 654, y: 144, w: 82, h: 38 },
-    { id: 'cco', label: 'CCO', owner: 'Creative', status: 'Narrative system', activity: 'Menjaga source, document pack, copy, brand voice, dan format komunikasi final.', output: 'Narrative dan evidence pack.', x: 654, y: 202, w: 82, h: 38 },
-    { id: 'specialists', label: 'Specialists', owner: 'C-level', status: 'Execution cells', activity: 'HR, production, curator, brand, market, sales, innovation, business design, finance, document, editorial, dan web researcher menjalankan subtask.', output: 'Specialist packets per domain.', x: 826, y: 66, w: 132, h: 44, tone: 'accent' },
-    { id: 'research', label: 'Research Tools', owner: 'Web Researcher', status: 'Evidence', activity: 'Mengambil sinyal web, Tavily/source evidence, kompetitor, market, dan fact-check untuk planning.', output: 'Evidence log dengan confidence.', x: 826, y: 142, w: 132, h: 44, tone: 'accent' },
-    { id: 'memory', label: 'Business Memory', owner: 'Atmaja', status: 'Learning layer', activity: 'Menyimpan keputusan, preferensi Matthew, business canon, source log, dan lesson penting di storage lokal.', output: 'Context privat untuk keputusan berikutnya.', x: 1002, y: 48, w: 132, h: 44 },
-    { id: 'automation', label: 'Skill Automation', owner: 'Atmaja', status: 'Trigger layer', activity: 'Menjalankan recurring scan, follow-up, queue routing, approval reminder, skill checklist, dan Private Sync Vault.', output: 'Automation runbook dan job trigger.', x: 1002, y: 124, w: 132, h: 44 },
-    { id: 'contract', label: 'Output Contract', owner: 'Agent runtime', status: 'Structured result', activity: 'Membungkus hasil agent menjadi AgentOutputEnvelope v1: summary, planning frame, visual map, blocks, gates, actions, dan memory policy.', output: 'Planning-grade output yang bisa dirender app.', x: 980, y: 218, w: 176, h: 48, tone: 'primary' },
+    { id: 'intake', label: 'Brief Intake', owner: 'Atmaja', status: 'Signal intake', activity: 'Membaca brief Matthew, konteks bisnis, constraint, dan tujuan keputusan sebelum dibagi ke council.', output: 'Problem frame dan planning question.', tier: 1 },
+    { id: 'atmaja', label: 'Atmaja CEO', owner: 'Atmaja', status: 'Chief planner', activity: 'Mengorkestrasi C-level, memberi push-back, menyatukan trade-off, dan menentukan kapan perlu approval Matthew.', output: 'Master planning frame dan decision gate.', tier: 1 },
+    { id: 'council', label: 'C-Level Council', owner: 'Atmaja', status: 'Delegation hub', activity: 'Membagi pekerjaan ke COO, CMO, CFO, dan CCO sesuai domain keputusan.', output: 'Lane kerja C-level yang siap dieksekusi agent.', tier: 2 },
+    { id: 'coo', label: 'COO', owner: 'Operations', status: 'Ops system', activity: 'Merancang SOP, staffing, vendor, fulfillment, timeline, dan dependency operasional.', output: 'Operating roadmap dan blocker list.', tier: 2 },
+    { id: 'cmo', label: 'CMO', owner: 'Marketing', status: 'Growth system', activity: 'Merancang positioning, market thesis, channel, funnel, dan innovation signal.', output: 'Market map dan growth plan.', tier: 2 },
+    { id: 'cfo', label: 'CFO', owner: 'Finance', status: 'Capital system', activity: 'Mengunci ROI, budget, pricing, margin, runway, dan scenario guardrail.', output: 'Financial decision frame.', tier: 2 },
+    { id: 'cco', label: 'CCO', owner: 'Creative', status: 'Narrative system', activity: 'Menjaga source, document pack, copy, brand voice, dan format komunikasi final.', output: 'Narrative dan evidence pack.', tier: 2 },
+    { id: 'specialists', label: 'Specialists', owner: 'C-level', status: 'Execution cells', activity: 'HR, production, curator, brand, market, sales, innovation, business design, finance, document, editorial, dan web researcher menjalankan subtask.', output: 'Specialist packets per domain.', tier: 3 },
+    { id: 'research', label: 'Research Tools', owner: 'Web Researcher', status: 'Evidence', activity: 'Mengambil sinyal web, Tavily atau source evidence, kompetitor, market, dan fact-check untuk planning.', output: 'Evidence log dengan confidence.', tier: 3 },
+    { id: 'memory', label: 'Business Memory', owner: 'Atmaja', status: 'Learning layer', activity: 'Menyimpan keputusan, preferensi Matthew, business canon, source log, dan lesson penting di storage lokal.', output: 'Context privat untuk keputusan berikutnya.', tier: 3 },
+    { id: 'automation', label: 'Skill Automation', owner: 'Atmaja', status: 'Trigger layer', activity: 'Menjalankan recurring scan, follow-up, queue routing, approval reminder, skill checklist, dan Private Sync Vault.', output: 'Automation runbook dan job trigger.', tier: 3 },
+    { id: 'contract', label: 'Output Contract', owner: 'Agent runtime', status: 'Structured result', activity: 'Membungkus hasil agent menjadi AgentOutputEnvelope v1: summary, planning frame, visual map, blocks, gates, actions, dan memory policy.', output: 'Planning-grade output yang bisa dirender app.', tier: 4 },
   ]
   const [selectedNodeId, setSelectedNodeId] = useState('atmaja')
+  const selectedNode = mapNodes.find((n) => n.id === selectedNodeId) ?? mapNodes[0]
 
-  const nodeById = new Map(mapNodes.map((node) => [node.id, node]))
-  const selectedNode = nodeById.get(selectedNodeId) ?? mapNodes[0]
-  const center = (id: string) => {
-    const node = nodeById.get(id)!
-    return { x: node.x + node.w / 2, y: node.y + node.h / 2 }
+  const tierLabels: Record<1 | 2 | 3 | 4, { label: string; sublabel: string }> = {
+    1: { label: 'Lapis 1', sublabel: 'Intake & Orkestrasi' },
+    2: { label: 'Lapis 2', sublabel: 'Council & Delegasi' },
+    3: { label: 'Lapis 3', sublabel: 'Eksekusi & Memori' },
+    4: { label: 'Lapis 4', sublabel: 'Output Terstruktur' },
   }
-  const path = (from: string, to: string, bend = 34) => {
-    const start = center(from)
-    const end = center(to)
-    const midY = Math.max(start.y, end.y) + bend
 
-    return `M ${start.x} ${start.y + 18} C ${start.x} ${midY}, ${end.x} ${midY}, ${end.x} ${end.y - 18}`
-  }
+  const tiers: Array<1 | 2 | 3 | 4> = [1, 2, 3, 4]
 
   return (
-    <div className="rounded-lg border border-[#2b2926] bg-[#151412] p-2 shadow-card">
-      <div className="overflow-x-auto rounded-md border border-white/8 bg-[#171614] [scrollbar-color:#6d6256_#171716]">
-        <div
-          className="relative h-[332px] w-[1180px] overflow-hidden"
-          style={{
-            backgroundImage:
-              'linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px)',
-            backgroundSize: '32px 32px',
-          }}
-        >
-          <div className="absolute left-4 top-3 z-10 flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-white/48">
-            <span className="inline-flex size-2 rounded-full bg-status-final shadow-[0_0_16px_rgba(61,111,88,0.9)]" />
-            AI Architecture
-          </div>
-          <div className="absolute right-4 top-3 z-10 flex gap-2">
-            <span className="rounded-sm border border-white/10 bg-white/[0.03] px-2 py-1 text-[10px] font-bold text-white/48">Atmaja</span>
-            <span className="rounded-sm border border-white/10 bg-white/[0.03] px-2 py-1 text-[10px] font-bold text-white/48">C-level</span>
-          </div>
-
-          <svg className="absolute inset-0 size-full" viewBox="0 0 1180 332" aria-hidden="true">
-            <defs>
-              <marker id="department-arrow" markerHeight="6" markerWidth="6" orient="auto" refX="5" refY="3">
-                <path d="M0,0 L6,3 L0,6 Z" fill="#8b8278" />
-              </marker>
-            </defs>
-            <g fill="none" stroke="#7d766d" strokeLinecap="round" strokeWidth="1.15" opacity="0.78" markerEnd="url(#department-arrow)">
-              <path d={path('intake', 'atmaja', 8)} />
-              <path d={path('atmaja', 'council', 8)} />
-              <path d={path('council', 'coo', 8)} />
-              <path d={path('council', 'cmo', 8)} />
-              <path d={path('council', 'cfo', 8)} />
-              <path d={path('council', 'cco', 8)} />
-              <path d={path('coo', 'specialists', 8)} />
-              <path d={path('cmo', 'specialists', 10)} />
-              <path d={path('cfo', 'specialists', 12)} />
-              <path d={path('cco', 'research', 10)} />
-              <path d={path('specialists', 'memory', 10)} />
-              <path d={path('research', 'memory', 10)} />
-              <path d={path('specialists', 'automation', 10)} />
-              <path d={path('research', 'automation', 10)} />
-              <path d={path('memory', 'contract', 10)} />
-              <path d={path('automation', 'contract', 10)} />
-              <path d={path('atmaja', 'contract', 44)} />
-            </g>
-          </svg>
-
-          {mapNodes.map((node) => {
-            const isSelected = node.id === selectedNode.id
-
-            return (
-              <button
-                key={node.id}
-                type="button"
-                onClick={() => setSelectedNodeId(node.id)}
-                className={cn(
-                  'absolute z-20 flex items-center justify-center rounded-md border px-2 text-center text-[10px] font-extrabold leading-3 shadow-[0_8px_22px_rgba(0,0,0,0.24)] transition duration-fast',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B8956B] focus-visible:ring-offset-2 focus-visible:ring-offset-[#171614]',
-                  isSelected
-                    ? 'border-[#B8956B] bg-[#4b4136] text-white shadow-[0_0_0_1px_rgba(184,149,107,0.35),0_16px_36px_rgba(0,0,0,0.34)]'
-                    : node.tone === 'primary'
-                      ? 'border-white/16 bg-[#393735] text-white/90 hover:border-[#B8956B]/55 hover:bg-[#413b34]'
-                      : node.tone === 'accent'
-                        ? 'border-[#a38a6b]/38 bg-[#3e3932] text-white/90 hover:border-[#B8956B]/65 hover:bg-[#463d34]'
-                        : 'border-white/10 bg-[#2d2c2b] text-white/82 hover:border-white/22 hover:bg-[#363330]',
-                )}
-                style={{ left: node.x, top: node.y, width: node.w, height: node.h }}
-              >
-                <span>{node.label}</span>
-                {isSelected && <span className="absolute -right-1 -top-1 size-2.5 rounded-full border border-[#171614] bg-[#B8956B]" />}
-              </button>
-            )
-          })}
+    <div className="rounded-2xl border border-white/55 bg-white/45 p-4 shadow-card backdrop-blur-md">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex size-2 rounded-full bg-status-final shadow-[0_0_10px_rgba(61,111,88,0.55)]" />
+          <p className="text-label-caps text-text-secondary">Arsitektur AI Department</p>
         </div>
+        <p className="text-[10px] font-bold text-text-faint">{mapNodes.length} node aktif</p>
+      </div>
+
+      <div className="space-y-3">
+        {tiers.map((tier) => {
+          const tierNodes = mapNodes.filter((n) => n.tier === tier)
+          const meta = tierLabels[tier]
+          return (
+            <div key={tier} className="rounded-xl border border-white/40 bg-white/55 p-2.5 shadow-soft">
+              <div className="mb-2 flex items-center gap-2 px-1">
+                <span className="inline-flex items-center justify-center rounded-full bg-accent-bg px-2 py-0.5 text-[10px] font-extrabold text-accent-dark">
+                  {meta.label}
+                </span>
+                <p className="text-[11px] font-bold text-text-secondary">{meta.sublabel}</p>
+              </div>
+              <div
+                className={cn(
+                  'grid gap-2',
+                  tierNodes.length <= 2 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5',
+                )}
+              >
+                {tierNodes.map((node) => {
+                  const isSelected = node.id === selectedNode.id
+                  return (
+                    <button
+                      key={node.id}
+                      type="button"
+                      onClick={() => setSelectedNodeId(node.id)}
+                      className={cn(
+                        'group relative rounded-lg border px-3 py-2.5 text-left transition-all duration-fast',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
+                        isSelected
+                          ? 'border-accent bg-accent-bg/60 shadow-[0_4px_12px_rgba(184,149,107,0.18)] ring-1 ring-accent/30'
+                          : 'border-white/60 bg-white/70 hover:border-accent/40 hover:bg-white/85',
+                      )}
+                    >
+                      <p
+                        className={cn(
+                          'text-[10px] font-extrabold uppercase tracking-[0.06em]',
+                          isSelected ? 'text-accent-dark' : 'text-text-faint group-hover:text-accent-dark',
+                        )}
+                      >
+                        {node.owner}
+                      </p>
+                      <p className="mt-0.5 text-[13px] font-extrabold leading-4 text-text-primary">{node.label}</p>
+                      <p className="mt-1 text-[10px] font-bold text-text-muted">{node.status}</p>
+                      {isSelected && (
+                        <span
+                          aria-hidden="true"
+                          className="absolute -right-1 -top-1 inline-flex size-2.5 rounded-full bg-accent shadow-[0_0_8px_rgba(184,149,107,0.5)] ring-2 ring-white"
+                        />
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })}
       </div>
 
       <motion.div
@@ -700,21 +686,21 @@ function LiveDepartmentMap() {
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.18 }}
-        className="mt-2 rounded-md border border-white/10 bg-[#211f1d] p-3 text-white shadow-soft"
+        className="mt-3 rounded-xl border border-accent/25 bg-white/80 p-4 shadow-soft backdrop-blur-md"
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-[#B8956B]">{selectedNode.owner}</p>
-            <h2 className="mt-1 text-[16px] font-extrabold leading-5">{selectedNode.label}</h2>
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.08em] text-accent-dark">{selectedNode.owner}</p>
+            <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">{selectedNode.label}</h2>
           </div>
-          <span className="shrink-0 rounded-full border border-[#B8956B]/25 bg-[#B8956B]/12 px-2.5 py-1 text-[10px] font-extrabold text-[#e6caa6]">
+          <span className="shrink-0 rounded-full border border-accent/35 bg-accent-bg/70 px-2.5 py-1 text-[10px] font-extrabold text-accent-dark">
             {selectedNode.status}
           </span>
         </div>
-        <p className="mt-2 text-xs font-semibold leading-5 text-white/72">{selectedNode.activity}</p>
-        <div className="mt-2 rounded-md border border-white/8 bg-white/[0.04] px-3 py-2">
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.08em] text-white/42">Output</p>
-          <p className="mt-1 text-[11px] font-bold leading-4 text-white/76">{selectedNode.output}</p>
+        <p className="mt-3 text-[13px] font-medium leading-relaxed text-text-secondary">{selectedNode.activity}</p>
+        <div className="mt-3 rounded-lg border border-white/60 bg-white/50 px-3 py-2">
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.08em] text-text-faint">Output</p>
+          <p className="mt-1 text-[12px] font-bold leading-4 text-text-primary">{selectedNode.output}</p>
         </div>
       </motion.div>
     </div>
@@ -2090,7 +2076,10 @@ function DashboardViewTabs({
   ]
 
   return (
-    <nav className="mt-3 rounded-lg border border-border-med bg-white p-1 shadow-soft" aria-label="Mode dashboard">
+    <nav
+      className="mt-3 rounded-2xl border border-white/55 bg-white/40 p-1.5 shadow-soft backdrop-blur-md"
+      aria-label="Mode dashboard"
+    >
       <div className="flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {items.map((item) => {
           const isActive = item.value === active
@@ -2101,23 +2090,37 @@ function DashboardViewTabs({
               type="button"
               onClick={() => onChange(item.value)}
               className={cn(
-                'min-h-[58px] min-w-[86px] flex-1 rounded-md px-2 py-2 text-left transition-colors duration-fast',
+                'min-h-[52px] min-w-[78px] flex-1 rounded-xl px-2.5 py-2 text-left transition-all duration-fast',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
-                isActive ? 'bg-text-primary text-white shadow-card' : 'text-text-secondary hover:bg-bg-surface',
+                isActive
+                  ? 'bg-white/90 shadow-card ring-1 ring-accent/30'
+                  : 'text-text-secondary hover:bg-white/55',
               )}
             >
               <span className="flex items-center justify-between gap-2">
-                <span className="text-xs font-extrabold">{item.label}</span>
+                <span
+                  className={cn(
+                    'text-[12px] font-extrabold',
+                    isActive ? 'text-text-primary' : 'text-text-secondary',
+                  )}
+                >
+                  {item.label}
+                </span>
                 <span
                   className={cn(
                     'rounded-full px-1.5 py-0.5 text-[10px] font-extrabold',
-                    isActive ? 'bg-white/16 text-white' : 'bg-bg-surface text-text-muted',
+                    isActive ? 'bg-accent-bg text-accent-dark' : 'bg-white/50 text-text-muted',
                   )}
                 >
                   {item.count}
                 </span>
               </span>
-              <span className={cn('mt-1 block text-[10px] font-semibold', isActive ? 'text-white/60' : 'text-text-faint')}>
+              <span
+                className={cn(
+                  'mt-1 block text-[10px] font-semibold',
+                  isActive ? 'text-accent-dark' : 'text-text-faint',
+                )}
+              >
                 {item.helper}
               </span>
             </button>
@@ -2157,25 +2160,25 @@ function CommandCenterSection({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-      className="mt-4 rounded-lg border border-border-med bg-white p-3.5 shadow-card"
+      className="mt-4 rounded-2xl border border-white/55 bg-white/55 p-4 shadow-card backdrop-blur-md"
       aria-label="Pusat kendali"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-label-caps text-accent-dark">Pusat kendali</p>
-          <h1 className="mt-1 text-[24px] font-extrabold leading-[1.08] tracking-[0] text-text-primary">
+          <h1 className="mt-1 text-[26px] font-extrabold leading-[1.1] tracking-[-0.01em] text-text-primary">
             Prioritas hari ini
           </h1>
-          <p className="mt-2 text-xs font-semibold leading-5 text-text-secondary">
+          <p className="mt-2 text-[13px] font-medium leading-relaxed text-text-secondary">
             {sectorLabel}. Lihat yang menunggu keputusan, sedang berjalan, butuh input, dan tertahan.
           </p>
         </div>
-        <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-md bg-text-primary text-white shadow-card">
+        <span className="inline-flex size-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-accent to-accent-dark text-white shadow-card">
           <Activity className="size-5" />
         </span>
       </div>
 
-      <div className="mt-4 grid grid-cols-4 divide-x divide-border-med rounded-md border border-border-med bg-bg-surface">
+      <div className="mt-4 grid grid-cols-4 gap-2">
         <MetricTile value={attentionCount} label="attention" />
         <MetricTile value={confirmationBriefs.length} label="confirm" tone="decision" />
         <MetricTile value={runningBriefs.length} label="running" tone="doing" />
@@ -2218,41 +2221,41 @@ function CommandCenterSection({
       </div>
 
       {totalQueue === 0 && (
-        <div className="mt-3 rounded-md border border-dashed border-border-med bg-bg-surface px-3 py-3">
+        <div className="mt-3 rounded-xl border border-dashed border-accent/30 bg-accent-bg/30 px-3.5 py-3.5">
           <p className="text-sm font-extrabold text-text-primary">Workspace masih bersih</p>
-          <p className="mt-1 text-xs font-semibold leading-5 text-text-muted">
+          <p className="mt-1 text-xs font-medium leading-relaxed text-text-secondary">
             Business knowledge tetap aktif. Mulai dengan brief pertama atau tanya Atmaja untuk framing.
           </p>
         </div>
       )}
 
       {recentOutputBriefs.length > 0 && (
-        <div className="mt-3 rounded-md border border-border-soft bg-bg-surface px-3 py-2.5">
+        <div className="mt-3 rounded-xl border border-white/55 bg-white/55 px-3.5 py-3 shadow-soft backdrop-blur-sm">
           <div className="flex items-center justify-between gap-3">
             <p className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-text-muted">Output terbaru</p>
-            <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-extrabold text-status-final">
+            <span className="rounded-full bg-status-final-bg px-2 py-0.5 text-[10px] font-extrabold text-status-final">
               {recentOutputBriefs.length}
             </span>
           </div>
           <button
             type="button"
             onClick={() => onOpenBrief(recentOutputBriefs[0].id)}
-            className="mt-2 flex w-full items-center justify-between gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="mt-2 flex w-full items-center justify-between gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-lg"
           >
             <span className="min-w-0">
-              <span className="block truncate text-xs font-extrabold text-text-primary">{recentOutputBriefs[0].title}</span>
+              <span className="block truncate text-[13px] font-extrabold text-text-primary">{recentOutputBriefs[0].title}</span>
               <span className="mt-0.5 block text-[11px] font-semibold text-text-muted">{recentOutputBriefs[0].timeAgo}</span>
             </span>
-            <ChevronRight className="size-4 shrink-0 text-text-faint" />
+            <ChevronRight className="size-4 shrink-0 text-accent-dark" />
           </button>
         </div>
       )}
 
-      <div className="mt-3">
+      <div className="mt-4">
         <button
           type="button"
           onClick={onCompose}
-          className="inline-flex min-h-touch w-full items-center justify-center gap-2 rounded-md bg-text-primary px-3 text-sm font-bold text-white shadow-card transition-transform duration-fast active:scale-[0.98]"
+          className="inline-flex min-h-touch w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-accent to-accent-dark px-3 text-sm font-bold text-white shadow-glow-accent transition-transform duration-fast active:scale-[0.98]"
         >
           <Plus className="size-4" />
           Buat brief baru
@@ -2768,22 +2771,23 @@ function VisualSurfaceSection() {
 
 function DashboardHeader({ activeCount, confirmationCount }: { activeCount: number; confirmationCount: number }) {
   return (
-    <header className="sticky top-0 z-20 -mx-4 bg-bg-app/92 px-4 pb-3 pt-5 backdrop-blur-xl">
+    <header className="sticky top-0 z-20 -mx-4 bg-white/60 px-4 pb-3 pt-5 backdrop-blur-xl">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-[18px] font-extrabold leading-none tracking-[0.02em] text-text-primary">
-            GERAI 1000 PINTU
+          <p className="text-[19px] font-extrabold leading-none tracking-[0.01em] text-text-primary">
+            Gerai 1000 Pintu
           </p>
-          <p className="mt-1 text-xs font-semibold text-text-muted">Hari ini / Dashboard kerja</p>
+          <p className="mt-1.5 text-xs font-semibold text-text-secondary">Hari ini / Dashboard kerja</p>
         </div>
-        <div className="rounded-md border border-border-med bg-white px-3 py-2 text-right shadow-soft">
-          <p className="text-[17px] font-extrabold leading-none text-text-primary">{activeCount}</p>
-          <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.06em] text-text-muted">aktif</p>
+        <div className="rounded-xl border border-white/55 bg-white/70 px-3.5 py-2 text-right shadow-soft backdrop-blur-md">
+          <p className="text-[18px] font-extrabold leading-none text-text-primary">{activeCount}</p>
+          <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.06em] text-accent-dark">aktif</p>
         </div>
       </div>
       <div className="mt-3 flex items-center gap-2 text-[11px] font-semibold text-text-muted">
+        <span className="inline-flex size-1.5 rounded-full bg-status-final shadow-[0_0_6px_rgba(61,111,88,0.5)]" />
         <span>{activeCount} brief aktif</span>
-        <span className="h-1 w-1 rounded-full bg-border-strong" />
+        <span className="size-1 rounded-full bg-text-faint" />
         <span>{confirmationCount} butuh konfirmasi</span>
       </div>
     </header>
@@ -2799,11 +2803,26 @@ function MetricTile({ value, label, tone = 'neutral' }: { value: number; label: 
         : tone === 'review'
           ? 'text-status-review'
           : 'text-text-primary'
+  const bgTone =
+    tone === 'decision'
+      ? 'bg-status-decision-bg/40'
+      : tone === 'doing'
+        ? 'bg-status-doing-bg/40'
+        : tone === 'review'
+          ? 'bg-status-review-bg/40'
+          : 'bg-white/55'
 
   return (
-    <div className="min-h-[76px] px-2 py-3 text-center">
-      <p className={cn('text-[24px] font-extrabold leading-none tracking-[0]', toneClass)}>{value}</p>
-      <p className="mx-auto mt-2 max-w-[64px] text-[10px] font-semibold leading-[1.15] text-text-muted">{label}</p>
+    <div
+      className={cn(
+        'min-h-[80px] rounded-xl border border-white/55 px-2 py-3 text-center shadow-soft backdrop-blur-sm',
+        bgTone,
+      )}
+    >
+      <p className={cn('text-[26px] font-extrabold leading-none tracking-[-0.01em]', toneClass)}>{value}</p>
+      <p className="mx-auto mt-2 max-w-[64px] text-[10px] font-semibold uppercase tracking-[0.06em] leading-[1.15] text-text-muted">
+        {label}
+      </p>
     </div>
   )
 }
