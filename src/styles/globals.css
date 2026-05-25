@@ -205,3 +205,19 @@
     text-transform: uppercase;
   }
 }
+
+/* Atmaja chat bubble markdown — compact margins + better table render */
+.atmaja-bubble-markdown > div > *:first-child { margin-top: 0; }
+.atmaja-bubble-markdown > div > *:last-child { margin-bottom: 0; }
+.atmaja-bubble-markdown p { margin-bottom: 0.5rem; }
+.atmaja-bubble-markdown p:last-child { margin-bottom: 0; }
+.atmaja-bubble-markdown h1 { margin-top: 0.75rem; margin-bottom: 0.5rem; font-size: 18px; line-height: 22px; }
+.atmaja-bubble-markdown h2 { margin-top: 0.75rem; margin-bottom: 0.375rem; font-size: 16px; line-height: 20px; }
+.atmaja-bubble-markdown h3 { margin-top: 0.625rem; margin-bottom: 0.25rem; font-size: 14px; line-height: 18px; }
+.atmaja-bubble-markdown ul, .atmaja-bubble-markdown ol { margin-top: 0.375rem; margin-bottom: 0.5rem; }
+.atmaja-bubble-markdown li { margin-bottom: 0.25rem; }
+.atmaja-bubble-markdown table { font-size: 13px; line-height: 18px; }
+.atmaja-bubble-markdown th { padding: 0.5rem 0.75rem; font-size: 11px; }
+.atmaja-bubble-markdown td { padding: 0.5rem 0.75rem; }
+.atmaja-bubble-markdown blockquote { margin-top: 0.5rem; margin-bottom: 0.5rem; }
+.atmaja-bubble-markdown hr { margin-top: 0.75rem; margin-bottom: 0.75rem; }
