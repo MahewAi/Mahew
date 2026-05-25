@@ -21,6 +21,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^11.11.17",
+    "html2pdf.js": "^0.14.0",
     "lucide-react": "^0.460.0",
     "mermaid": "^11.15.0",
     "react": "^18.3.1",

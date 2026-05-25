@@ -2265,24 +2265,31 @@ function AtmajaDocCard({ doc }: { doc: AtmajaDoc }) {
   const wordCount = countWords(doc.content)
   const sizeStr = estimateDocSize(doc.content)
 
-  const handleDownload = () => {
+  const [downloading, setDownloading] = useState(false)
+  const handleDownload = async () => {
+    if (downloading) return
     const html = hiddenContentRef.current?.innerHTML ?? ''
     if (!html.trim()) {
       alert('Konten dokumen belum ter-render. Coba klik lagi sebentar.')
       return
     }
     if (doc.type === 'pdf') {
-      exportMessageAsPdf({
-        contentHtml: html,
-        title: doc.title,
-        subtitle: `Disusun Atmaja pada ${new Date(doc.generatedAt).toLocaleString('id-ID', {
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-        })}`,
-      })
+      setDownloading(true)
+      try {
+        await exportMessageAsPdf({
+          contentHtml: html,
+          title: doc.title,
+          subtitle: `Disusun Atmaja pada ${new Date(doc.generatedAt).toLocaleString('id-ID', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          })}`,
+        })
+      } finally {
+        setDownloading(false)
+      }
     } else if (doc.type === 'md') {
       // Download as raw markdown file
       const blob = new Blob([doc.content], { type: 'text/markdown' })
@@ -2317,15 +2324,17 @@ function AtmajaDocCard({ doc }: { doc: AtmajaDoc }) {
 
       <button
         type="button"
-        onClick={handleDownload}
+        onClick={() => void handleDownload()}
+        disabled={downloading}
         className={cn(
           'group flex w-full items-center gap-3 rounded-xl border border-accent/30 bg-gradient-to-br from-accent-bg/70 to-white px-3.5 py-3 text-left shadow-soft',
           'transition-all duration-fast hover:border-accent/55 hover:shadow-card active:scale-[0.99]',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
+          downloading && 'cursor-wait opacity-80',
         )}
       >
         <span className="inline-flex size-12 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-accent-dark text-white shadow-soft">
-          <FileText className="size-5" />
+          {downloading ? <Loader2 className="size-5 animate-spin" /> : <FileText className="size-5" />}
         </span>
         <div className="min-w-0 flex-1">
           <p className="truncate text-[14px] font-extrabold leading-tight text-text-primary">{doc.title}</p>
@@ -2337,14 +2346,16 @@ function AtmajaDocCard({ doc }: { doc: AtmajaDoc }) {
             <span className="text-text-muted">{sizeStr}</span>
           </p>
           <p className="mt-0.5 text-[11px] font-semibold text-text-muted">
-            Klik untuk download {doc.type === 'pdf' ? 'PDF' : doc.type.toUpperCase()}
+            {downloading
+              ? 'Menyusun PDF...'
+              : `Klik untuk download ${doc.type === 'pdf' ? 'PDF' : doc.type.toUpperCase()}`}
           </p>
         </div>
         <span
           aria-hidden="true"
           className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-white/85 text-accent-dark shadow-soft group-hover:bg-accent group-hover:text-white"
         >
-          <ArrowUpRight className="size-3.5 -rotate-45" />
+          {downloading ? <Loader2 className="size-3.5 animate-spin" /> : <ArrowUpRight className="size-3.5 -rotate-45" />}
         </span>
       </button>
     </>
