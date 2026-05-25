@@ -42,6 +42,10 @@ import {
   parseDocMarkers,
   estimateDocSize,
   countWords,
+  userWantsPdf,
+  isRefusalResponse,
+  stripRefusalText,
+  synthesizeDocFromResponse,
   type AtmajaDoc,
 } from '@/lib/atmajaDocClient'
 import { generateImage, parseImageCommand, type OpenAIImageModel } from '@/lib/openaiImageClient'
@@ -902,7 +906,33 @@ export default function Atmaja() {
         const scheduleResult = parseScheduleMarkers(result.text)
         const insightResult = parseInsightMarkers(scheduleResult.cleanedText)
         const docResult = parseDocMarkers(insightResult.cleanedText)
-        const displayText = withVisualFollowUp(docResult.cleanedText, modelText, visuals)
+
+        // === FRONTEND SAFETY NET ===
+        // Kalau Matthew minta PDF tapi Atmaja tidak emit marker (karena keras kepala
+        // atau ada history refusal yang mengganggu), frontend force synthesize
+        // attachment card dari response. Plus strip refusal text supaya PDF bersih.
+        const matthewWantsPdf = userWantsPdf(userMsg.text)
+        const atmajaRefused = isRefusalResponse(insightResult.cleanedText)
+        let finalText = docResult.cleanedText
+        const finalDocs = [...docResult.docs]
+
+        if (matthewWantsPdf && finalDocs.length === 0) {
+          // Atmaja tidak emit marker tapi user butuh PDF. Synthesize.
+          const synthDoc = synthesizeDocFromResponse(
+            insightResult.cleanedText,
+            userMsg.text.slice(0, 80),
+          )
+          finalDocs.push(synthDoc)
+          // Replace refusal text dengan friendly conversational
+          if (atmajaRefused) {
+            finalText = `Berikut PDF "${synthDoc.title}" yang saya susun untuk Anda, silakan diunduh.`
+          } else {
+            // Atmaja tidak refuse tapi lupa marker — keep text + add attachment
+            finalText = stripRefusalText(finalText)
+          }
+        }
+
+        const displayText = withVisualFollowUp(finalText, modelText, visuals)
         const reply: AtmajaMessage = {
           id: `m-${Date.now() + 1}`,
           author: 'ceo',
@@ -910,7 +940,7 @@ export default function Atmaja() {
           timeAgo: 'Baru saja',
         }
         if (visuals.length > 0) reply.visuals = visuals
-        if (docResult.docs.length > 0) reply.documents = docResult.docs
+        if (finalDocs.length > 0) reply.documents = finalDocs
 
         setMessages((prev) => {
           const userIndex = prev.findIndex((message) => message.id === userMsg.id)

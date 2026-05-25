@@ -559,9 +559,51 @@ export default async function handler(req, res) {
     detail: `${memoryContent.length} char dari Business Memory`,
   })
 
-  const messages = [
+  // === PDF INTENT DETECTION ===
+  // Kalau Matthew minta PDF/dokumen di turn ini, inject system reinforcement
+  // supaya Atmaja PASTI emit [ATMAJA_DOC] marker, tidak nolak.
+  const PDF_INTENT_RE =
+    /\b(buat(kan)?( saya)?( file)?( sebuah)? pdf|kasih( saya)?( file)?( aku)? pdf|export( ke| sebagai| as)? pdf|kirim(kan)? pdf|save( as| sebagai)? pdf|pdf[- ]?(nya)? mana|buat(kan)? dokumen|generate( file)? pdf|hasilkan( file)? pdf|kasih( saya)? file|saya butuh( file)? pdf|saya mau( file)? pdf|tolong( buat)?( file)? pdf|pdf untuk (saya|aku|dibagikan|tim))/i
+  const userWantsPdf = PDF_INTENT_RE.test(userMessage)
+
+  const baseMessages = [
     { role: 'system', content: buildSystemPrompt(memoryContent) },
     ...normalizeHistory(payload?.history),
+  ]
+
+  // Inject reinforcement system message HANYA untuk turn yang detect PDF intent.
+  // Posisi: tepat sebelum user turn, supaya jadi paling fresh di context.
+  if (userWantsPdf) {
+    baseMessages.push({
+      role: 'system',
+      content: [
+        'PERINGATAN PENTING UNTUK TURN INI:',
+        'Matthew sedang minta file PDF. Sistem Gerai 1000 Pintu sudah punya kapabilitas auto-render PDF dari marker [ATMAJA_DOC] yang Anda emit.',
+        '',
+        'WAJIB: respond dengan format berikut, tidak boleh menolak.',
+        '',
+        '1. Tulis 1-2 kalimat conversational singkat ("Berikut PDF X yang saya susun untuk Anda, silakan diunduh.")',
+        '2. Lalu emit marker dengan konten dokumen lengkap di dalamnya:',
+        '',
+        '[ATMAJA_DOC type="pdf" title="Judul Singkat"]',
+        '# Judul Dokumen',
+        '',
+        '## Section pertama',
+        'Isi paragraf lengkap.',
+        '',
+        '## Section kedua',
+        '- Bullet 1',
+        '- Bullet 2',
+        '',
+        '[/ATMAJA_DOC]',
+        '',
+        'DILARANG menjawab "saya tidak bisa generate PDF" atau "matthew copy ke Google Docs" atau menyarankan workaround manual. Kapabilitas PDF AKTIF, gunakan marker.',
+      ].join('\n'),
+    })
+  }
+
+  const messages = [
+    ...baseMessages,
     { role: 'user', content: buildUserContent(userMessage, combinedAttachments) },
   ]
 
