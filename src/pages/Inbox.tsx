@@ -523,17 +523,22 @@ function CLevelPlanSection({ plans, mode = 'overview' }: { plans: CLevelPlan[]; 
 function DepartmentArchitectureSection() {
   return (
     <section className="mt-4 space-y-3" aria-label="AI Department architecture dashboard">
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <p className="text-label-caps text-text-muted">AI Department</p>
-          <h1 className="mt-1 text-[24px] font-extrabold leading-7 text-text-primary">Struktur AI Atmaja</h1>
-          <p className="mt-1 max-w-[360px] text-xs font-semibold leading-5 text-text-secondary">
-            Denah otak Atmaja, C-level council, specialist lane, memory, automation, dan output contract.
-          </p>
+      <div className="rounded-2xl border border-white/55 bg-white/55 p-4 shadow-card backdrop-blur-md">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-label-caps text-accent-dark">AI Department</p>
+            <h1 className="mt-1 text-[26px] font-extrabold leading-[1.1] tracking-[-0.01em] text-text-primary">
+              Struktur AI Atmaja
+            </h1>
+            <p className="mt-2 max-w-[420px] text-[13px] font-medium leading-relaxed text-text-secondary">
+              Denah otak Atmaja, C-level council, specialist lane, memory, automation, dan output contract.
+              Susun per lapis dari intake sampai output.
+            </p>
+          </div>
+          <span className="inline-flex size-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-accent to-accent-dark text-white shadow-card">
+            <Network className="size-5" />
+          </span>
         </div>
-        <span className="rounded-full border border-border-med bg-white px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.06em] text-text-muted shadow-soft">
-          geser
-        </span>
       </div>
       <LiveDepartmentMap />
     </section>
@@ -614,71 +619,91 @@ function LiveDepartmentMap() {
   const tiers: Array<1 | 2 | 3 | 4> = [1, 2, 3, 4]
 
   return (
-    <div className="rounded-2xl border border-white/55 bg-white/45 p-4 shadow-card backdrop-blur-md">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span className="inline-flex size-2 rounded-full bg-status-final shadow-[0_0_10px_rgba(61,111,88,0.55)]" />
-          <p className="text-label-caps text-text-secondary">Arsitektur AI Department</p>
+    <div className="space-y-3">
+      <div className="rounded-2xl border border-white/55 bg-white/40 p-3.5 shadow-soft backdrop-blur-md">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex size-2 rounded-full bg-status-final shadow-[0_0_10px_rgba(61,111,88,0.55)]" />
+            <p className="text-label-caps text-accent-dark">Arsitektur AI Department</p>
+          </div>
+          <p className="text-[10px] font-bold text-text-faint">{mapNodes.length} node aktif</p>
         </div>
-        <p className="text-[10px] font-bold text-text-faint">{mapNodes.length} node aktif</p>
-      </div>
 
-      <div className="space-y-3">
-        {tiers.map((tier) => {
-          const tierNodes = mapNodes.filter((n) => n.tier === tier)
-          const meta = tierLabels[tier]
-          return (
-            <div key={tier} className="rounded-xl border border-white/40 bg-white/55 p-2.5 shadow-soft">
-              <div className="mb-2 flex items-center gap-2 px-1">
-                <span className="inline-flex items-center justify-center rounded-full bg-accent-bg px-2 py-0.5 text-[10px] font-extrabold text-accent-dark">
-                  {meta.label}
-                </span>
-                <p className="text-[11px] font-bold text-text-secondary">{meta.sublabel}</p>
-              </div>
-              <div
-                className={cn(
-                  'grid gap-2',
-                  tierNodes.length <= 2 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5',
+        <div className="space-y-2.5">
+          {tiers.map((tier, tierIdx) => {
+            const tierNodes = mapNodes.filter((n) => n.tier === tier)
+            const meta = tierLabels[tier]
+            const isLastTier = tierIdx === tiers.length - 1
+            return (
+              <div key={tier}>
+                <div className="rounded-xl border border-white/55 bg-white/65 p-3 shadow-soft">
+                  <div className="mb-2.5 flex items-center gap-2">
+                    <span className="inline-flex min-w-[52px] items-center justify-center rounded-full bg-accent-bg px-2 py-1 text-[10px] font-extrabold text-accent-dark">
+                      {meta.label}
+                    </span>
+                    <p className="text-[12px] font-extrabold text-text-primary">{meta.sublabel}</p>
+                    <p className="ml-auto text-[10px] font-bold text-text-faint">{tierNodes.length} node</p>
+                  </div>
+                  <div
+                    className={cn(
+                      'grid gap-2',
+                      tierNodes.length <= 2
+                        ? 'grid-cols-1 sm:grid-cols-2'
+                        : tierNodes.length <= 4
+                          ? 'grid-cols-2 sm:grid-cols-4'
+                          : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5',
+                    )}
+                  >
+                    {tierNodes.map((node) => {
+                      const isSelected = node.id === selectedNode.id
+                      return (
+                        <button
+                          key={node.id}
+                          type="button"
+                          onClick={() => setSelectedNodeId(node.id)}
+                          className={cn(
+                            'group relative rounded-xl border px-3 py-2.5 text-left transition-all duration-fast',
+                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
+                            isSelected
+                              ? 'border-accent bg-accent-bg/70 shadow-[0_4px_14px_rgba(184,149,107,0.22)] ring-1 ring-accent/40'
+                              : 'border-white/70 bg-white/85 hover:border-accent/45 hover:bg-white hover:-translate-y-px',
+                          )}
+                        >
+                          <p
+                            className={cn(
+                              'text-[10px] font-extrabold uppercase tracking-[0.06em] truncate',
+                              isSelected ? 'text-accent-dark' : 'text-text-faint group-hover:text-accent-dark',
+                            )}
+                          >
+                            {node.owner}
+                          </p>
+                          <p className="mt-0.5 text-[13px] font-extrabold leading-[1.2] text-text-primary">
+                            {node.label}
+                          </p>
+                          <p className="mt-1 text-[10px] font-semibold text-text-muted truncate">{node.status}</p>
+                          {isSelected && (
+                            <span
+                              aria-hidden="true"
+                              className="absolute -right-1 -top-1 inline-flex size-2.5 rounded-full bg-accent shadow-[0_0_8px_rgba(184,149,107,0.55)] ring-2 ring-white"
+                            />
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+                {/* Flow connector — visual hint antar lapis */}
+                {!isLastTier && (
+                  <div aria-hidden="true" className="flex justify-center py-1.5">
+                    <span className="inline-flex size-5 items-center justify-center rounded-full bg-white/60 shadow-soft">
+                      <ChevronRight className="size-3 rotate-90 text-accent-dark" />
+                    </span>
+                  </div>
                 )}
-              >
-                {tierNodes.map((node) => {
-                  const isSelected = node.id === selectedNode.id
-                  return (
-                    <button
-                      key={node.id}
-                      type="button"
-                      onClick={() => setSelectedNodeId(node.id)}
-                      className={cn(
-                        'group relative rounded-lg border px-3 py-2.5 text-left transition-all duration-fast',
-                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
-                        isSelected
-                          ? 'border-accent bg-accent-bg/60 shadow-[0_4px_12px_rgba(184,149,107,0.18)] ring-1 ring-accent/30'
-                          : 'border-white/60 bg-white/70 hover:border-accent/40 hover:bg-white/85',
-                      )}
-                    >
-                      <p
-                        className={cn(
-                          'text-[10px] font-extrabold uppercase tracking-[0.06em]',
-                          isSelected ? 'text-accent-dark' : 'text-text-faint group-hover:text-accent-dark',
-                        )}
-                      >
-                        {node.owner}
-                      </p>
-                      <p className="mt-0.5 text-[13px] font-extrabold leading-4 text-text-primary">{node.label}</p>
-                      <p className="mt-1 text-[10px] font-bold text-text-muted">{node.status}</p>
-                      {isSelected && (
-                        <span
-                          aria-hidden="true"
-                          className="absolute -right-1 -top-1 inline-flex size-2.5 rounded-full bg-accent shadow-[0_0_8px_rgba(184,149,107,0.5)] ring-2 ring-white"
-                        />
-                      )}
-                    </button>
-                  )
-                })}
               </div>
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
       </div>
 
       <motion.div
@@ -686,21 +711,23 @@ function LiveDepartmentMap() {
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.18 }}
-        className="mt-3 rounded-xl border border-accent/25 bg-white/80 p-4 shadow-soft backdrop-blur-md"
+        className="rounded-2xl border border-accent/25 bg-white/85 p-4 shadow-card backdrop-blur-md"
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.08em] text-accent-dark">{selectedNode.owner}</p>
-            <h2 className="mt-1 text-[17px] font-extrabold leading-5 text-text-primary">{selectedNode.label}</h2>
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.08em] text-accent-dark">
+              {selectedNode.owner}
+            </p>
+            <h2 className="mt-1 text-[18px] font-extrabold leading-[1.2] text-text-primary">{selectedNode.label}</h2>
           </div>
           <span className="shrink-0 rounded-full border border-accent/35 bg-accent-bg/70 px-2.5 py-1 text-[10px] font-extrabold text-accent-dark">
             {selectedNode.status}
           </span>
         </div>
         <p className="mt-3 text-[13px] font-medium leading-relaxed text-text-secondary">{selectedNode.activity}</p>
-        <div className="mt-3 rounded-lg border border-white/60 bg-white/50 px-3 py-2">
+        <div className="mt-3 rounded-xl border border-white/65 bg-bg-soft/60 px-3.5 py-2.5">
           <p className="text-[10px] font-extrabold uppercase tracking-[0.08em] text-text-faint">Output</p>
-          <p className="mt-1 text-[12px] font-bold leading-4 text-text-primary">{selectedNode.output}</p>
+          <p className="mt-1 text-[13px] font-bold leading-[1.4] text-text-primary">{selectedNode.output}</p>
         </div>
       </motion.div>
     </div>
