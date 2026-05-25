@@ -46,6 +46,8 @@ import {
   isRefusalResponse,
   stripRefusalText,
   synthesizeDocFromResponse,
+  looksLikeDocumentResponse,
+  extractDocumentContent,
   type AtmajaDoc,
 } from '@/lib/atmajaDocClient'
 import { generateImage, parseImageCommand, type OpenAIImageModel } from '@/lib/openaiImageClient'
@@ -907,28 +909,37 @@ export default function Atmaja() {
         const insightResult = parseInsightMarkers(scheduleResult.cleanedText)
         const docResult = parseDocMarkers(insightResult.cleanedText)
 
-        // === FRONTEND SAFETY NET ===
-        // Kalau Matthew minta PDF tapi Atmaja tidak emit marker (karena keras kepala
-        // atau ada history refusal yang mengganggu), frontend force synthesize
-        // attachment card dari response. Plus strip refusal text supaya PDF bersih.
+        // === FRONTEND SAFETY NET (2 layer) ===
+        // Layer A: User explicit minta PDF/file/dokumen tapi Atmaja tidak emit marker
+        // Layer B: Atmaja respond dengan content yang LOOKS LIKE document (long, headings,
+        //   ada code block HTML/markdown) — auto-treat sebagai document attachment
         const matthewWantsPdf = userWantsPdf(userMsg.text)
         const atmajaRefused = isRefusalResponse(insightResult.cleanedText)
+        const responseLookSLikeDoc = looksLikeDocumentResponse(insightResult.cleanedText)
         let finalText = docResult.cleanedText
         const finalDocs = [...docResult.docs]
 
-        if (matthewWantsPdf && finalDocs.length === 0) {
-          // Atmaja tidak emit marker tapi user butuh PDF. Synthesize.
-          const synthDoc = synthesizeDocFromResponse(
-            insightResult.cleanedText,
-            userMsg.text.slice(0, 80),
-          )
-          finalDocs.push(synthDoc)
-          // Replace refusal text dengan friendly conversational
-          if (atmajaRefused) {
-            finalText = `Berikut PDF "${synthDoc.title}" yang saya susun untuk Anda, silakan diunduh.`
-          } else {
-            // Atmaja tidak refuse tapi lupa marker — keep text + add attachment
-            finalText = stripRefusalText(finalText)
+        // Trigger synthesize kalau: explicit PDF intent ATAU response punya struktur document
+        const shouldSynthesize = finalDocs.length === 0 && (matthewWantsPdf || responseLookSLikeDoc)
+
+        if (shouldSynthesize) {
+          // Extract clean document content (strip HTML code blocks, convert to markdown)
+          const docContent = extractDocumentContent(stripRefusalText(insightResult.cleanedText))
+          if (docContent.trim().length > 200) {
+            const synthDoc = synthesizeDocFromResponse(
+              docContent,
+              userMsg.text.slice(0, 80) || 'Dokumen Atmaja',
+            )
+            finalDocs.push(synthDoc)
+            // Replace text dengan friendly conversational (chat tidak lagi penuh raw HTML/markdown)
+            if (atmajaRefused) {
+              finalText = `Berikut PDF "${synthDoc.title}" yang saya susun untuk Anda, silakan diunduh.`
+            } else if (responseLookSLikeDoc) {
+              // Strip raw content, ganti dengan friendly opener
+              finalText = `Berikut "${synthDoc.title}" sudah saya susun jadi PDF, silakan klik untuk download.`
+            } else {
+              finalText = stripRefusalText(finalText)
+            }
           }
         }
 

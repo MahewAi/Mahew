@@ -71,13 +71,75 @@ export function countWords(content: string): number {
   return (content.match(/\S+/g) ?? []).length
 }
 
-// === PDF INTENT DETECTION (frontend) ===
-// Mirror regex backend supaya client + server consistent.
+// === DOCUMENT/FILE INTENT DETECTION (frontend) ===
+// Lebih luas dari sekedar PDF: HTML, markdown, dokumen, file. Semua dialihkan
+// jadi PDF attachment (browser print → save as PDF). Lebih user-friendly.
 const PDF_INTENT_RE =
-  /\b(buat(kan)?( saya)?( file)?( sebuah)? pdf|kasih( saya)?( file)?( aku)? pdf|export( ke| sebagai| as)? pdf|kirim(kan)? pdf|save( as| sebagai)? pdf|pdf[- ]?(nya)? mana|buat(kan)? dokumen|generate( file)? pdf|hasilkan( file)? pdf|kasih( saya)? file|saya butuh( file)? pdf|saya mau( file)? pdf|tolong( buat)?( file)? pdf|pdf untuk (saya|aku|dibagikan|tim))/i
+  /\b(buat(kan)?( saya)?( file)?( sebuah)? (pdf|html|dokumen|file|markdown|md)|kasih( saya)?( file)?( aku)?( juga)? (pdf|html|dokumen|file|markdown|md)|export( ke| sebagai| as)? (pdf|html|dokumen)|kirim(kan)? (pdf|html|file|dokumen)|save( as| sebagai)? pdf|pdf[- ]?(nya)? mana|buat(kan)? dokumen|generate( file)? (pdf|html|dokumen)|hasilkan( file)? (pdf|html|dokumen)|kasih( saya)? file|saya butuh( file)?( pdf| dokumen)?|saya mau( file)?( pdf| dokumen)?|tolong( buat)?( file)? (pdf|html|dokumen)|(pdf|html|dokumen|file) untuk (saya|aku|dibagikan|tim|presentasi)|html bole(h)?|file bole(h)?|dokumen bole(h)?|pdf bole(h)?|markdown bole(h)?|md bole(h)?|kasih (yang|saja|aja)|boleh (juga|saja|aja)|ya bole(h)?|ya kasih)/i
 
 export function userWantsPdf(userMessage: string): boolean {
   return PDF_INTENT_RE.test(String(userMessage ?? ''))
+}
+
+// Detect kalau Atmaja's RESPONSE punya struktur document — long + multi-heading +
+// ada HTML/markdown code blocks. Indikasi: Atmaja kasih document content padahal
+// user tidak explicit minta "pdf". Frontend synthesize attachment dari content ini.
+export function looksLikeDocumentResponse(responseText: string): boolean {
+  if (!responseText || responseText.length < 1500) return false
+
+  // Pattern 1: response punya raw HTML code block (```html ... ```)
+  const hasHtmlBlock = /```html[\s\S]*?```/i.test(responseText)
+
+  // Pattern 2: response opening dengan "Berikut HTML/file/dokumen/PDF/markdown"
+  const offerPhrase = /\bberikut\s+(html|file|dokumen|pdf|markdown|md|workflow|sintesis|brief)\s+\w/i.test(
+    responseText.slice(0, 500),
+  )
+
+  // Pattern 3: multi-heading (3+ H1/H2 markers di markdown)
+  const headingCount = (responseText.match(/^#{1,2}\s+\S/gm) ?? []).length
+  const hasMultipleHeadings = headingCount >= 3
+
+  // Pattern 4: ada table markdown (| header | dst)
+  const hasTable = /\n\s*\|.+\|\s*\n\s*\|[\s:|-]+\|/m.test(responseText)
+
+  // Document response = panjang + (HTML block OR offer phrase OR multi-heading + table)
+  return hasHtmlBlock || offerPhrase || (hasMultipleHeadings && hasTable)
+}
+
+// Extract content yang appropriate untuk PDF dari response yang ada raw HTML.
+// Strategi: kalau ada ```html block, gunakan markdown structure-nya untuk PDF.
+// Kalau hanya ada markdown structure, gunakan as-is.
+export function extractDocumentContent(responseText: string): string {
+  // Strip ```html ... ``` code fences kalau ada (HTML mentah dilarang masuk PDF
+  // karena PDF render via MarkdownBlock yang akan double-render HTML)
+  let content = responseText.replace(/```html\s*\n([\s\S]*?)\n```/gi, (_, htmlInner) => {
+    // Convert basic HTML structure kembali ke markdown approximation
+    return htmlInner
+      .replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, '# $1\n')
+      .replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, '## $1\n')
+      .replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, '### $1\n')
+      .replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, '$1\n\n')
+      .replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, '- $1\n')
+      .replace(/<strong[^>]*>([\s\S]*?)<\/strong>/gi, '**$1**')
+      .replace(/<em[^>]*>([\s\S]*?)<\/em>/gi, '*$1*')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<[^>]+>/g, '') // strip remaining tags
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+  })
+
+  // Strip conversational opener kalau ada ("Siap Matthew." / "Berikut..." dst di awal)
+  // supaya document content fokus
+  content = content.replace(
+    /^(siap\s+matthew[.,]?\s*|baik\s+matthew[.,]?\s*|tentu[.,]?\s*|berikut[^.\n]{0,80}[.\n]\s*)/i,
+    '',
+  )
+
+  return content.trim()
 }
 
 // Refusal phrases yang Atmaja kadang masih kasih meski sudah diajarkan.
