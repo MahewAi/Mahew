@@ -1,8 +1,8 @@
 // Client wrapper untuk Sora 2 video generation.
 // Endpoint:
-//   POST /api/openai/video/create      → create job
-//   GET  /api/openai/video/status?id=  → poll progress
-//   GET  /api/openai/video/content?id= → MP4 stream (pakai langsung di <video src=...>)
+//   POST /api/openai/video?action=create      → create job
+//   GET  /api/openai/video?action=status&id=  → poll progress
+//   GET  /api/openai/video?action=content&id= → MP4 stream (pakai langsung di <video src=...>)
 //
 // Async lifecycle: client kirim create → poll status setiap 3-5s sampai completed → render video.
 
@@ -31,7 +31,7 @@ export interface VideoJob {
   completedAt?: number | null
   expiresAt?: number | null
   error?: unknown
-  /** URL ke /api/openai/video/content?id=xxx, siap dipasang ke <video src=...>. Null kalau belum completed. */
+  /** URL ke /api/openai/video?action=content&id=xxx, siap dipasang ke <video src=...>. Null kalau belum completed. */
   contentUrl: string | null
 }
 
@@ -68,7 +68,7 @@ export async function createVideoJob(input: CreateVideoInput): Promise<VideoJob 
   if (!AGENT_BRIDGE_ALLOWED) return null
 
   try {
-    const response = await fetch('/api/openai/video/create', {
+    const response = await fetch('/api/openai/video?action=create', {
       method: 'POST',
       cache: 'no-store',
       headers: { accept: 'application/json', 'content-type': 'application/json' },
@@ -100,7 +100,7 @@ export async function createVideoJob(input: CreateVideoInput): Promise<VideoJob 
 export async function fetchVideoStatus(id: string): Promise<VideoJob | null> {
   if (!AGENT_BRIDGE_ALLOWED) return null
   try {
-    const response = await fetch(`/api/openai/video/status?id=${encodeURIComponent(id)}`, {
+    const response = await fetch(`/api/openai/video?action=status&id=${encodeURIComponent(id)}`, {
       method: 'GET',
       cache: 'no-store',
       headers: { accept: 'application/json' },

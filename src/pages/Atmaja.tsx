@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback, type DragEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { Send, Sunrise, ArrowUpRight, Trash2, ChevronDown, FileText, Image as ImageIcon, Loader2, Paperclip, UploadCloud, X, Library, BookOpen, Plus, Sparkles, Check, AlertTriangle } from 'lucide-react'
+import { Send, Sunrise, ArrowUpRight, Trash2, ChevronDown, FileText, Image as ImageIcon, Loader2, Paperclip, UploadCloud, X, Library, BookOpen, Plus, Sparkles, Check, AlertTriangle, Mic, MicOff, Camera, CalendarClock, Pause, Play } from 'lucide-react'
 import { loadStoredBriefs } from '@/lib/briefStore'
 import { recordInteractionLessons } from '@/lib/learningMemory'
 import { isAtmajaRemoteBridgeAllowed, requestAtmajaReply } from '@/lib/atmajaClient'
@@ -25,6 +25,17 @@ import {
   formatProposalDate,
   type AtmajaProposal,
 } from '@/lib/atmajaProposalsClient'
+import {
+  listSchedules,
+  createSchedule,
+  pauseSchedule,
+  resumeSchedule,
+  deleteSchedule,
+  parseScheduleMarkers,
+  formatScheduleDate,
+  type AtmajaSchedule,
+} from '@/lib/atmajaSchedulerClient'
+import { browseUrl, parseBrowseCommand, buildBrowseMessage } from '@/lib/atmajaBrowseClient'
 import { generateImage, parseImageCommand, type OpenAIImageModel } from '@/lib/openaiImageClient'
 import { generateVideo, parseVideoCommand, type OpenAIVideoModel } from '@/lib/openaiVideoClient'
 import { generateMockReply, type ChatMessage } from '@/lib/mockReplies'
@@ -410,11 +421,51 @@ export default function Atmaja() {
   const [proposalsOpen, setProposalsOpen] = useState(false)
   const [proposalsLoading, setProposalsLoading] = useState(false)
   const [proposalsError, setProposalsError] = useState('')
+
+  // NL Scheduler (Hermes-inspired automation)
+  const [schedules, setSchedules] = useState<AtmajaSchedule[]>([])
+  const [schedulesOpen, setSchedulesOpen] = useState(false)
+  const [schedulesLoading, setSchedulesLoading] = useState(false)
+  // Browse status untuk show progress saat /browse fetch URL
+  const [browsing, setBrowsing] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
   const libraryUploadRef = useRef<HTMLInputElement>(null)
   const dragDepthRef = useRef(0)
   const pendingReplyTimerRef = useRef<number | null>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const voiceRecognitionRef = useRef<unknown>(null)
+
+  const [voiceListening, setVoiceListening] = useState(false)
+  const [voiceSupported, setVoiceSupported] = useState(false)
+
+  // Mobile keyboard handling — visualViewport API set --keyboard-h CSS variable.
+  // Saat keyboard open di iOS/Android, composer bar auto-naik supaya tetap visible.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const vv = window.visualViewport
+    if (!vv) return
+    const update = () => {
+      const offset = Math.max(0, window.innerHeight - vv.height)
+      document.documentElement.style.setProperty('--keyboard-h', `${offset}px`)
+    }
+    vv.addEventListener('resize', update)
+    vv.addEventListener('scroll', update)
+    update()
+    return () => {
+      vv.removeEventListener('resize', update)
+      vv.removeEventListener('scroll', update)
+      document.documentElement.style.setProperty('--keyboard-h', '0px')
+    }
+  }, [])
+
+  // Detect Web Speech API support (Chrome desktop + Android, Safari iOS 14.5+).
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const W = window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown }
+    setVoiceSupported(Boolean(W.SpeechRecognition || W.webkitSpeechRecognition))
+  }, [])
 
   useEffect(() => {
     saveThread(messages)
@@ -617,6 +668,35 @@ export default function Atmaja() {
     }
   }, [refreshProposals])
 
+  // ============ NL Scheduler handlers ============
+  const refreshSchedules = useCallback(async () => {
+    setSchedulesLoading(true)
+    const r = await listSchedules()
+    if (r?.ok) setSchedules(r.schedules ?? [])
+    setSchedulesLoading(false)
+  }, [])
+
+  const handlePauseSchedule = useCallback(async (id: string) => {
+    const ok = await pauseSchedule(id)
+    if (ok) await refreshSchedules()
+  }, [refreshSchedules])
+
+  const handleResumeSchedule = useCallback(async (id: string) => {
+    const ok = await resumeSchedule(id)
+    if (ok) await refreshSchedules()
+  }, [refreshSchedules])
+
+  const handleDeleteSchedule = useCallback(async (id: string) => {
+    if (!confirm('Hapus schedule ini? Tidak bisa di-undo.')) return
+    const ok = await deleteSchedule(id)
+    if (ok) await refreshSchedules()
+  }, [refreshSchedules])
+
+  // Load schedules on mount
+  useEffect(() => {
+    void refreshSchedules()
+  }, [refreshSchedules])
+
   const dismissWarning = useCallback((warningType: string) => {
     setWarningsDismissed((prev) => new Set([...prev, warningType]))
   }, [])
@@ -806,10 +886,15 @@ export default function Atmaja() {
         }
 
         const visuals = buildVisualsForReply(modelText, result.text, userMsg.attachments ?? [])
+
+        // Parse [ATMAJA_SCHEDULE_CREATE] markers — auto-create schedule in KV when Atmaja
+        // detects Matthew minta reminder/jadwal. Markers stripped from display text.
+        const scheduleResult = parseScheduleMarkers(result.text)
+        const displayText = withVisualFollowUp(scheduleResult.cleanedText, modelText, visuals)
         const reply: AtmajaMessage = {
           id: `m-${Date.now() + 1}`,
           author: 'ceo',
-          text: withVisualFollowUp(result.text, modelText, visuals),
+          text: displayText,
           timeAgo: 'Baru saja',
         }
         if (visuals.length > 0) reply.visuals = visuals
@@ -822,9 +907,19 @@ export default function Atmaja() {
           return nextMessages
         })
         setSending(false)
+
+        // Fire-and-forget: process schedule markers di background. Tidak block UI.
+        if (scheduleResult.schedules.length > 0) {
+          void (async () => {
+            for (const s of scheduleResult.schedules) {
+              await createSchedule(s)
+            }
+            await refreshSchedules()
+          })()
+        }
       })()
     }, delay)
-  }, [])
+  }, [attachedLibraryIds, refreshSchedules])
 
   useEffect(() => {
     const lastMessage = messages[messages.length - 1]
@@ -872,6 +967,85 @@ export default function Atmaja() {
       listRef.current.scrollTop = listRef.current.scrollHeight
     }
   }, [messages.length])
+
+  // Voice input via Web Speech API. Chrome desktop + Android + Safari iOS 14.5+.
+  // Append hasil transcription ke text field, biarkan Matthew edit sebelum kirim.
+  const toggleVoiceInput = useCallback(() => {
+    if (typeof window === 'undefined') return
+    const W = window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown }
+    const SpeechRecognitionCtor = (W.SpeechRecognition ?? W.webkitSpeechRecognition) as
+      | (new () => {
+          continuous: boolean
+          interimResults: boolean
+          lang: string
+          onresult: ((event: { results: ArrayLike<{ 0: { transcript: string }; isFinal: boolean }> }) => void) | null
+          onerror: ((event: { error: string }) => void) | null
+          onend: (() => void) | null
+          start: () => void
+          stop: () => void
+        })
+      | undefined
+    if (!SpeechRecognitionCtor) {
+      setAttachmentError('Voice input tidak didukung di browser ini. Coba pakai Chrome atau Safari terbaru.')
+      return
+    }
+
+    // Toggle off kalau sedang listening.
+    if (voiceListening) {
+      try {
+        const current = voiceRecognitionRef.current as { stop?: () => void } | null
+        current?.stop?.()
+      } catch {
+        // ignore
+      }
+      setVoiceListening(false)
+      return
+    }
+
+    try {
+      const recognition = new SpeechRecognitionCtor()
+      recognition.continuous = false
+      recognition.interimResults = true
+      recognition.lang = 'id-ID'
+      let finalTranscript = ''
+      recognition.onresult = (event) => {
+        let interim = ''
+        for (let i = 0; i < event.results.length; i += 1) {
+          const result = event.results[i]
+          const transcript = result[0].transcript
+          if (result.isFinal) {
+            finalTranscript += transcript
+          } else {
+            interim += transcript
+          }
+        }
+        const combined = (finalTranscript + interim).trim()
+        if (combined) {
+          setText((prev) => {
+            // Replace any previous in-progress voice text. Marker: prev ends with space + interim.
+            const trimmedPrev = prev.trim()
+            return trimmedPrev ? `${trimmedPrev} ${combined}` : combined
+          })
+        }
+      }
+      recognition.onerror = (event) => {
+        setVoiceListening(false)
+        if (event.error !== 'no-speech' && event.error !== 'aborted') {
+          setAttachmentError(`Voice input gagal: ${event.error}`)
+        }
+      }
+      recognition.onend = () => {
+        setVoiceListening(false)
+      }
+      voiceRecognitionRef.current = recognition
+      recognition.start()
+      setVoiceListening(true)
+      if ('vibrate' in navigator) navigator.vibrate(30)
+    } catch (error) {
+      setVoiceListening(false)
+      setAttachmentError(`Voice input gagal start: ${error instanceof Error ? error.message : 'unknown'}`)
+    }
+  }, [voiceListening])
 
   const handleFileSelect = async (files: FileList | null) => {
     const selectedFiles = Array.from(files ?? [])
@@ -961,11 +1135,50 @@ export default function Atmaja() {
       scheduleImageGen(userMsg, imgCmd)
       return
     }
+    // /browse command — fetch URL via Vercel Edge, feed content ke Atmaja untuk analysis.
+    const browseCmd = parseBrowseCommand(displayText)
+    if (browseCmd) {
+      setBrowsing(true)
+      setSending(true)
+      void (async () => {
+        const result = await browseUrl(browseCmd.url)
+        setBrowsing(false)
+        if (!result || !result.ok) {
+          const errorReply: AtmajaMessage = {
+            id: `m-${Date.now() + 1}`,
+            author: 'ceo',
+            text: `Maaf, gagal buka ${browseCmd.url}. Error: \`${result?.error ?? 'unknown'}\`. Coba URL lain, atau cek apakah halaman public dan HTML-based.`,
+            timeAgo: 'Baru saja',
+          }
+          setMessages((prev) => {
+            const next = [...prev, errorReply]
+            saveThread(next)
+            return next
+          })
+          setSending(false)
+          return
+        }
+        setSending(false)
+        // Enriched user msg untuk API call (visible chat tetap pakai original /browse text)
+        const enrichedUserMsg: AtmajaMessage = {
+          ...userMsg,
+          text: buildBrowseMessage(browseCmd.url, result, browseCmd.question),
+        }
+        scheduleAtmajaReply(historySnapshot, enrichedUserMsg)
+      })()
+      return
+    }
     scheduleAtmajaReply(historySnapshot, userMsg)
   }
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 pb-32 pt-safe-top sm:px-6 lg:px-8">
+    <main
+      className="mx-auto flex min-h-screen w-full max-w-5xl flex-col pb-32 pt-safe-top sm:px-6 lg:px-8"
+      style={{
+        paddingLeft: 'max(1rem, var(--safe-left, 0px))',
+        paddingRight: 'max(1rem, var(--safe-right, 0px))',
+      }}
+    >
       {/* Warnings banner — credit low / env missing / dll */}
       {visibleWarnings.length > 0 && (
         <div className="mt-3 space-y-2">
@@ -1110,20 +1323,47 @@ export default function Atmaja() {
           </AnimatePresence>
 
           {sending && (
-            <div className="flex items-center gap-2 pl-12 text-meta text-text-muted">
-              <span className="inline-flex gap-1">
-                <span className="size-1.5 animate-pulse rounded-full bg-text-muted" />
-                <span
-                  className="size-1.5 animate-pulse rounded-full bg-text-muted"
-                  style={{ animationDelay: '0.15s' }}
-                />
-                <span
-                  className="size-1.5 animate-pulse rounded-full bg-text-muted"
-                  style={{ animationDelay: '0.3s' }}
-                />
+            <motion.div
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+              className="flex items-end gap-2.5"
+            >
+              <span
+                aria-hidden="true"
+                className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-role-ceo text-white font-serif text-base"
+                style={{ fontFamily: '"Cormorant Garamond", Georgia, serif' }}
+              >
+                A
               </span>
-              Atmaja sedang menulis...
-            </div>
+              <div className="min-w-0 max-w-[min(90%,600px)]">
+                <p
+                  className="mb-1 px-1 text-meta font-bold text-accent-dark"
+                  style={{ fontFamily: '"Cormorant Garamond", Georgia, serif' }}
+                >
+                  Atmaja
+                </p>
+                <div className="rounded-[18px] rounded-bl-md bg-white/82 px-4 py-3 shadow-card space-y-2">
+                  <div className="skeleton-line h-3.5 rounded" />
+                  <div className="skeleton-line h-3.5 w-5/6 rounded" />
+                  <div className="skeleton-line h-3.5 w-4/6 rounded" />
+                </div>
+                <p className="mt-1 px-1 text-[10px] text-text-faint inline-flex items-center gap-1">
+                  <span className="inline-flex gap-0.5">
+                    <span className="size-1 animate-pulse rounded-full bg-text-faint" />
+                    <span
+                      className="size-1 animate-pulse rounded-full bg-text-faint"
+                      style={{ animationDelay: '0.15s' }}
+                    />
+                    <span
+                      className="size-1 animate-pulse rounded-full bg-text-faint"
+                      style={{ animationDelay: '0.3s' }}
+                    />
+                  </span>
+                  {browsing ? 'Membuka halaman web' : 'Atmaja menulis'}
+                </p>
+              </div>
+            </motion.div>
           )}
         </div>
 
@@ -1164,7 +1404,7 @@ export default function Atmaja() {
 
         <div
           className={cn(
-            'sticky bottom-24 z-20 rounded-[22px] border bg-white/76 p-2 shadow-pop backdrop-blur-xl transition-colors duration-fast',
+            'composer-sticky rounded-[22px] border bg-white/76 p-2 shadow-pop backdrop-blur-xl transition-colors duration-fast',
             draggingFiles ? 'border-accent bg-accent-bg/85 ring-2 ring-accent/25' : 'border-white/75',
           )}
           onDragEnter={handleComposerDragEnter}
@@ -1221,7 +1461,7 @@ export default function Atmaja() {
             </div>
           )}
 
-          <div className="flex items-end gap-2">
+          <div className="flex items-end gap-1.5 sm:gap-2">
             <input
               ref={fileInputRef}
               type="file"
@@ -1232,22 +1472,50 @@ export default function Atmaja() {
                 void handleFileSelect(event.target.files)
               }}
             />
+            {/* Camera input — capture=environment supaya HP buka camera back langsung */}
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="sr-only"
+              onChange={(event) => {
+                void handleFileSelect(event.target.files)
+              }}
+            />
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={sending || readingFiles}
               aria-label="Lampirkan file untuk Atmaja"
               className={cn(
-                'inline-flex size-11 shrink-0 items-center justify-center rounded-full transition-colors duration-fast',
+                'inline-flex size-12 sm:size-11 shrink-0 items-center justify-center rounded-full transition-colors duration-fast',
                 sending || readingFiles
                   ? 'bg-bg-soft text-text-faint cursor-not-allowed'
                   : 'bg-white text-text-secondary shadow-soft hover:text-text-primary',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
               )}
             >
-              {readingFiles ? <Loader2 className="size-4 animate-spin" /> : <Paperclip className="size-4" />}
+              {readingFiles ? <Loader2 className="size-5 sm:size-4 animate-spin" /> : <Paperclip className="size-5 sm:size-4" />}
             </button>
-            {/* Lapis 3: Library button — open drawer ke list semua PDF persistent */}
+            {/* Camera button — HP: buka kamera langsung. Desktop: hidden (sm:hidden) karena tidak relevan. */}
+            <button
+              type="button"
+              onClick={() => cameraInputRef.current?.click()}
+              disabled={sending || readingFiles}
+              aria-label="Ambil foto dengan kamera"
+              className={cn(
+                'sm:hidden inline-flex size-12 shrink-0 items-center justify-center rounded-full transition-colors duration-fast',
+                sending || readingFiles
+                  ? 'bg-bg-soft text-text-faint cursor-not-allowed'
+                  : 'bg-white text-text-secondary shadow-soft hover:text-text-primary',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+              )}
+            >
+              <Camera className="size-5" />
+            </button>
+            {/* Lapis 3: Library button — open drawer ke list semua PDF persistent.
+                Hidden di mobile (sm:flex) untuk hemat space, akses via menu lain. */}
             {serverCaps?.fileLibrary && (
               <button
                 type="button"
@@ -1256,7 +1524,7 @@ export default function Atmaja() {
                 aria-label={`Library — ${libraryFiles.length} file`}
                 title={`Library Atmaja — ${libraryFiles.length} file PDF`}
                 className={cn(
-                  'relative inline-flex size-11 shrink-0 items-center justify-center rounded-full transition-colors duration-fast',
+                  'hidden sm:inline-flex relative size-11 shrink-0 items-center justify-center rounded-full transition-colors duration-fast',
                   sending
                     ? 'bg-bg-soft text-text-faint cursor-not-allowed'
                     : 'bg-white text-text-secondary shadow-soft hover:text-text-primary',
@@ -1271,7 +1539,8 @@ export default function Atmaja() {
                 )}
               </button>
             )}
-            {/* Skill Proposals button — Atmaja self-evolving */}
+            {/* Skill Proposals button — Atmaja self-evolving.
+                Hidden di mobile untuk hemat space. */}
             {serverCaps?.skillProposals && (
               <button
                 type="button"
@@ -1283,7 +1552,7 @@ export default function Atmaja() {
                 aria-label={`Proposals — ${proposals.length} pending`}
                 title={`Skill Proposals Atmaja — ${proposals.length} pending`}
                 className={cn(
-                  'relative inline-flex size-11 shrink-0 items-center justify-center rounded-full transition-colors duration-fast',
+                  'hidden sm:inline-flex relative size-11 shrink-0 items-center justify-center rounded-full transition-colors duration-fast',
                   sending
                     ? 'bg-bg-soft text-text-faint cursor-not-allowed'
                     : 'bg-white text-text-secondary shadow-soft hover:text-text-primary',
@@ -1298,16 +1567,56 @@ export default function Atmaja() {
                 )}
               </button>
             )}
+            {/* Schedules button — NL Scheduler (Hermes-inspired).
+                Hidden di mobile untuk hemat space, akses via swipe atau menu. */}
+            <button
+              type="button"
+              onClick={() => {
+                setSchedulesOpen(true)
+                void refreshSchedules()
+              }}
+              disabled={sending}
+              aria-label={`Jadwal — ${schedules.filter((s) => s.status === 'active').length} aktif`}
+              title="Jadwal & reminder Atmaja"
+              className={cn(
+                'hidden sm:inline-flex relative size-11 shrink-0 items-center justify-center rounded-full transition-colors duration-fast',
+                sending
+                  ? 'bg-bg-soft text-text-faint cursor-not-allowed'
+                  : 'bg-white text-text-secondary shadow-soft hover:text-text-primary',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+              )}
+            >
+              <CalendarClock className="size-4" />
+              {schedules.filter((s) => s.status === 'active').length > 0 && (
+                <span className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-status-final px-1 text-[10px] font-extrabold text-white shadow-soft">
+                  {schedules.filter((s) => s.status === 'active').length}
+                </span>
+              )}
+            </button>
             <textarea
+              ref={textareaRef}
               value={text}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                  e.preventDefault()
-                  send(text)
+                // Desktop: Cmd/Ctrl+Enter kirim. Mobile: Enter alone kirim (kalau tidak shift).
+                const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
+                if (e.key === 'Enter') {
+                  if (e.metaKey || e.ctrlKey) {
+                    e.preventDefault()
+                    send(text)
+                  } else if (isMobile && !e.shiftKey) {
+                    e.preventDefault()
+                    send(text)
+                  }
                 }
               }}
-              placeholder={attachments.length > 0 ? 'Tambah catatan untuk file...' : 'Tanya Atmaja... (Cmd+Enter kirim)'}
+              onFocus={() => {
+                // Scroll textarea into view setelah keyboard naik (delay match keyboard animation).
+                window.setTimeout(() => {
+                  textareaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                }, 320)
+              }}
+              placeholder={attachments.length > 0 ? 'Tambah catatan untuk file...' : 'Tanya Atmaja...'}
               rows={1}
               className={cn(
                 'max-h-32 flex-1 resize-none bg-transparent px-3 py-2.5 text-base leading-relaxed text-text-primary placeholder:text-text-faint',
@@ -1315,19 +1624,43 @@ export default function Atmaja() {
               )}
               style={{ minHeight: '44px' }}
             />
+            {/* Voice input button — hanya muncul kalau browser support Web Speech API */}
+            {voiceSupported && (
+              <button
+                type="button"
+                onClick={toggleVoiceInput}
+                disabled={sending || readingFiles}
+                aria-label={voiceListening ? 'Hentikan voice input' : 'Mulai voice input'}
+                title={voiceListening ? 'Hentikan voice input' : 'Voice input (id-ID)'}
+                className={cn(
+                  'inline-flex size-12 sm:size-11 shrink-0 items-center justify-center rounded-full transition-colors duration-fast',
+                  voiceListening
+                    ? 'bg-status-review text-white shadow-glow-accent voice-recording'
+                    : sending || readingFiles
+                      ? 'bg-bg-soft text-text-faint cursor-not-allowed'
+                      : 'bg-white text-text-secondary shadow-soft hover:text-text-primary',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+                )}
+              >
+                {voiceListening ? <MicOff className="size-5 sm:size-4" /> : <Mic className="size-5 sm:size-4" />}
+              </button>
+            )}
             <button
               type="button"
-              onClick={() => send(text)}
+              onClick={() => {
+                send(text)
+                if ('vibrate' in navigator) navigator.vibrate(40)
+              }}
               disabled={(!text.trim() && attachments.length === 0 && attachedLibraryIds.length === 0) || sending || readingFiles}
               aria-label="Kirim ke Atmaja"
               className={cn(
-                'inline-flex size-11 shrink-0 items-center justify-center rounded-full transition-colors duration-fast',
+                'inline-flex size-12 sm:size-11 shrink-0 items-center justify-center rounded-full transition-colors duration-fast',
                 (text.trim() || attachments.length > 0 || attachedLibraryIds.length > 0) && !sending && !readingFiles
                   ? 'bg-accent text-white shadow-glow-accent hover:bg-accent-dark'
                   : 'bg-bg-soft text-text-faint cursor-not-allowed',
               )}
             >
-              <Send className="size-4" />
+              <Send className="size-5 sm:size-4" />
             </button>
           </div>
         </div>
@@ -1652,6 +1985,139 @@ export default function Atmaja() {
             </motion.div>
           </motion.div>
         )}
+
+        {/* Schedules Drawer — NL Scheduler (Hermes-inspired automation).
+            Atmaja parse intent dari chat ("ingatkan saya X tiap Y") + auto-create schedule. */}
+        {schedulesOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center"
+            onClick={() => setSchedulesOpen(false)}
+          >
+            <motion.div
+              initial={reduceMotion ? { opacity: 0 } : { y: '100%', opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={reduceMotion ? { opacity: 0 } : { y: '100%', opacity: 0 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              className="relative w-full max-w-2xl rounded-t-3xl bg-white p-5 shadow-2xl sm:max-h-[85vh] sm:rounded-2xl sm:p-6"
+              style={{ maxHeight: '85vh' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-extrabold text-text-primary flex items-center gap-2">
+                    <CalendarClock className="size-5 text-accent" />
+                    Jadwal & Reminder
+                  </h2>
+                  <p className="mt-0.5 text-xs text-text-secondary">
+                    Atmaja parse intent dari chat ("ingatkan saya X tiap Y") + auto-create schedule. Lihat, pause, atau hapus dari sini. ({schedules.filter((s) => s.status === 'active').length} aktif)
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSchedulesOpen(false)}
+                  aria-label="Tutup Jadwal"
+                  className="inline-flex size-8 items-center justify-center rounded-full bg-bg-soft text-text-secondary hover:text-text-primary"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => void refreshSchedules()}
+                disabled={schedulesLoading}
+                className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-2 text-xs font-extrabold text-text-secondary shadow-soft hover:text-text-primary"
+              >
+                {schedulesLoading ? <Loader2 className="size-3.5 animate-spin" /> : 'Refresh'}
+              </button>
+
+              {schedules.length === 0 && !schedulesLoading && (
+                <div className="rounded-md bg-bg-soft p-6 text-center text-sm text-text-secondary">
+                  <CalendarClock className="mx-auto mb-2 size-6 opacity-40" />
+                  <p>Belum ada jadwal.</p>
+                  <p className="mt-2 text-[11px] text-text-faint">
+                    Cara pakai: chat Atmaja dengan kalimat seperti "ingatkan saya cek inventory tiap Senin pagi" atau "jadwalkan review brief mingguan". Atmaja parse intent + simpan otomatis.
+                  </p>
+                </div>
+              )}
+
+              {schedules.length > 0 && (
+                <div className="space-y-2.5 overflow-y-auto" style={{ maxHeight: '55vh' }}>
+                  {schedules.map((s) => (
+                    <div
+                      key={s.id}
+                      className={cn(
+                        'rounded-lg border p-3 shadow-soft',
+                        s.status === 'paused' ? 'border-border-soft bg-bg-soft/60 opacity-70' : 'border-accent/25 bg-white',
+                      )}
+                    >
+                      <div className="mb-1 flex items-center justify-between gap-2">
+                        <span
+                          className={cn(
+                            'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide',
+                            s.status === 'active'
+                              ? 'bg-status-final-bg text-status-final'
+                              : 'bg-bg-soft text-text-muted',
+                          )}
+                        >
+                          {s.status === 'active' ? 'Aktif' : 'Pause'}
+                        </span>
+                        <span className="text-[10px] text-text-faint">{formatScheduleDate(s.createdAt)}</span>
+                      </div>
+                      <h3 className="text-sm font-extrabold text-text-primary">{s.task}</h3>
+                      <p className="mt-1 text-[11px] text-accent-dark">
+                        <CalendarClock className="inline size-3 mr-1" />
+                        {s.cronHuman}
+                      </p>
+                      {s.lastRunAt && (
+                        <p className="mt-1 text-[10px] text-text-faint">
+                          Terakhir jalan: {formatScheduleDate(s.lastRunAt)}
+                        </p>
+                      )}
+                      <div className="mt-2.5 flex gap-1.5">
+                        {s.status === 'active' ? (
+                          <button
+                            type="button"
+                            onClick={() => void handlePauseSchedule(s.id)}
+                            className="inline-flex items-center gap-1 rounded-full bg-bg-soft px-2.5 py-1 text-[10px] font-extrabold text-text-secondary hover:text-text-primary"
+                          >
+                            <Pause className="size-2.5" />
+                            Pause
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => void handleResumeSchedule(s.id)}
+                            className="inline-flex items-center gap-1 rounded-full bg-accent-bg px-2.5 py-1 text-[10px] font-extrabold text-accent-dark hover:bg-accent/15"
+                          >
+                            <Play className="size-2.5" />
+                            Resume
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => void handleDeleteSchedule(s.id)}
+                          className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[10px] font-extrabold text-status-review shadow-soft hover:bg-status-review/10"
+                        >
+                          <Trash2 className="size-2.5" />
+                          Hapus
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-4 border-t border-white/40 pt-3 text-[11px] text-text-secondary">
+                Eksekusi schedule via n8n Daily Digest (workflow #2) yang check schedules table tiap hari. Tip: pakai juga <code>/browse [url]</code> untuk Atmaja research kompetitor langsung.
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
     </main>
   )
@@ -1680,7 +2146,7 @@ function MessageBubble({ message, reduceMotion }: { message: AtmajaMessage; redu
         {isMatthew ? 'M' : 'A'}
       </span>
 
-      <div className={cn('min-w-0 max-w-[min(86%,760px)]', isMatthew ? 'items-end' : 'items-start')}>
+      <div className={cn('min-w-0 max-w-[min(92%,600px)] sm:max-w-[min(86%,760px)]', isMatthew ? 'items-end' : 'items-start')}>
         {!isMatthew && (
           <p
             className="mb-1 px-1 text-meta font-bold text-accent-dark"

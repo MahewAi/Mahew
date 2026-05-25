@@ -800,7 +800,186 @@ export default async function handler(req, res) {
     return
   }
 
+  if (type === 'schedule' || type === 'schedules') {
+    await handleSchedule(req, res, url)
+    return
+  }
+
   await handleMemory(req, res)
+}
+
+// ============================================================================
+// SCHEDULE HANDLER — NL Scheduler (Hermes-inspired automation)
+// Atmaja parse intent "ingatkan saya X setiap Y" → simpan KV → display di UI.
+// Actual execution via n8n Daily Digest yang check schedules table tiap hari.
+// ============================================================================
+
+const SCHEDULES_KEY = 'atmaja:schedules:matthew'
+const MAX_SCHEDULES = 50
+const MAX_SCHEDULE_TASK_CHARS = 600
+
+async function handleSchedule(req, res, url) {
+  const action = url.searchParams.get('action')
+
+  // GET ?type=schedule → list semua schedule aktif
+  if (req.method === 'GET') {
+    try {
+      const list = (await kv.get(SCHEDULES_KEY)) ?? []
+      const items = Array.isArray(list) ? list : []
+      // Filter status default (sembunyikan yang deleted)
+      const filtered = items.filter((s) => s.status !== 'deleted')
+      sendJson(res, 200, {
+        ok: true,
+        schedules: filtered,
+        count: filtered.length,
+        max: MAX_SCHEDULES,
+      })
+    } catch (error) {
+      console.error('[atmaja-schedule] list error:', error?.message ?? error)
+      sendJson(res, 500, { ok: false, error: 'schedule_list_failed' })
+    }
+    return
+  }
+
+  // POST ?type=schedule → create schedule
+  if (req.method === 'POST') {
+    const contentType = getHeader(req, 'content-type') ?? ''
+    if (!contentType.includes('application/json')) {
+      sendJson(res, 415, { ok: false, error: 'unsupported_media_type' })
+      return
+    }
+    let payload
+    try {
+      payload = await readJsonBody(req, 32_000)
+    } catch (error) {
+      sendJson(res, error.statusCode ?? 400, {
+        ok: false,
+        error: error.message === 'payload_too_large' ? 'payload_too_large' : 'invalid_json',
+      })
+      return
+    }
+    const task = String(payload?.task ?? '').trim().slice(0, MAX_SCHEDULE_TASK_CHARS)
+    const cron = String(payload?.cron ?? '').trim().slice(0, 80)
+    const cronHuman = String(payload?.cronHuman ?? '').trim().slice(0, 200)
+    if (!task || task.length < 3) {
+      sendJson(res, 400, { ok: false, error: 'task_required', note: 'task min 3 char.' })
+      return
+    }
+    if (!cronHuman) {
+      sendJson(res, 400, { ok: false, error: 'cronHuman_required', note: 'cronHuman wajib (text human-readable).' })
+      return
+    }
+
+    try {
+      const list = (await kv.get(SCHEDULES_KEY)) ?? []
+      const items = Array.isArray(list) ? list : []
+      const activeCount = items.filter((s) => s.status === 'active').length
+      if (activeCount >= MAX_SCHEDULES) {
+        sendJson(res, 429, {
+          ok: false,
+          error: 'max_schedules_reached',
+          note: `Maksimal ${MAX_SCHEDULES} schedule aktif. Hapus yang lama dulu.`,
+        })
+        return
+      }
+      const id = `sch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      const newSchedule = {
+        id,
+        task,
+        cron: cron || null,
+        cronHuman,
+        status: 'active',
+        createdAt: new Date().toISOString(),
+        nextRunAt: payload?.nextRunAt ? String(payload.nextRunAt).slice(0, 40) : null,
+        lastRunAt: null,
+        source: String(payload?.source ?? 'atmaja_chat').slice(0, 40),
+      }
+      items.unshift(newSchedule)
+      await kv.set(SCHEDULES_KEY, items)
+      sendJson(res, 201, { ok: true, schedule: newSchedule, count: items.length })
+    } catch (error) {
+      console.error('[atmaja-schedule] create error:', error?.message ?? error)
+      sendJson(res, 500, { ok: false, error: 'schedule_create_failed' })
+    }
+    return
+  }
+
+  // PUT ?type=schedule&id=X&action=pause|resume → toggle status
+  // PUT ?type=schedule&id=X (with body) → update task/cron
+  if (req.method === 'PUT') {
+    const id = url.searchParams.get('id')
+    if (!id) {
+      sendJson(res, 400, { ok: false, error: 'id_required' })
+      return
+    }
+    try {
+      const list = (await kv.get(SCHEDULES_KEY)) ?? []
+      const items = Array.isArray(list) ? list : []
+      const idx = items.findIndex((s) => s.id === id)
+      if (idx < 0) {
+        sendJson(res, 404, { ok: false, error: 'schedule_not_found' })
+        return
+      }
+      if (action === 'pause') {
+        items[idx].status = 'paused'
+      } else if (action === 'resume') {
+        items[idx].status = 'active'
+      } else if (action === 'markRun') {
+        items[idx].lastRunAt = new Date().toISOString()
+      }
+      await kv.set(SCHEDULES_KEY, items)
+      sendJson(res, 200, { ok: true, schedule: items[idx] })
+    } catch (error) {
+      console.error('[atmaja-schedule] update error:', error?.message ?? error)
+      sendJson(res, 500, { ok: false, error: 'schedule_update_failed' })
+    }
+    return
+  }
+
+  // DELETE ?type=schedule&id=X → soft-delete (status=deleted)
+  if (req.method === 'DELETE') {
+    const id = url.searchParams.get('id')
+    if (!id) {
+      sendJson(res, 400, { ok: false, error: 'id_required' })
+      return
+    }
+    try {
+      const list = (await kv.get(SCHEDULES_KEY)) ?? []
+      const items = Array.isArray(list) ? list : []
+      const filtered = items.filter((s) => s.id !== id) // hard delete
+      await kv.set(SCHEDULES_KEY, filtered)
+      sendJson(res, 200, { ok: true, deleted: id })
+    } catch (error) {
+      console.error('[atmaja-schedule] delete error:', error?.message ?? error)
+      sendJson(res, 500, { ok: false, error: 'schedule_delete_failed' })
+    }
+    return
+  }
+
+  sendJson(res, 405, { ok: false, error: 'method_not_allowed' })
+}
+
+// Helper: read JSON body (mirror dari pattern existing handlers, simple cap).
+function readJsonBody(req, maxBytes) {
+  return new Promise((resolve, reject) => {
+    let raw = ''
+    req.on('data', (chunk) => {
+      raw += chunk
+      if (Buffer.byteLength(raw) > maxBytes) {
+        reject(Object.assign(new Error('payload_too_large'), { statusCode: 413 }))
+        req.destroy()
+      }
+    })
+    req.on('end', () => {
+      if (!raw) return resolve({})
+      try {
+        resolve(JSON.parse(raw))
+      } catch (error) {
+        reject(Object.assign(error, { statusCode: 400 }))
+      }
+    })
+    req.on('error', reject)
+  })
 }
 
 // ============================================================================
