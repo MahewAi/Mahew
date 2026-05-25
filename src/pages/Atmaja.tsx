@@ -37,7 +37,13 @@ import {
 } from '@/lib/atmajaSchedulerClient'
 import { browseUrl, parseBrowseCommand, buildBrowseMessage } from '@/lib/atmajaBrowseClient'
 import { parseInsightMarkers } from '@/lib/atmajaInsightClient'
-import { exportMessageAsPdf, deriveTitleFromMessage } from '@/lib/exportPdf'
+import { exportMessageAsPdf } from '@/lib/exportPdf'
+import {
+  parseDocMarkers,
+  estimateDocSize,
+  countWords,
+  type AtmajaDoc,
+} from '@/lib/atmajaDocClient'
 import { generateImage, parseImageCommand, type OpenAIImageModel } from '@/lib/openaiImageClient'
 import { generateVideo, parseVideoCommand, type OpenAIVideoModel } from '@/lib/openaiVideoClient'
 import { generateMockReply, type ChatMessage } from '@/lib/mockReplies'
@@ -91,6 +97,8 @@ interface AtmajaMessage extends ChatMessage {
   attachments?: AtmajaAttachment[]
   visuals?: AtmajaVisual[]
   videos?: AtmajaVideo[]
+  /** PDF/dokumen yang Atmaja generate via [ATMAJA_DOC] marker */
+  documents?: AtmajaDoc[]
 }
 
 const STORAGE_KEY = 'gerai:atmaja-thread'
@@ -889,11 +897,12 @@ export default function Atmaja() {
 
         const visuals = buildVisualsForReply(modelText, result.text, userMsg.attachments ?? [])
 
-        // Parse markers: schedule + insight. Strip dari display text supaya tidak
-        // tampil sebagai bracket text di chat bubble.
+        // Parse markers: schedule + insight + doc. Strip dari display text supaya
+        // tidak tampil sebagai bracket text di chat bubble.
         const scheduleResult = parseScheduleMarkers(result.text)
         const insightResult = parseInsightMarkers(scheduleResult.cleanedText)
-        const displayText = withVisualFollowUp(insightResult.cleanedText, modelText, visuals)
+        const docResult = parseDocMarkers(insightResult.cleanedText)
+        const displayText = withVisualFollowUp(docResult.cleanedText, modelText, visuals)
         const reply: AtmajaMessage = {
           id: `m-${Date.now() + 1}`,
           author: 'ceo',
@@ -901,6 +910,7 @@ export default function Atmaja() {
           timeAgo: 'Baru saja',
         }
         if (visuals.length > 0) reply.visuals = visuals
+        if (docResult.docs.length > 0) reply.documents = docResult.docs
 
         setMessages((prev) => {
           const userIndex = prev.findIndex((message) => message.id === userMsg.id)
@@ -2128,7 +2138,6 @@ export default function Atmaja() {
 
 function MessageBubble({ message, reduceMotion }: { message: AtmajaMessage; reduceMotion: boolean }) {
   const isMatthew = message.author === 'matthew'
-  const contentRef = useRef<HTMLDivElement>(null)
 
   return (
     <motion.div
@@ -2170,9 +2179,7 @@ function MessageBubble({ message, reduceMotion }: { message: AtmajaMessage; redu
           {isMatthew ? (
             message.text
           ) : (
-            <div ref={contentRef}>
-              <MarkdownBlock content={message.text} className="atmaja-bubble-markdown" />
-            </div>
+            <MarkdownBlock content={message.text} className="atmaja-bubble-markdown" />
           )}
           {message.attachments && message.attachments.length > 0 && (
             <div className="mt-3 grid gap-2">
@@ -2196,35 +2203,97 @@ function MessageBubble({ message, reduceMotion }: { message: AtmajaMessage; redu
             ))}
           </div>
         )}
-        <div className={cn('mt-1 flex items-center gap-2 px-1', isMatthew && 'flex-row-reverse')}>
-          <p className="text-[10px] text-text-faint">{message.timeAgo}</p>
-          {/* Export PDF — hanya untuk Atmaja messages, dan kalau message text cukup panjang (avoid noise di reply pendek) */}
-          {!isMatthew && message.text.trim().length > 80 && (
-            <button
-              type="button"
-              onClick={() => {
-                const html = contentRef.current?.innerHTML ?? ''
-                if (!html.trim()) {
-                  alert('Belum ada konten siap di-export.')
-                  return
-                }
-                exportMessageAsPdf({
-                  contentHtml: html,
-                  title: deriveTitleFromMessage(message.text),
-                  subtitle: `Dari chat Atmaja, ${message.timeAgo}`,
-                })
-              }}
-              title="Simpan jawaban Atmaja sebagai PDF"
-              aria-label="Simpan PDF"
-              className="inline-flex items-center gap-1 rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-extrabold text-accent-dark shadow-soft transition-colors duration-fast hover:bg-white hover:text-text-primary"
-            >
-              <FileText className="size-2.5" />
-              Simpan PDF
-            </button>
-          )}
-        </div>
+        {/* Doc attachments — Atmaja-generated PDF/dokumen lewat marker [ATMAJA_DOC] */}
+        {message.documents && message.documents.length > 0 && (
+          <div className="mt-2 grid gap-2">
+            {message.documents.map((doc) => (
+              <AtmajaDocCard key={doc.id} doc={doc} />
+            ))}
+          </div>
+        )}
+        <p className={cn('mt-1 px-1 text-[10px] text-text-faint', isMatthew && 'text-right')}>
+          {message.timeAgo}
+        </p>
       </div>
     </motion.div>
+  )
+}
+
+function AtmajaDocCard({ doc }: { doc: AtmajaDoc }) {
+  const hiddenContentRef = useRef<HTMLDivElement>(null)
+  const wordCount = countWords(doc.content)
+  const sizeStr = estimateDocSize(doc.content)
+
+  const handleDownload = () => {
+    const html = hiddenContentRef.current?.innerHTML ?? ''
+    if (!html.trim()) {
+      alert('Konten dokumen belum ter-render. Coba klik lagi sebentar.')
+      return
+    }
+    if (doc.type === 'pdf') {
+      exportMessageAsPdf({
+        contentHtml: html,
+        title: doc.title,
+        subtitle: `Disusun Atmaja pada ${new Date(doc.generatedAt).toLocaleString('id-ID', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })}`,
+      })
+    } else if (doc.type === 'md') {
+      // Download as raw markdown file
+      const blob = new Blob([doc.content], { type: 'text/markdown' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${doc.title.replace(/[^\w\s-]/g, '').slice(0, 60)}.md`
+      a.click()
+      URL.revokeObjectURL(url)
+    }
+  }
+
+  return (
+    <>
+      {/* Hidden div untuk render markdown content via MarkdownBlock — capture innerHTML saat user klik */}
+      <div ref={hiddenContentRef} className="sr-only" aria-hidden="true">
+        <MarkdownBlock content={doc.content} />
+      </div>
+
+      <button
+        type="button"
+        onClick={handleDownload}
+        className={cn(
+          'group flex w-full items-center gap-3 rounded-xl border border-accent/30 bg-gradient-to-br from-accent-bg/70 to-white px-3.5 py-3 text-left shadow-soft',
+          'transition-all duration-fast hover:border-accent/55 hover:shadow-card active:scale-[0.99]',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
+        )}
+      >
+        <span className="inline-flex size-12 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-accent-dark text-white shadow-soft">
+          <FileText className="size-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[14px] font-extrabold leading-tight text-text-primary">{doc.title}</p>
+          <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.06em] text-accent-dark">
+            {doc.type === 'pdf' ? 'PDF Document' : doc.type === 'md' ? 'Markdown File' : 'Document'}
+            <span className="mx-1.5 text-text-faint">·</span>
+            <span className="text-text-muted">{wordCount} kata</span>
+            <span className="mx-1.5 text-text-faint">·</span>
+            <span className="text-text-muted">{sizeStr}</span>
+          </p>
+          <p className="mt-0.5 text-[11px] font-semibold text-text-muted">
+            Klik untuk download {doc.type === 'pdf' ? 'PDF' : doc.type.toUpperCase()}
+          </p>
+        </div>
+        <span
+          aria-hidden="true"
+          className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-white/85 text-accent-dark shadow-soft group-hover:bg-accent group-hover:text-white"
+        >
+          <ArrowUpRight className="size-3.5 -rotate-45" />
+        </span>
+      </button>
+    </>
   )
 }
 
