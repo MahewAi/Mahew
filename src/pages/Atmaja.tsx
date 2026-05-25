@@ -2297,8 +2297,21 @@ function AtmajaDocCard({ doc }: { doc: AtmajaDoc }) {
 
   return (
     <>
-      {/* Hidden div untuk render markdown content via MarkdownBlock — capture innerHTML saat user klik */}
-      <div ref={hiddenContentRef} className="sr-only" aria-hidden="true">
+      {/* Hidden div untuk render markdown content via MarkdownBlock — capture innerHTML saat user klik.
+          Pakai offscreen absolute positioning supaya MarkdownBlock benar-benar render (sr-only class
+          kadang punya clip yang menggangu rendering). */}
+      <div
+        ref={hiddenContentRef}
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          left: '-99999px',
+          top: '0',
+          width: '800px',
+          opacity: 0,
+          pointerEvents: 'none',
+        }}
+      >
         <MarkdownBlock content={doc.content} />
       </div>
 

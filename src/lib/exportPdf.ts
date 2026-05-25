@@ -1,12 +1,13 @@
 // Export PDF dari Atmaja message ke browser native print dialog.
-// User pilih "Save as PDF" di dialog → dapat PDF berkualitas tinggi.
-// Tidak butuh extra library (no jsPDF/html2canvas), bundle tetap kecil.
+// Pakai HIDDEN IFRAME approach supaya kompatibel dengan PWA standalone mode
+// (window.open biasanya di-block di PWA standalone).
 //
 // Cara kerja:
-// 1. Buka window baru dengan HTML yang sudah di-style brand canon
-// 2. Embed content message (markdown sudah ter-render via react-markdown)
-// 3. Auto-trigger window.print() setelah onload
-// 4. User klik "Save as PDF" di print dialog
+// 1. Create hidden iframe (offscreen, 0×0)
+// 2. Write branded HTML ke iframe.contentDocument
+// 3. iframe.contentWindow.print() trigger native print dialog di atas PWA
+// 4. User pilih "Save as PDF" di dialog → dapat file PDF
+// 5. Fallback kalau iframe gagal: download as .html (user double-click → open di browser → print)
 
 interface ExportPdfOptions {
   /** Innerhtml dari rendered markdown (sudah di-style oleh MarkdownBlock) */
@@ -18,12 +19,6 @@ interface ExportPdfOptions {
 }
 
 export function exportMessageAsPdf({ contentHtml, title, subtitle }: ExportPdfOptions): boolean {
-  // Open blank window. Pakai about:blank biar tidak terkena CSP atau cross-origin.
-  const printWindow = window.open('', '_blank', 'width=920,height=900')
-  if (!printWindow) {
-    alert('Browser memblokir pop-up. Izinkan pop-up untuk gerai.mahewwork.com agar bisa simpan PDF.')
-    return false
-  }
 
   const now = new Date()
   const dateStr = now.toLocaleDateString('id-ID', {
@@ -335,24 +330,122 @@ export function exportMessageAsPdf({ contentHtml, title, subtitle }: ExportPdfOp
     <span>Generated dari chat Atmaja. gerai.mahewwork.com</span>
   </footer>
 
-  <script>
-    // Auto-trigger print dialog setelah font load (atau timeout fallback).
-    function tryPrint() {
-      try { window.focus(); window.print(); } catch (e) {}
-    }
-    if (document.fonts && document.fonts.ready) {
-      document.fonts.ready.then(() => setTimeout(tryPrint, 200))
-    } else {
-      setTimeout(tryPrint, 700)
-    }
-  </script>
+
 </body>
 </html>`
 
-  printWindow.document.open()
-  printWindow.document.write(html)
-  printWindow.document.close()
-  return true
+  // === IFRAME APPROACH (works in PWA standalone) ===
+  // Create hidden iframe, write HTML, trigger print via iframe.contentWindow.print()
+  console.info('[exportPdf] starting export via iframe approach...')
+
+  try {
+    const iframe = document.createElement('iframe')
+    iframe.setAttribute('aria-hidden', 'true')
+    iframe.title = 'PDF preview'
+    iframe.style.position = 'fixed'
+    iframe.style.left = '-99999px'
+    iframe.style.top = '0'
+    iframe.style.width = '794px' // A4 width at 96 DPI
+    iframe.style.height = '1123px' // A4 height at 96 DPI
+    iframe.style.border = '0'
+    iframe.style.opacity = '0'
+    document.body.appendChild(iframe)
+
+    const idoc = iframe.contentDocument || iframe.contentWindow?.document
+    if (!idoc) {
+      console.warn('[exportPdf] iframe document not accessible, fallback to HTML download')
+      document.body.removeChild(iframe)
+      return downloadAsHtmlFile(html, safeTitle)
+    }
+
+    idoc.open()
+    idoc.write(html)
+    idoc.close()
+
+    let printed = false
+
+    const triggerPrint = () => {
+      if (printed) return
+      printed = true
+      try {
+        const win = iframe.contentWindow
+        if (!win) {
+          console.warn('[exportPdf] iframe.contentWindow null')
+          downloadAsHtmlFile(html, safeTitle)
+          return
+        }
+        win.focus()
+        // Slight delay supaya font load + render selesai
+        win.print()
+      } catch (err) {
+        console.error('[exportPdf] iframe.print() failed:', err)
+        downloadAsHtmlFile(html, safeTitle)
+      }
+      // Cleanup iframe setelah print dialog handled (timeout supaya tidak hapus
+      // sebelum print actually trigger)
+      window.setTimeout(() => {
+        try {
+          document.body.removeChild(iframe)
+        } catch {
+          // ignore
+        }
+      }, 60_000) // 60s — generous untuk user yang lambat decision
+    }
+
+    // Wait iframe load + fonts ready
+    iframe.onload = () => {
+      // Wait fonts kalau available
+      const win = iframe.contentWindow
+      const fontsReady = win?.document?.fonts?.ready
+      if (fontsReady && typeof fontsReady.then === 'function') {
+        fontsReady.then(() => window.setTimeout(triggerPrint, 250))
+      } else {
+        window.setTimeout(triggerPrint, 700)
+      }
+    }
+
+    // Fallback timeout — kalau onload tidak fire dalam 3s, force print
+    window.setTimeout(() => {
+      if (!printed) {
+        console.warn('[exportPdf] onload timeout, force trigger print')
+        triggerPrint()
+      }
+    }, 3000)
+
+    return true
+  } catch (err) {
+    console.error('[exportPdf] iframe approach failed:', err)
+    return downloadAsHtmlFile(html, safeTitle)
+  }
+}
+
+// Fallback: download as .html file kalau iframe approach gagal. User open .html
+// di browser, lalu Ctrl/Cmd+P → Save as PDF manually.
+function downloadAsHtmlFile(html: string, title: string): boolean {
+  try {
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    const safeName = String(title || 'Sintesis Atmaja')
+      .replace(/[^\w\s\-À-ɏ]/g, '')
+      .replace(/\s+/g, '_')
+      .slice(0, 60)
+    a.download = `${safeName || 'Sintesis_Atmaja'}.html`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.setTimeout(() => URL.revokeObjectURL(url), 1500)
+    // Inform user dengan toast/alert ringan
+    alert(
+      'PDF print belum bisa di-trigger langsung di PWA. File .html sudah diunduh — buka di browser lalu Ctrl+P (atau Cmd+P) untuk Save as PDF.',
+    )
+    return true
+  } catch (err) {
+    console.error('[exportPdf] downloadAsHtmlFile failed:', err)
+    alert('Gagal generate file PDF. Coba reload PWA atau pakai browser desktop.')
+    return false
+  }
 }
 
 /**
