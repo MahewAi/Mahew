@@ -5,7 +5,9 @@ import {
   Activity,
   BarChart3,
   BrainCircuit,
+  CalendarClock,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
   CircleDashed,
   CreditCard,
@@ -16,12 +18,15 @@ import {
   KeyRound,
   Image as ImageIcon,
   Layers3,
+  Library,
   ListChecks,
+  MessageSquare,
   Network,
   PlugZap,
   Plus,
   ServerCog,
   ShieldCheck,
+  Sparkles,
   Table2,
   Timer,
   WalletCards,
@@ -322,7 +327,7 @@ export default function Inbox() {
         )}
 
         {dashboardView === 'department' && (
-          <DepartmentArchitectureSection />
+          <DepartmentArchitectureSection briefs={briefs} onCompose={() => setComposeOpen(true)} />
         )}
 
         {dashboardView === 'workmap' && (
@@ -520,27 +525,284 @@ function CLevelPlanSection({ plans, mode = 'overview' }: { plans: CLevelPlan[]; 
   )
 }
 
-function DepartmentArchitectureSection() {
+function DepartmentArchitectureSection({
+  briefs,
+  onCompose,
+}: {
+  briefs: Brief[]
+  onCompose: () => void
+}) {
+  const navigate = useNavigate()
+  const [stats, setStats] = useState<{
+    files: number
+    proposals: number
+    schedules: number
+    creditWarning: { severity: string; message: string } | null
+    online: boolean
+  }>({
+    files: 0,
+    proposals: 0,
+    schedules: 0,
+    creditWarning: null,
+    online: true,
+  })
+  const [statsLoaded, setStatsLoaded] = useState(false)
+  const [showArchitecture, setShowArchitecture] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const [healthRes, filesRes, proposalsRes, schedulesRes] = await Promise.all([
+          fetch('/api/agent/health', { cache: 'no-store' }).catch(() => null),
+          fetch('/api/atmaja/memory?type=files', { cache: 'no-store' }).catch(() => null),
+          fetch('/api/atmaja/memory?type=proposals&status=pending', { cache: 'no-store' }).catch(() => null),
+          fetch('/api/atmaja/memory?type=schedule', { cache: 'no-store' }).catch(() => null),
+        ])
+        if (cancelled) return
+        let creditWarning: { severity: string; message: string } | null = null
+        let online = true
+        if (healthRes?.ok) {
+          const data = await healthRes.json().catch(() => null)
+          const warnings: Array<{ severity: string; type: string; message: string }> =
+            Array.isArray(data?.warnings) ? data.warnings : []
+          const credit = warnings.find((w) => w.type?.includes('credit'))
+          if (credit) creditWarning = { severity: credit.severity, message: credit.message }
+          online = Boolean(data?.chat?.capabilities)
+        }
+        const filesData = filesRes?.ok ? await filesRes.json().catch(() => null) : null
+        const proposalsData = proposalsRes?.ok ? await proposalsRes.json().catch(() => null) : null
+        const schedulesData = schedulesRes?.ok ? await schedulesRes.json().catch(() => null) : null
+        if (cancelled) return
+        setStats({
+          files: filesData?.count ?? 0,
+          proposals: Array.isArray(proposalsData?.proposals) ? proposalsData.proposals.length : 0,
+          schedules: schedulesData?.count ?? 0,
+          creditWarning,
+          online,
+        })
+        setStatsLoaded(true)
+      } catch {
+        setStatsLoaded(true)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const activeBriefs = briefs.filter((b) => b.status !== 'final').length
+  const recentBriefs = [...briefs].slice(0, 5)
+
+  // Quick actions buat akses cepat ke fitur Atmaja
+  const quickActions = [
+    { id: 'chat', label: 'Chat Atmaja', icon: MessageSquare, onClick: () => navigate('/atmaja'), tone: 'primary' as const },
+    { id: 'brief', label: 'Brief baru', icon: Plus, onClick: onCompose, tone: 'primary' as const },
+    { id: 'schedule', label: 'Jadwal', icon: CalendarClock, onClick: () => navigate('/atmaja'), tone: 'default' as const },
+    { id: 'library', label: 'Library', icon: Library, onClick: () => navigate('/atmaja'), tone: 'default' as const },
+    { id: 'proposals', label: 'Proposals', icon: Sparkles, onClick: () => navigate('/atmaja'), tone: 'default' as const },
+  ]
+
+  // C-Level roster (5 cards: Atmaja + 4 C-level)
+  const roster = [
+    { id: 'atmaja', name: 'Atmaja', role: 'CEO', mandate: 'Sintesis kepemimpinan', color: 'role-ceo' },
+    { id: 'coo', name: 'COO', role: 'Operations', mandate: 'SOP & fulfillment', color: 'role-coo' },
+    { id: 'cmo', name: 'CMO', role: 'Marketing', mandate: 'Growth & positioning', color: 'role-cmo' },
+    { id: 'cfo', name: 'CFO', role: 'Finance', mandate: 'Margin & runway', color: 'role-cfo' },
+    { id: 'cco', name: 'CCO', role: 'Creative', mandate: 'Narrative & brand', color: 'role-cco' },
+  ]
+
   return (
-    <section className="mt-4 space-y-3" aria-label="AI Department architecture dashboard">
+    <section className="mt-4 space-y-3" aria-label="AI Department operations dashboard">
+      {/* Header */}
       <div className="rounded-2xl border border-white/55 bg-white/55 p-4 shadow-card backdrop-blur-md">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-label-caps text-accent-dark">AI Department</p>
             <h1 className="mt-1 text-[26px] font-extrabold leading-[1.1] tracking-[-0.01em] text-text-primary">
-              Struktur AI Atmaja
+              Operasi & status
             </h1>
             <p className="mt-2 max-w-[420px] text-[13px] font-medium leading-relaxed text-text-secondary">
-              Denah otak Atmaja, C-level council, specialist lane, memory, automation, dan output contract.
-              Susun per lapis dari intake sampai output.
+              Health real-time, quick action ke Atmaja, dan ringkasan aktivitas C-level. Untuk struktur arsitektur, buka panel di bawah.
             </p>
           </div>
           <span className="inline-flex size-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-accent to-accent-dark text-white shadow-card">
-            <Network className="size-5" />
+            <Activity className="size-5" />
           </span>
         </div>
       </div>
-      <LiveDepartmentMap />
+
+      {/* Service Health Grid */}
+      <div className="rounded-2xl border border-white/55 bg-white/55 p-3.5 shadow-soft backdrop-blur-md">
+        <div className="mb-2 flex items-center justify-between">
+          <p className="text-label-caps text-accent-dark">Status layanan</p>
+          {!statsLoaded && <span className="text-[10px] font-bold text-text-faint">Memuat...</span>}
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <HealthTile
+            icon={MessageSquare}
+            label="Atmaja"
+            value={stats.online ? 'Online' : 'Offline'}
+            tone={stats.online ? 'ok' : 'down'}
+          />
+          <HealthTile
+            icon={CreditCard}
+            label="OpenRouter"
+            value={stats.creditWarning ? 'Perlu top-up' : 'Aman'}
+            tone={stats.creditWarning ? (stats.creditWarning.severity === 'critical' ? 'down' : 'warn') : 'ok'}
+            subtitle={stats.creditWarning?.message ?? undefined}
+          />
+          <HealthTile
+            icon={Library}
+            label="Library"
+            value={`${stats.files} / 50`}
+            tone="ok"
+            subtitle="File PDF"
+          />
+          <HealthTile
+            icon={CalendarClock}
+            label="Jadwal"
+            value={`${stats.schedules} aktif`}
+            tone={stats.schedules > 0 ? 'ok' : 'idle'}
+          />
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="rounded-2xl border border-white/55 bg-white/55 p-3.5 shadow-soft backdrop-blur-md">
+        <p className="mb-2.5 text-label-caps text-accent-dark">Aksi cepat</p>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+          {quickActions.map((a) => {
+            const Icon = a.icon
+            return (
+              <button
+                key={a.id}
+                type="button"
+                onClick={a.onClick}
+                className={cn(
+                  'flex flex-col items-start gap-2 rounded-xl border px-3 py-3 text-left transition-all duration-fast active:scale-[0.98]',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
+                  a.tone === 'primary'
+                    ? 'border-accent/30 bg-gradient-to-br from-accent-bg/80 to-white/80 hover:border-accent/60 hover:shadow-card'
+                    : 'border-white/65 bg-white/75 hover:border-accent/35 hover:bg-white',
+                )}
+              >
+                <span
+                  className={cn(
+                    'inline-flex size-9 items-center justify-center rounded-lg',
+                    a.tone === 'primary' ? 'bg-accent text-white shadow-soft' : 'bg-accent-bg text-accent-dark',
+                  )}
+                >
+                  <Icon className="size-4" />
+                </span>
+                <p className="text-[13px] font-extrabold text-text-primary">{a.label}</p>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* C-Level Roster */}
+      <div className="rounded-2xl border border-white/55 bg-white/55 p-3.5 shadow-soft backdrop-blur-md">
+        <div className="mb-2.5 flex items-center justify-between">
+          <p className="text-label-caps text-accent-dark">Council aktif</p>
+          <p className="text-[10px] font-bold text-text-faint">{activeBriefs} brief sedang berjalan</p>
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+          {roster.map((r) => (
+            <div
+              key={r.id}
+              className="rounded-xl border border-white/65 bg-white/80 px-3 py-2.5 shadow-soft"
+            >
+              <div className="mb-1.5 flex items-center gap-2">
+                <span
+                  className={cn(
+                    'inline-flex size-8 items-center justify-center rounded-full text-[12px] font-extrabold text-white shadow-soft',
+                    `bg-${r.color}`,
+                  )}
+                  style={{ fontFamily: r.id === 'atmaja' ? '"Cormorant Garamond", Georgia, serif' : undefined }}
+                >
+                  {r.id === 'atmaja' ? 'A' : r.role.slice(0, 1)}
+                </span>
+                <p className="text-[13px] font-extrabold text-text-primary">{r.name}</p>
+              </div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.05em] text-text-faint">{r.role}</p>
+              <p className="mt-0.5 text-[10px] font-semibold leading-3 text-text-muted">{r.mandate}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Recent Activity */}
+      <div className="rounded-2xl border border-white/55 bg-white/55 p-3.5 shadow-soft backdrop-blur-md">
+        <div className="mb-2.5 flex items-center justify-between">
+          <p className="text-label-caps text-accent-dark">Aktivitas terbaru</p>
+          {stats.proposals > 0 && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-status-review-bg px-2 py-0.5 text-[10px] font-extrabold text-status-review">
+              <Sparkles className="size-2.5" />
+              {stats.proposals} proposal pending
+            </span>
+          )}
+        </div>
+        {recentBriefs.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border-soft bg-bg-soft/60 px-3 py-4 text-center">
+            <p className="text-xs font-bold text-text-secondary">Belum ada aktivitas brief.</p>
+            <p className="mt-1 text-[11px] font-semibold text-text-muted">Mulai dengan brief pertama dari aksi cepat di atas.</p>
+          </div>
+        ) : (
+          <ul className="space-y-1.5">
+            {recentBriefs.map((b) => (
+              <li key={b.id}>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/brief/${b.id}`)}
+                  className="group flex w-full items-start gap-3 rounded-xl border border-white/60 bg-white/70 px-3 py-2 text-left transition-colors duration-fast hover:border-accent/40 hover:bg-white"
+                >
+                  <span className="mt-1 inline-flex size-2 shrink-0 rounded-full bg-accent shadow-[0_0_6px_rgba(184,149,107,0.45)]" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[13px] font-extrabold text-text-primary">{b.title}</p>
+                    <p className="mt-0.5 text-[11px] font-semibold text-text-muted">
+                      {b.timeAgo} · status {b.status}
+                    </p>
+                  </div>
+                  <ChevronRight className="size-4 shrink-0 self-center text-text-faint group-hover:text-accent-dark" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* Collapsible Architecture Diagram (secondary, default closed) */}
+      <div className="rounded-2xl border border-white/55 bg-white/40 shadow-soft backdrop-blur-md">
+        <button
+          type="button"
+          onClick={() => setShowArchitecture((v) => !v)}
+          className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+          aria-expanded={showArchitecture}
+        >
+          <div className="flex items-center gap-3">
+            <span className="inline-flex size-9 items-center justify-center rounded-lg bg-accent-bg text-accent-dark">
+              <Network className="size-4" />
+            </span>
+            <div>
+              <p className="text-[13px] font-extrabold text-text-primary">Struktur arsitektur</p>
+              <p className="text-[11px] font-semibold text-text-muted">Lihat 12 node tier-based (intake sampai output)</p>
+            </div>
+          </div>
+          <ChevronDown
+            className={cn(
+              'size-4 text-text-faint transition-transform duration-fast',
+              showArchitecture && 'rotate-180',
+            )}
+          />
+        </button>
+        {showArchitecture && (
+          <div className="border-t border-white/55 px-3 pb-3 pt-3">
+            <LiveDepartmentMap />
+          </div>
+        )}
+      </div>
     </section>
   )
 }
@@ -577,6 +839,44 @@ function WorkMapDashboardSection({ plans }: { plans: CLevelPlan[] }) {
         <CLevelWorkMapCard key={plan.role} role={plan.role} map={plan.workMap} />
       ))}
     </section>
+  )
+}
+
+function HealthTile({
+  icon: Icon,
+  label,
+  value,
+  tone,
+  subtitle,
+}: {
+  icon: typeof Activity
+  label: string
+  value: string
+  tone: 'ok' | 'warn' | 'down' | 'idle'
+  subtitle?: string
+}) {
+  const dotColor =
+    tone === 'ok'
+      ? 'bg-status-final shadow-[0_0_8px_rgba(61,111,88,0.55)]'
+      : tone === 'warn'
+        ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.55)]'
+        : tone === 'down'
+          ? 'bg-status-review shadow-[0_0_8px_rgba(168,89,116,0.55)]'
+          : 'bg-text-faint'
+  return (
+    <div className="rounded-xl border border-white/65 bg-white/80 px-3 py-2.5 shadow-soft">
+      <div className="flex items-center gap-2">
+        <span className="inline-flex size-7 items-center justify-center rounded-lg bg-accent-bg text-accent-dark">
+          <Icon className="size-3.5" />
+        </span>
+        <p className="text-[11px] font-extrabold uppercase tracking-[0.05em] text-text-faint">{label}</p>
+      </div>
+      <div className="mt-2 flex items-center gap-1.5">
+        <span aria-hidden="true" className={cn('inline-flex size-1.5 shrink-0 rounded-full', dotColor)} />
+        <p className="text-[13px] font-extrabold leading-4 text-text-primary truncate">{value}</p>
+      </div>
+      {subtitle && <p className="mt-1 text-[10px] font-semibold leading-3 text-text-muted truncate">{subtitle}</p>}
+    </div>
   )
 }
 
