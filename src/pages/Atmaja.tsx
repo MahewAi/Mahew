@@ -195,6 +195,31 @@ const quickPrompts = [
   'Skenario terburuk yang harus saya antisipasi?',
 ]
 
+// FASE 3 UX: Capability cards untuk showcase fitur Atmaja ke user baru.
+// Sama dengan pattern Claude.ai empty state — capabilities + suggested prompts visible.
+const capabilityCards = [
+  {
+    title: 'Buatkan PDF',
+    description: 'Atmaja generate file PDF langsung di chat',
+    example: 'Buatkan saya PDF strategi pricing premium untuk produk lokal Bali',
+  },
+  {
+    title: 'Jadwalkan reminder',
+    description: 'NL Scheduler auto-create task recurring',
+    example: 'Ingatkan saya review brief tiap Senin pagi',
+  },
+  {
+    title: 'Research web',
+    description: 'Browse URL untuk analisis kompetitor + market',
+    example: '/browse https://kompetitor.com analisis positioning mereka',
+  },
+  {
+    title: 'Analisis dokumen',
+    description: 'Lampirkan PDF, image, atau text — Atmaja baca isinya',
+    example: 'Klik icon attachment, upload PDF, lalu tanya konten-nya',
+  },
+]
+
 function formatFileSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
@@ -656,13 +681,19 @@ export default function Atmaja() {
     await refreshLibrary()
   }, [refreshLibrary])
 
-  const toggleAttachedLibrary = useCallback((id: string) => {
-    setAttachedLibraryIds((prev) => {
-      if (prev.includes(id)) return prev.filter((x) => x !== id)
-      if (prev.length >= 3) return prev
-      return [...prev, id]
-    })
-  }, [])
+  // FIX (MEDIUM #11): pakai server caps untuk file limit, jangan hardcode
+  // Fallback ke 3 kalau caps belum loaded
+  const maxAttachedPerTurn = serverCaps?.maxFileAttachedPerTurn || 3
+  const toggleAttachedLibrary = useCallback(
+    (id: string) => {
+      setAttachedLibraryIds((prev) => {
+        if (prev.includes(id)) return prev.filter((x) => x !== id)
+        if (prev.length >= maxAttachedPerTurn) return prev
+        return [...prev, id]
+      })
+    },
+    [maxAttachedPerTurn],
+  )
 
   // ============ Proposals handlers ============
   const refreshProposals = useCallback(async () => {
@@ -1471,37 +1502,81 @@ export default function Atmaja() {
         </div>
 
         {messages.length <= 1 && (
-          <div className="mb-3">
-            <button
-              type="button"
-              onClick={() => setQuickOpen((open) => !open)}
-              className={cn(
-                'inline-flex min-h-touch items-center gap-2 rounded-md border border-border-med bg-white px-3 text-xs font-extrabold text-text-primary shadow-soft',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
-              )}
-              aria-expanded={quickOpen}
-            >
-              Contoh pertanyaan
-              <ChevronDown className={cn('size-3.5 transition-transform duration-fast', quickOpen && 'rotate-180')} />
-            </button>
-            {quickOpen && (
-              <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                {quickPrompts.map((p) => (
+          <div className="mb-4 space-y-4">
+            {/* Welcome banner — Claude-style empty state */}
+            <div className="rounded-2xl border border-white/55 bg-white/55 p-4 shadow-soft backdrop-blur-md">
+              <p className="text-label-caps text-accent-dark">Mulai dari sini</p>
+              <h2 className="mt-1 text-[20px] font-extrabold leading-tight tracking-[-0.01em] text-text-primary">
+                Selamat datang, Matthew
+              </h2>
+              <p className="mt-1.5 text-[13px] font-medium leading-relaxed text-text-secondary">
+                Atmaja siap membantu dari sintesis kepemimpinan, generate PDF, jadwal harian,
+                sampai research kompetitor web. Pilih kapabilitas di bawah atau langsung tanya.
+              </p>
+            </div>
+
+            {/* Capability cards — quick start dengan example prompt yang langsung jalan */}
+            <div>
+              <p className="mb-2 px-1 text-label-caps text-text-muted">Kapabilitas Atmaja</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {capabilityCards.map((c) => (
                   <button
-                    key={p}
+                    key={c.title}
                     type="button"
-                    onClick={() => send(p)}
+                    onClick={() => send(c.example)}
                     className={cn(
-                      'rounded-md bg-white/72 px-3 py-2.5 text-left text-xs font-bold leading-4 text-text-primary shadow-soft',
-                      'transition-colors duration-fast hover:bg-white',
-                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+                      'group rounded-xl border border-white/65 bg-white/75 p-3 text-left shadow-soft',
+                      'transition-all duration-fast hover:border-accent/40 hover:bg-white hover:shadow-card hover:-translate-y-px',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
                     )}
                   >
-                    {p}
+                    <p className="text-[13px] font-extrabold text-text-primary">{c.title}</p>
+                    <p className="mt-1 text-[11px] font-semibold text-text-muted leading-relaxed">
+                      {c.description}
+                    </p>
+                    <p className="mt-2 text-[10px] font-medium italic text-accent-dark line-clamp-2 group-hover:text-accent">
+                      "{c.example}"
+                    </p>
                   </button>
                 ))}
               </div>
-            )}
+            </div>
+
+            {/* Quick prompts — collapsible secondary */}
+            <div>
+              <button
+                type="button"
+                onClick={() => setQuickOpen((open) => !open)}
+                className={cn(
+                  'inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-1.5 text-[11px] font-extrabold text-text-secondary shadow-soft hover:bg-white hover:text-text-primary',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+                )}
+                aria-expanded={quickOpen}
+              >
+                Contoh pertanyaan lain
+                <ChevronDown
+                  className={cn('size-3 transition-transform duration-fast', quickOpen && 'rotate-180')}
+                />
+              </button>
+              {quickOpen && (
+                <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
+                  {quickPrompts.map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => send(p)}
+                      className={cn(
+                        'rounded-lg bg-white/70 px-3 py-2 text-left text-[12px] font-bold leading-tight text-text-secondary shadow-soft',
+                        'transition-colors duration-fast hover:bg-white hover:text-text-primary',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+                      )}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -1893,7 +1968,7 @@ export default function Atmaja() {
                 <div className="space-y-2 overflow-y-auto" style={{ maxHeight: '50vh' }}>
                   {libraryFiles.map((file) => {
                     const isAttached = attachedLibraryIds.includes(file.id)
-                    const canAttachMore = attachedLibraryIds.length < 3
+                    const canAttachMore = attachedLibraryIds.length < maxAttachedPerTurn
                     return (
                       <div
                         key={file.id}
@@ -1922,7 +1997,7 @@ export default function Atmaja() {
                             type="button"
                             onClick={() => toggleAttachedLibrary(file.id)}
                             disabled={!isAttached && !canAttachMore}
-                            title={!isAttached && !canAttachMore ? 'Max 3 file per turn' : ''}
+                            title={!isAttached && !canAttachMore ? `Max ${maxAttachedPerTurn} file per turn` : ''}
                             className={cn(
                               'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-extrabold transition-colors',
                               isAttached
