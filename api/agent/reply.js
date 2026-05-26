@@ -46,6 +46,67 @@ const ALLOWED_MODELS = new Set([
   'anthropic/claude-sonnet-4.6',
 ])
 
+// === ANTHROPIC DIRECT (sama pattern dengan api/atmaja/chat.js) ===
+// Active kalau ANTHROPIC_API_KEY tersedia. Auto-fallback ke OpenRouter kalau gagal.
+function toAnthropicModelId(orModelId) {
+  // Verified via /v1/models endpoint 2026-05-26.
+  const map = {
+    'anthropic/claude-opus-4.7': 'claude-opus-4-7',
+    'anthropic/claude-opus-4.7-fast': 'claude-opus-4-7',
+    'anthropic/claude-opus-4.6': 'claude-opus-4-6',
+    'anthropic/claude-opus-4.6-fast': 'claude-opus-4-6',
+    'anthropic/claude-opus-4.5': 'claude-opus-4-5-20251101',
+    'anthropic/claude-opus-4.1': 'claude-opus-4-1',
+    'anthropic/claude-opus-4': 'claude-opus-4',
+    'anthropic/claude-sonnet-4.6': 'claude-sonnet-4-6',
+  }
+  return map[orModelId] ?? orModelId.replace('anthropic/', '').replace(/\./g, '-')
+}
+
+function splitSystemFromMessages(msgs) {
+  const systemParts = []
+  const remaining = []
+  for (const m of msgs) {
+    if (m.role === 'system') {
+      if (typeof m.content === 'string') systemParts.push(m.content)
+    } else {
+      remaining.push(m)
+    }
+  }
+  return { system: systemParts.join('\n\n'), messages: remaining }
+}
+
+function adaptContentBlocksForAnthropic(content) {
+  if (typeof content === 'string') return content
+  if (!Array.isArray(content)) return content
+  return content.map((block) => {
+    if (!block || typeof block !== 'object') return block
+    if (block.type === 'image_url' && block.image_url?.url) {
+      const url = String(block.image_url.url)
+      const match = url.match(/^data:([^;]+);base64,(.+)$/)
+      if (match) {
+        return { type: 'image', source: { type: 'base64', media_type: match[1], data: match[2] } }
+      }
+      return { type: 'image', source: { type: 'url', url } }
+    }
+    if (block.type === 'file' && block.file?.file_data) {
+      const fileData = String(block.file.file_data)
+      const match = fileData.match(/^data:([^;]+);base64,(.+)$/)
+      if (match) {
+        return {
+          type: 'document',
+          source: { type: 'base64', media_type: match[1] || 'application/pdf', data: match[2] },
+        }
+      }
+    }
+    return block
+  })
+}
+
+function adaptMessagesForAnthropic(messages) {
+  return messages.map((m) => ({ role: m.role, content: adaptContentBlocksForAnthropic(m.content) }))
+}
+
 function resolveModel(payloadModel, envModel, tier) {
   // Precedence: payload (validated) > env (validated) > tier default.
   // Anything below floor (e.g. Sonnet 4.5, Haiku, 3.5-sonnet, mistral) di-replace dengan FLOOR_MODEL.
@@ -389,12 +450,16 @@ export default async function handler(req, res) {
     sendJson(res, 405, { ok: false, error: 'method_not_allowed' })
     return
   }
-  if (process.env.ATMAJA_OPENROUTER_ENABLED !== 'true') {
-    sendJson(res, 503, { ok: false, error: 'openrouter_disabled' })
-    return
-  }
-  if (!process.env.OPENROUTER_API_KEY) {
-    sendJson(res, 503, { ok: false, error: 'openrouter_key_missing' })
+  // Provider gate: minimal salah satu dari Anthropic direct ATAU OpenRouter harus configured.
+  // Anthropic direct = primary kalau ANTHROPIC_API_KEY ada. OpenRouter = fallback / fallback-only mode.
+  const USE_ANTHROPIC_DIRECT = Boolean(process.env.ANTHROPIC_API_KEY?.trim())
+  const HAS_OPENROUTER = Boolean(process.env.OPENROUTER_API_KEY) && process.env.ATMAJA_OPENROUTER_ENABLED === 'true'
+  if (!USE_ANTHROPIC_DIRECT && !HAS_OPENROUTER) {
+    sendJson(res, 503, {
+      ok: false,
+      error: 'no_provider_configured',
+      note: 'Set ANTHROPIC_API_KEY (primary) atau OPENROUTER_API_KEY + ATMAJA_OPENROUTER_ENABLED=true (fallback).',
+    })
     return
   }
   const auth = isRequestAllowed(req)
@@ -455,6 +520,59 @@ export default async function handler(req, res) {
     { role: 'user', content: buildUserContent(userMessage, attachments) },
   ]
 
+  const MAX_TOKENS = 2500
+  const TEMPERATURE = 0.7
+
+  async function callAnthropicDirect(modelId) {
+    const anthropicModelId = toAnthropicModelId(modelId)
+    const { system, messages: nonSystemMessages } = splitSystemFromMessages(messages)
+    const anthropicMessages = adaptMessagesForAnthropic(nonSystemMessages)
+    // Opus 4.7+ deprecate `temperature`, skip kalau model 4.7+
+    const supportsTemperature = !/claude-opus-4-7|claude-opus-4-8|claude-opus-5/.test(anthropicModelId)
+    const reqBody = {
+      model: anthropicModelId,
+      max_tokens: MAX_TOKENS,
+      system,
+      messages: anthropicMessages,
+    }
+    if (supportsTemperature) reqBody.temperature = TEMPERATURE
+
+    const upstream = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+        accept: 'application/json',
+      },
+      body: JSON.stringify(reqBody),
+    })
+    const raw = await upstream.text()
+    let parsed = {}
+    try {
+      parsed = raw ? JSON.parse(raw) : {}
+    } catch {
+      parsed = { raw: raw.slice(0, 500) }
+    }
+    if (upstream.ok && parsed) {
+      const textParts = Array.isArray(parsed.content)
+        ? parsed.content.filter((c) => c?.type === 'text').map((c) => c.text).join('')
+        : ''
+      const usage = parsed.usage
+        ? {
+            prompt_tokens: Number(parsed.usage.input_tokens) || 0,
+            completion_tokens: Number(parsed.usage.output_tokens) || 0,
+            total_tokens: (Number(parsed.usage.input_tokens) || 0) + (Number(parsed.usage.output_tokens) || 0),
+          }
+        : undefined
+      return {
+        upstream,
+        body: { choices: [{ message: { role: 'assistant', content: textParts } }], model: parsed.model ?? anthropicModelId, usage },
+      }
+    }
+    return { upstream, body: parsed }
+  }
+
   async function callOpenRouter(modelId) {
     const upstream = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -468,8 +586,8 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: modelId,
         messages,
-        temperature: 0.7, // Raised dari 0.4 — quality (matching atmaja/chat.js)
-        max_tokens: 2500, // Raised dari 900 supaya C-Suite reply substantive (was too short for deep output)
+        temperature: TEMPERATURE,
+        max_tokens: MAX_TOKENS,
       }),
     })
     const raw = await upstream.text()
@@ -482,18 +600,44 @@ export default async function handler(req, res) {
     return { upstream, body: parsed }
   }
 
+  async function callLLM(modelId) {
+    if (USE_ANTHROPIC_DIRECT) return callAnthropicDirect(modelId)
+    return callOpenRouter(modelId)
+  }
+
   try {
-    let { upstream, body } = await callOpenRouter(primaryModel)
+    let { upstream, body } = await callLLM(primaryModel)
     let usedModel = primaryModel
     let fallbackTried = false
+    let usedProvider = USE_ANTHROPIC_DIRECT ? 'Anthropic (direct)' : 'OpenRouter'
+    let anthropicError = null
+
+    // Auto-fallback: kalau Anthropic direct gagal + OpenRouter available, retry via OpenRouter.
+    if (!upstream.ok && USE_ANTHROPIC_DIRECT && HAS_OPENROUTER) {
+      anthropicError = {
+        status: upstream.status,
+        message: body?.error?.message ?? body?.message ?? 'unknown',
+      }
+      console.error(`[agent-reply ${role}] Anthropic direct failed, fallback OpenRouter:`, anthropicError)
+      const orResult = await callOpenRouter(primaryModel)
+      if (orResult.upstream.ok) {
+        upstream = orResult.upstream
+        body = orResult.body
+        usedProvider = 'OpenRouter (Anthropic fallback)'
+        fallbackTried = true
+      }
+    }
 
     if (!upstream.ok) {
+      const providerLabel = USE_ANTHROPIC_DIRECT ? 'Anthropic' : 'OpenRouter'
       sendJson(res, upstream.status, {
         ok: false,
-        error: 'openrouter_error',
+        error: USE_ANTHROPIC_DIRECT ? 'anthropic_error' : 'openrouter_error',
         upstreamStatus: upstream.status,
         modelTried: primaryModel,
-        note: body?.error?.message ?? body?.message ?? 'OpenRouter request failed.',
+        provider: providerLabel,
+        anthropicError,
+        note: body?.error?.message ?? body?.message ?? `${providerLabel} request failed.`,
       })
       return
     }
@@ -502,7 +646,7 @@ export default async function handler(req, res) {
 
     if ((typeof replyText !== 'string' || !replyText.trim()) && primaryModel !== FLOOR_MODEL) {
       fallbackTried = true
-      const retry = await callOpenRouter(FLOOR_MODEL)
+      const retry = await callLLM(FLOOR_MODEL)
       upstream = retry.upstream
       body = retry.body
       usedModel = FLOOR_MODEL
@@ -512,7 +656,8 @@ export default async function handler(req, res) {
     if (typeof replyText !== 'string' || !replyText.trim()) {
       sendJson(res, 502, {
         ok: false,
-        error: 'empty_openrouter_reply',
+        error: 'empty_reply',
+        provider: usedProvider,
         modelTried: usedModel,
         fallbackTried,
       })
@@ -533,11 +678,14 @@ export default async function handler(req, res) {
 
     sendJson(res, 200, {
       ok: true,
-      provider: 'OpenRouter',
+      provider: usedProvider,
+      anthropicEnabled: USE_ANTHROPIC_DIRECT,
+      anthropicError,
       role,
       tier,
       model: (body?.model ?? usedModel) || null,
       requestedModel: primaryModel,
+      anthropicModelTried: USE_ANTHROPIC_DIRECT ? toAnthropicModelId(primaryModel) : null,
       fallbackUsed: fallbackTried,
       text: replyText.trim(),
       usage: body?.usage ?? null,
@@ -547,7 +695,7 @@ export default async function handler(req, res) {
   } catch (error) {
     sendJson(res, 502, {
       ok: false,
-      error: 'openrouter_unreachable',
+      error: 'provider_unreachable',
       note: error instanceof Error ? error.message : 'unknown_error',
     })
   }
