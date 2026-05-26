@@ -2536,6 +2536,102 @@ function AtmajaDocCard({ doc }: { doc: AtmajaDoc }) {
     }
   }
 
+  // Backup #1: download raw markdown — paling reliable, zero rendering dependency.
+  // Matthew bisa buka di Notion/Obsidian/VSCode/Bear/MarginNote.
+  const handleDownloadMd = () => {
+    const safeName = doc.title.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_').slice(0, 60) || 'Sintesis_Atmaja'
+    const header = `# ${doc.title}\n\n> Disusun Atmaja pada ${new Date(doc.generatedAt).toLocaleString('id-ID')}\n> Gerai 1000 Pintu\n\n---\n\n`
+    const blob = new Blob([header + doc.content], { type: 'text/markdown;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${safeName}.md`
+    document.body.appendChild(a)
+    a.click()
+    setTimeout(() => {
+      try { document.body.removeChild(a) } catch {}
+      URL.revokeObjectURL(url)
+    }, 2000)
+  }
+
+  // Backup #2: download as standalone HTML — user buka di browser, Ctrl+P → Save as PDF.
+  // Browser native print engine jauh lebih reliable daripada html2canvas/html2pdf.
+  const handleDownloadHtml = () => {
+    const safeName = doc.title.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_').slice(0, 60) || 'Sintesis_Atmaja'
+    const html = hiddenContentRef.current?.innerHTML ?? ''
+    if (!html.trim()) {
+      alert('Konten dokumen belum ter-render. Coba klik lagi sebentar.')
+      return
+    }
+    const dateStr = new Date(doc.generatedAt).toLocaleString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+    const fullHtml = `<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>${doc.title.replace(/[<>]/g, '')}</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm 22mm 16mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif; color: #1F1A14; background: #FAF8F4; max-width: 780px; margin: 0 auto; padding: 28px 36px; font-size: 11.5pt; line-height: 1.65; }
+  header { border-bottom: 2px solid #B8956B; padding-bottom: 14px; margin-bottom: 22px; display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; }
+  h1 { font-family: Georgia, 'Cormorant Garamond', serif; font-size: 26pt; font-weight: 600; margin: 0; color: #1F1A14; letter-spacing: -0.01em; }
+  h2 { font-size: 16pt; font-weight: 700; margin: 22px 0 10px; color: #1F1A14; }
+  h3 { font-size: 13pt; font-weight: 700; margin: 18px 0 8px; color: #1F1A14; }
+  p, li { margin: 8px 0; }
+  ul, ol { padding-left: 22px; }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 10.5pt; }
+  th, td { border: 1px solid #D4C8B0; padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: #F2E9D5; font-weight: 700; }
+  code { background: #F2E9D5; padding: 2px 5px; border-radius: 3px; font-family: 'JetBrains Mono', monospace; font-size: 10pt; }
+  pre { background: #1F1A14; color: #FAF8F4; padding: 14px 16px; border-radius: 8px; overflow-x: auto; font-size: 10pt; font-family: 'JetBrains Mono', monospace; }
+  pre code { background: transparent; padding: 0; color: inherit; }
+  blockquote { border-left: 3px solid #B8956B; padding-left: 14px; margin: 14px 0; color: #6B6253; font-style: italic; }
+  strong { color: #1F1A14; }
+  hr { border: none; border-top: 1px solid #E6DDD0; margin: 22px 0; }
+  footer { margin-top: 36px; padding-top: 14px; border-top: 1px solid #E6DDD0; font-size: 8.5pt; color: #807767; display: flex; justify-content: space-between; }
+  .print-note { background: #F2E9D5; border: 1px solid #D4C8B0; padding: 12px 16px; border-radius: 8px; margin-bottom: 18px; font-size: 10pt; color: #6B6253; }
+  @media print { .print-note { display: none; } }
+</style>
+</head>
+<body>
+  <div class="print-note">
+    <strong>Tips:</strong> Tekan <kbd>Ctrl+P</kbd> (atau <kbd>Cmd+P</kbd> di Mac) lalu pilih <em>Save as PDF</em> untuk konversi ke PDF berkualitas terbaik. Margin sudah diatur otomatis untuk A4.
+  </div>
+  <header>
+    <div>
+      <div style="font-size:9pt;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#A07A38;margin-bottom:6px;">Sintesis Atmaja</div>
+      <h1>${doc.title.replace(/[<>]/g, '')}</h1>
+    </div>
+    <div style="text-align:right;font-size:9pt;color:#6B6253;">
+      <div style="font-family:Georgia,serif;font-size:13pt;font-weight:600;color:#1F1A14;margin-bottom:4px;">Gerai 1000 Pintu</div>
+      <div>${dateStr} WITA</div>
+    </div>
+  </header>
+  ${html}
+  <footer>
+    <span style="font-family:Georgia,serif;font-size:11pt;color:#A07A38;">Atmaja</span>
+    <span>gerai.mahewwork.com</span>
+  </footer>
+</body>
+</html>`
+    const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${safeName}.html`
+    document.body.appendChild(a)
+    a.click()
+    setTimeout(() => {
+      try { document.body.removeChild(a) } catch {}
+      URL.revokeObjectURL(url)
+    }, 2000)
+  }
+
   return (
     <>
       {/* Hidden div untuk render markdown content — capture innerHTML saat user klik PDF.
@@ -2596,6 +2692,31 @@ function AtmajaDocCard({ doc }: { doc: AtmajaDoc }) {
           {downloading ? <Loader2 className="size-3.5 animate-spin" /> : <ArrowUpRight className="size-3.5 -rotate-45" />}
         </span>
       </button>
+      {/* Backup download options — kalau PDF generation gagal/kosong, 2 opsi reliable:
+          1. HTML: download standalone .html, buka di browser, Ctrl+P → Save as PDF (native print engine)
+          2. Markdown: raw .md, buka di Notion/Obsidian/Word/text editor */}
+      {doc.type === 'pdf' && (
+        <div className="mt-1.5 flex gap-1.5">
+          <button
+            type="button"
+            onClick={handleDownloadHtml}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-border-soft bg-white/70 px-2.5 py-1.5 text-[11px] font-bold text-text-muted shadow-soft transition-colors hover:border-accent/40 hover:bg-accent-bg/30 hover:text-accent-dark"
+            title="Download .html, lalu buka di browser dan Ctrl+P → Save as PDF (lebih reliable)"
+          >
+            <FileText className="size-3" />
+            Download HTML (Ctrl+P → PDF)
+          </button>
+          <button
+            type="button"
+            onClick={handleDownloadMd}
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border-soft bg-white/70 px-2.5 py-1.5 text-[11px] font-bold text-text-muted shadow-soft transition-colors hover:border-accent/40 hover:bg-accent-bg/30 hover:text-accent-dark"
+            title="Download .md raw markdown, buka di Notion/Obsidian/editor lain"
+          >
+            <FileText className="size-3" />
+            .md
+          </button>
+        </div>
+      )}
     </>
   )
 }
