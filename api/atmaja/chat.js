@@ -1,4 +1,4 @@
-import { readMemory, writeMemory, incrementTurnCounter, getFileById, fetchFileBase64 } from './memory.js'
+import { readMemory, writeMemory, incrementTurnCounter, getFileById, fetchFileBase64, listProposals, createProposal } from './memory.js'
 import { isRequestAllowed, getHeader, getRequestHost, parseCsv, getClientIp, consumeRateLimit as sharedConsumeRateLimit, attachRequestId } from '../_shared.js'
 import { kv } from '@vercel/kv'
 
@@ -302,6 +302,8 @@ function buildSystemPrompt(memory) {
     '',
     '**Insight gap detection**: kalau Anda lihat gap capability/proses yang Matthew butuh berulang, emit `[ATMAJA_INSIGHT]<satu kalimat insight>[/ATMAJA_INSIGHT]` di akhir. Max 1 per turn, hanya signal kuat.',
     '',
+    '**Skill proposal** (auto-generated capability): kalau Anda detect pattern Matthew berulang minta hal yang sama (3+ kali dalam history) dan worth jadi reusable skill, emit:\n\n[ATMAJA_SKILL_PROPOSE]\nname: <slug pendek, kebab-case, contoh "reverse-calendar-calc">\ndescription: <1-2 kalimat apa skill ini lakukan>\ntriggers: <comma-separated keyword yang trigger skill, lowercase>\npromptTemplate: <instruksi detail yang akan Anda apply ke turn yang trigger. Bisa include placeholder {variable}.>\nrationale: <kenapa worth jadi skill, evidence dari history>\n[/ATMAJA_SKILL_PROPOSE]\n\nKapan emit: pattern jelas (Matthew sering tanya reverse calendar, NPV calc, brief vendor X, persona analysis Y). Max 1 propose per turn. Setelah Matthew approve via UI, skill aktif: setiap kali keyword trigger muncul di chat berikutnya, system prompt prepend template, Anda apply otomatis.',
+    '',
     '**Brief multi-perspective**: Kalau Matthew minta keputusan strategis yang BUTUH input multi-perspective (4 C-level: COO + CMO + CFO + CCO masing-masing kasih insight, lalu Atmaja synth) — bukan sekedar single advisory yang Anda bisa jawab sendiri — emit marker brief workflow. Frontend akan trigger workflow #1 n8n yang fan-out ke 4 C-level paralel, hasilnya kembali jadi brief structured di Inbox. Format:\n\n[ATMAJA_BRIEF_REQUEST]\ntitle: <judul singkat 5-10 kata>\nsummary: <konteks brief 1-3 kalimat, detail apa yang harus diputuskan + constraint relevant>\n[/ATMAJA_BRIEF_REQUEST]\n\nKapan pakai: keputusan strategis kompleks (launch timing, vendor switching, pricing structure, brand positioning major, hire framework). JANGAN pakai untuk single-domain question (technical detail, simple research, conversational).\n\nSebelum emit marker, tulis 1-2 kalimat conversational ("Decision ini butuh review 4 C-level, saya kirim ke council, hasilnya akan landed di Brief Inbox dalam 1-2 menit.").',
     '',
     '## PLAN-EXECUTE-SYNTHESIZE pattern (untuk task kompleks multi-step)',
@@ -593,6 +595,33 @@ export default async function handler(req, res) {
     detail: `${memoryContent.length} char dari Business Memory`,
   })
 
+  // === SKILL ACTIVATION ===
+  // Load semua skill yang status='approved'. Untuk setiap skill, cek trigger keyword di user message.
+  // Kalau match, append promptTemplate ke system context — Atmaja apply skill ini di turn berikutnya.
+  let activeSkillsInjection = ''
+  try {
+    const approvedProposals = await listProposals('approved')
+    const approvedSkills = approvedProposals.filter((p) => p?.type === 'skill' && p?.promptTemplate)
+    const userMsgLower = String(userMessage ?? '').toLowerCase()
+    const matchedSkills = approvedSkills.filter((s) =>
+      Array.isArray(s.triggers) && s.triggers.some((t) => t && userMsgLower.includes(String(t).toLowerCase())),
+    )
+    if (matchedSkills.length > 0) {
+      activeSkillsInjection = [
+        '## SKILLS AKTIF (matched di turn ini)',
+        '',
+        'Skill berikut sudah di-approve Matthew dan trigger match dengan pesan turn ini. Apply template di response Anda:',
+        '',
+        ...matchedSkills.map(
+          (s, i) =>
+            `### Skill ${i + 1}: ${s.title} (${s.id})\nDescription: ${s.description}\nTemplate:\n${s.promptTemplate}\n`,
+        ),
+      ].join('\n')
+    }
+  } catch (error) {
+    console.error('[atmaja-chat] load active skills failed:', error?.message ?? error)
+  }
+
   // === PDF INTENT DETECTION ===
   // Kalau Matthew minta PDF/dokumen di turn ini, inject system reinforcement
   // supaya Atmaja PASTI emit [ATMAJA_DOC] marker, tidak nolak.
@@ -604,6 +633,11 @@ export default async function handler(req, res) {
     { role: 'system', content: buildSystemPrompt(memoryContent) },
     ...normalizeHistory(payload?.history),
   ]
+
+  // Inject active skill templates kalau ada match.
+  if (activeSkillsInjection) {
+    baseMessages.push({ role: 'system', content: activeSkillsInjection })
+  }
 
   // Inject reinforcement system message HANYA untuk turn yang detect PDF intent.
   // Posisi: tepat sebelum user turn, supaya jadi paling fresh di context.
@@ -1229,6 +1263,47 @@ export default async function handler(req, res) {
       })
     }
 
+    // === SERVER-SIDE SKILL PROPOSE MARKER ===
+    // [ATMAJA_SKILL_PROPOSE] dengan key-value lines:
+    //   name, description, triggers (comma-list), promptTemplate (multi-line OK), rationale
+    // → createProposal type='skill', status='pending'. Matthew approve via UI Skill Proposals panel.
+    const skillProposals = []
+    const SKILL_RE = /\[ATMAJA_SKILL_PROPOSE\]([\s\S]*?)\[\/ATMAJA_SKILL_PROPOSE\]/g
+    let skillMatch
+    let skillCount = 0
+    while ((skillMatch = SKILL_RE.exec(replyText)) !== null && skillCount < 1) {
+      skillCount += 1
+      const inner = skillMatch[1]
+      const getField = (key) => {
+        const m = inner.match(new RegExp(`^${key}:\\s*([\\s\\S]*?)(?=\\n[a-zA-Z]+:|\\s*$)`, 'im'))
+        return m?.[1]?.trim() ?? ''
+      }
+      const name = getField('name')
+      const description = getField('description')
+      const promptTemplate = getField('promptTemplate') || getField('promptTemplate ')
+      const triggersRaw = getField('triggers')
+      const rationale = getField('rationale')
+      const triggers = triggersRaw.split(',').map((t) => t.trim()).filter(Boolean)
+      if (name && description && promptTemplate && triggers.length > 0) {
+        try {
+          const result = await createProposal({
+            type: 'skill',
+            title: name,
+            description,
+            rationale,
+            promptTemplate,
+            triggers,
+            proposedBy: 'atmaja_chat_marker',
+          })
+          if (result.ok) {
+            skillProposals.push({ id: result.proposal.id, name, triggers })
+          }
+        } catch (error) {
+          console.error('[atmaja-chat] skill propose failed:', error?.message ?? error)
+        }
+      }
+    }
+
     // === SERVER-SIDE SCRAPE MARKER ===
     // [ATMAJA_SCRAPE url="..." schema={...}] → call /api/agent/browse dengan schema → return structured.
     const scrapeResults = []
@@ -1392,6 +1467,10 @@ export default async function handler(req, res) {
       schedulesCreated: scheduleMarkers,
       sandboxExec: execResults,
       scrapeResults,
+      skillProposals,
+      skillsActivated: activeSkillsInjection
+        ? activeSkillsInjection.match(/Skill \d+: ([^(]+)/g)?.map((m) => m.replace(/Skill \d+: /, '').trim())
+        : [],
       memoryUpdate,
       sessionId,
     })

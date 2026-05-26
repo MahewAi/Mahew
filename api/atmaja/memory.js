@@ -173,6 +173,12 @@ export async function createProposal(input) {
     estimatedEffort: String(input?.estimatedEffort ?? '').trim().slice(0, 100),
     estimatedCost: String(input?.estimatedCost ?? '').trim().slice(0, 100),
     proposedBy: String(input?.proposedBy ?? 'atmaja').trim().slice(0, 50),
+    // Skill-specific fields (only relevant kalau type='skill'):
+    promptTemplate: String(input?.promptTemplate ?? '').trim().slice(0, 5000) || null,
+    triggers: Array.isArray(input?.triggers)
+      ? input.triggers.slice(0, 10).map((t) => String(t).trim().toLowerCase().slice(0, 80)).filter(Boolean)
+      : [],
+    sandboxCode: String(input?.sandboxCode ?? '').trim().slice(0, 8000) || null,
     status: 'pending',
     createdAt: new Date().toISOString(),
     approvedAt: null,
