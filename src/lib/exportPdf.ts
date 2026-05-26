@@ -258,63 +258,104 @@ function isPwaStandalone(): boolean {
   }
 }
 
+// Type guard untuk FileSystem Access API
+interface FileSystemAccessWindow extends Window {
+  showSaveFilePicker?: (options?: {
+    suggestedName?: string
+    types?: Array<{ description?: string; accept?: Record<string, string[]> }>
+  }) => Promise<{
+    createWritable: () => Promise<{
+      write: (data: Blob) => Promise<void>
+      close: () => Promise<void>
+    }>
+  }>
+}
+
 /**
- * Trigger native browser download dari blob.
- * Reliable di PWA standalone karena pakai synchronous anchor click pattern
- * yang preserve user gesture context.
+ * Primary download: pakai FileSystem Access API kalau available (Chrome/Edge
+ * desktop + Chrome Android 86+). User dapat native save dialog dengan folder picker.
+ * Paling reliable di PWA standalone karena tidak depend pada synthetic click.
  */
-function downloadBlobAsFile(blob: Blob, filename: string): boolean {
+async function downloadViaFileSystemApi(blob: Blob, filename: string): Promise<'success' | 'cancelled' | 'unsupported' | 'error'> {
+  const w = window as FileSystemAccessWindow
+  if (typeof w.showSaveFilePicker !== 'function') {
+    console.info('[exportPdf] FileSystem Access API tidak supported')
+    return 'unsupported'
+  }
+  try {
+    console.info('[exportPdf] trying FileSystem Access API save picker...')
+    const handle = await w.showSaveFilePicker({
+      suggestedName: filename,
+      types: [
+        {
+          description: 'PDF Document',
+          accept: { 'application/pdf': ['.pdf'] },
+        },
+      ],
+    })
+    const writable = await handle.createWritable()
+    await writable.write(blob)
+    await writable.close()
+    console.info('[exportPdf] FileSystem Access API save berhasil')
+    return 'success'
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      console.info('[exportPdf] user cancelled save dialog')
+      return 'cancelled'
+    }
+    console.warn('[exportPdf] FileSystem Access API failed:', err)
+    return 'error'
+  }
+}
+
+/**
+ * Fallback 1: synchronous anchor click via element yang sudah di-DOM.
+ * Untuk browser yang tidak support FileSystem Access API.
+ */
+function downloadViaAnchor(blob: Blob, filename: string): boolean {
   try {
     const blobUrl = URL.createObjectURL(blob)
-    console.info('[exportPdf] blob URL created:', blobUrl, 'size:', blob.size, 'bytes')
+    console.info('[exportPdf] anchor download method, blob:', blobUrl)
 
-    // Method 1: Anchor click approach (most reliable across browsers)
     const a = document.createElement('a')
     a.href = blobUrl
     a.download = filename
+    a.target = '_blank' // helps mobile browsers treat as download
     a.rel = 'noopener'
-    a.style.display = 'none'
+    a.style.position = 'fixed'
+    a.style.left = '-9999px'
     document.body.appendChild(a)
 
-    // Dispatch synthetic mouse click — better preserve user gesture context than .click()
-    const clickEvent = new MouseEvent('click', {
-      view: window,
-      bubbles: true,
-      cancelable: true,
-    })
-    a.dispatchEvent(clickEvent)
-    console.info('[exportPdf] anchor click dispatched, download triggered for:', filename)
+    // Pakai .click() native (not dispatchEvent) — preserve user gesture lebih baik
+    a.click()
+    console.info('[exportPdf] a.click() called for download:', filename)
 
-    // Cleanup after delay (browser needs time to start download)
     window.setTimeout(() => {
       try { document.body.removeChild(a) } catch {}
       URL.revokeObjectURL(blobUrl)
-      console.info('[exportPdf] cleanup done, blob URL revoked')
-    }, 2000)
-
+    }, 5000)
     return true
   } catch (err) {
-    console.error('[exportPdf] downloadBlobAsFile failed:', err)
+    console.error('[exportPdf] anchor download failed:', err)
     return false
   }
 }
 
 /**
- * Fallback: open blob URL di tab baru. Browser akan render PDF inline,
- * user bisa save manual via Ctrl+S atau browser PDF viewer download button.
- * Pakai ini kalau direct download anchor click gagal (PWA standalone aggressive).
+ * Fallback 2: open blob URL di tab baru. Browser render PDF inline via PDF viewer,
+ * user save manual via Ctrl+S atau download icon di toolbar PDF viewer.
  */
-function openBlobInNewTab(blob: Blob, _filename: string): boolean {
+function openBlobInNewTab(blob: Blob): boolean {
   try {
     const blobUrl = URL.createObjectURL(blob)
     console.info('[exportPdf] fallback: opening blob in new tab')
     const newWindow = window.open(blobUrl, '_blank', 'noopener,noreferrer')
     if (!newWindow) {
-      console.warn('[exportPdf] window.open returned null — popup blocked')
-      // Last resort: navigate current window to blob URL
+      console.warn('[exportPdf] window.open blocked — try current window navigation')
+      // Last resort: navigate current window (akan keluar PWA standalone)
       window.location.href = blobUrl
+      return true
     }
-    // Don't revoke immediately — new tab needs time to load
     window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000)
     return true
   } catch (err) {
@@ -398,29 +439,43 @@ export async function exportMessageAsPdf(options: ExportPdfOptions): Promise<boo
 
     console.info('[exportPdf] PDF blob generated, size:', pdfBlob.size, 'bytes, type:', pdfBlob.type)
 
-    // Try Method 1: Direct download via anchor click
-    const downloaded = downloadBlobAsFile(pdfBlob, filename)
+    // === DOWNLOAD STRATEGY ===
+    // Method 1 (PREFERRED): FileSystem Access API — native save dialog,
+    //   user pilih folder + filename, reliable di PWA standalone Chrome/Edge
+    // Method 2 (FALLBACK): Anchor click — works di browser biasa
+    // Method 3 (LAST RESORT): Open in new tab — user save manual
 
-    if (downloaded) {
+    const fsResult = await downloadViaFileSystemApi(pdfBlob, filename)
+    if (fsResult === 'success') {
+      showResultToast('PDF tersimpan ke file system')
+      return true
+    }
+    if (fsResult === 'cancelled') {
+      showResultToast('Download dibatalkan')
+      return false
+    }
+    // 'unsupported' atau 'error' → coba fallback
+
+    console.info('[exportPdf] FileSystem API not used, trying anchor click...')
+    const anchorOk = downloadViaAnchor(pdfBlob, filename)
+    if (anchorOk && !standalone) {
+      // Di browser biasa, anchor click biasanya jalan. Show success.
+      showResultToast('PDF berhasil di-download. Cek Downloads folder.')
+      return true
+    }
+
+    // Standalone PWA: anchor sering silent fail. Pakai new tab fallback supaya
+    // user PASTI lihat PDF + bisa save manual.
+    console.warn('[exportPdf] PWA standalone — bypass ke new tab fallback supaya reliable')
+    const tabOk = openBlobInNewTab(pdfBlob)
+    if (tabOk) {
       showResultToast(
-        standalone
-          ? 'PDF di-download. Cek Downloads folder atau notification bar HP.'
-          : 'PDF berhasil di-download',
+        'PDF terbuka di tab baru. Tap titik tiga di atas → Download atau Save as PDF.',
       )
       return true
     }
 
-    // Method 2 fallback: Open blob in new tab
-    console.warn('[exportPdf] direct download failed, trying new tab fallback')
-    const openedTab = openBlobInNewTab(pdfBlob, filename)
-    if (openedTab) {
-      showResultToast(
-        'PDF terbuka di tab baru. Save manual via Ctrl+S (atau download icon di PDF viewer).',
-      )
-      return true
-    }
-
-    showResultToast('Gagal trigger download. Cek browser settings + pop-up.', true)
+    showResultToast('Gagal trigger download. Coba pakai browser biasa (bukan PWA standalone).', true)
     return false
   } catch (err) {
     if (timedOut) return false
