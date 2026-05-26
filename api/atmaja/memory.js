@@ -988,8 +988,73 @@ const SCHEDULES_KEY = 'atmaja:schedules:matthew'
 const MAX_SCHEDULES = 50
 const MAX_SCHEDULE_TASK_CHARS = 600
 
+// === Cron parser sederhana untuk cronHuman → match day-of-week ===
+// Schedule disimpan dengan cronHuman bahasa natural ("setiap Senin pukul 9 pagi").
+// Function ini extract day-of-week + match dengan hari ini (WITA).
+const DAY_KEYWORDS = {
+  senin: 1, monday: 1,
+  selasa: 2, tuesday: 2,
+  rabu: 3, wednesday: 3,
+  kamis: 4, thursday: 4,
+  jumat: 5, friday: 5, jumaat: 5,
+  sabtu: 6, saturday: 6,
+  minggu: 0, sunday: 0, ahad: 0,
+}
+
+// Detect cronHuman matches today (di timezone WITA = UTC+8)
+function scheduleMatchesToday(cronHuman, nowDate) {
+  if (!cronHuman) return false
+  const lower = String(cronHuman).toLowerCase()
+  const now = nowDate || new Date()
+  // WITA = UTC+8
+  const witaDow = (now.getUTCDay() + (now.getUTCHours() + 8 >= 24 ? 1 : 0)) % 7
+  const todayDow = witaDow
+
+  // "setiap hari" / "tiap hari" / "every day" / "harian" / "daily"
+  if (/\b(setiap|tiap|every)\s+hari\b/i.test(lower)) return true
+  if (/\b(harian|daily|setiap pagi|tiap pagi)\b/i.test(lower)) return true
+
+  // Day-of-week match
+  for (const [keyword, dow] of Object.entries(DAY_KEYWORDS)) {
+    if (lower.includes(keyword) && todayDow === dow) return true
+  }
+
+  // "weekly" or "mingguan" tanpa hari specific → default Senin
+  if (/\b(mingguan|weekly)\b/i.test(lower) && todayDow === 1) return true
+
+  // "monthly" / "bulanan" → fire kalau tanggal 1
+  if (/\b(bulanan|monthly)\b/i.test(lower) && now.getUTCDate() === 1) return true
+
+  return false
+}
+
 async function handleSchedule(req, res, url) {
   const action = url.searchParams.get('action')
+
+  // GET ?type=schedule&action=due → schedules yang fire hari ini (untuk n8n cron job)
+  if (req.method === 'GET' && action === 'due') {
+    try {
+      const list = (await kv.get(SCHEDULES_KEY)) ?? []
+      const items = Array.isArray(list) ? list : []
+      const now = new Date()
+      const dueItems = items.filter(
+        (s) => s.status === 'active' && scheduleMatchesToday(s.cronHuman, now),
+      )
+      sendJson(res, 200, {
+        ok: true,
+        due: dueItems,
+        count: dueItems.length,
+        checkedAt: now.toISOString(),
+        witaDate: new Date(now.getTime() + 8 * 60 * 60 * 1000)
+          .toISOString()
+          .split('T')[0],
+      })
+    } catch (error) {
+      console.error('[atmaja-schedule] due error:', error?.message ?? error)
+      sendJson(res, 500, { ok: false, error: 'schedule_due_failed' })
+    }
+    return
+  }
 
   // GET ?type=schedule → list semua schedule aktif
   if (req.method === 'GET') {
@@ -1007,6 +1072,63 @@ async function handleSchedule(req, res, url) {
     } catch (error) {
       console.error('[atmaja-schedule] list error:', error?.message ?? error)
       sendJson(res, 500, { ok: false, error: 'schedule_list_failed' })
+    }
+    return
+  }
+
+  // POST ?type=schedule&action=fire&id=X → mark schedule as fired (lastRunAt = now)
+  // PLUS append reminder ke memory file section "Reminder Hari Ini" supaya Atmaja
+  // chat next turn aware reminder yang due hari ini.
+  if (req.method === 'POST' && action === 'fire') {
+    const id = url.searchParams.get('id')
+    if (!id) {
+      sendJson(res, 400, { ok: false, error: 'id_required' })
+      return
+    }
+    try {
+      const list = (await kv.get(SCHEDULES_KEY)) ?? []
+      const items = Array.isArray(list) ? list : []
+      const idx = items.findIndex((s) => s.id === id)
+      if (idx < 0) {
+        sendJson(res, 404, { ok: false, error: 'schedule_not_found' })
+        return
+      }
+      const sched = items[idx]
+      const nowIso = new Date().toISOString()
+      items[idx].lastRunAt = nowIso
+      await kv.set(SCHEDULES_KEY, items)
+
+      // Append ke memory file section "Briefs Aktif" supaya Atmaja next turn surface
+      // reminder ini sebagai catatan due today
+      try {
+        const memory = await readMemory()
+        const witaDate = new Date(Date.now() + 8 * 60 * 60 * 1000)
+          .toISOString()
+          .split('T')[0]
+        const reminderBullet = `- [Reminder ${witaDate}] ${sched.task} (jadwal: ${sched.cronHuman})`
+        let updatedMemory = memory
+        if (memory.includes('## Briefs Aktif')) {
+          // Insert sebelum section selanjutnya
+          updatedMemory = memory.replace(
+            '## Briefs Aktif\n',
+            `## Briefs Aktif\n${reminderBullet}\n`,
+          )
+        } else {
+          updatedMemory = memory + `\n\n## Briefs Aktif\n${reminderBullet}\n`
+        }
+        await writeMemory(updatedMemory)
+      } catch (memErr) {
+        console.error('[atmaja-schedule] memory append on fire failed:', memErr?.message ?? memErr)
+      }
+
+      sendJson(res, 200, {
+        ok: true,
+        fired: { id: sched.id, task: sched.task, lastRunAt: nowIso },
+        appendedToMemory: true,
+      })
+    } catch (error) {
+      console.error('[atmaja-schedule] fire error:', error?.message ?? error)
+      sendJson(res, 500, { ok: false, error: 'schedule_fire_failed' })
     }
     return
   }
