@@ -637,8 +637,10 @@ export default async function handler(req, res) {
     { role: 'user', content: buildUserContent(userMessage, combinedAttachments) },
   ]
 
-  // Max output per single call. Opus 4.7 via OpenRouter support up to 8192 standard.
-  const MAX_TOKENS_PER_CALL = 8192
+  // Max output per single call. Opus 4.7 native support 128K output via direct API.
+  // 16384 = compromise: support response panjang tanpa risiko runaway cost.
+  // OpenRouter fallback path tetap kirim 16384 (OpenRouter clamp ke model limit).
+  const MAX_TOKENS_PER_CALL = 16384
   // Max auto-continuation kalau response masih kepotong (1 initial + N continuations).
   // Total worst case output: 8192 * 3 = 24,576 token = ~18K kata. Sangat jarang full.
   const MAX_CONTINUATIONS = 2
@@ -656,17 +658,21 @@ export default async function handler(req, res) {
   // Contoh: anthropic/claude-4.7-opus-20260416 (verified dari OpenRouter response).
   // Untuk Anthropic native, hilangkan "anthropic/" prefix + ganti "." dengan "-".
   function toAnthropicModelId(orModelId) {
-    // Mapping eksplisit: pakai Anthropic standard naming claude-{family}-{version}-{date}
-    // Untuk Opus 4.7 → claude-opus-4-7-20260416 (date dari OpenRouter trace)
-    // Different dari OpenRouter format yang reversed (claude-4.7-opus-20260416)
+    // VERIFIED via /v1/models endpoint (26 Mei 2026): Anthropic pakai alias form
+    // tanpa date suffix untuk model utama. Example: claude-opus-4-7 → Claude Opus 4.7
+    // GET https://api.anthropic.com/v1/models confirmed model IDs:
+    //   - claude-opus-4-7    (Opus 4.7, max_input 1M, max_output 128K)
+    //   - claude-opus-4-6
+    //   - claude-opus-4-5-20251101 (4.5 needs date suffix)
+    //   - claude-sonnet-4-6
     const map = {
-      'anthropic/claude-opus-4.7': 'claude-opus-4-7-20260416',
-      'anthropic/claude-opus-4.7-fast': 'claude-opus-4-7-20260416',
+      'anthropic/claude-opus-4.7': 'claude-opus-4-7',
+      'anthropic/claude-opus-4.7-fast': 'claude-opus-4-7',
       'anthropic/claude-opus-4.6': 'claude-opus-4-6',
       'anthropic/claude-opus-4.6-fast': 'claude-opus-4-6',
-      'anthropic/claude-opus-4.5': 'claude-opus-4-5',
-      'anthropic/claude-opus-4.1': 'claude-opus-4-1-20250805',
-      'anthropic/claude-opus-4': 'claude-opus-4-20250514',
+      'anthropic/claude-opus-4.5': 'claude-opus-4-5-20251101',
+      'anthropic/claude-opus-4.1': 'claude-opus-4-1',
+      'anthropic/claude-opus-4': 'claude-opus-4',
       'anthropic/claude-sonnet-4.6': 'claude-sonnet-4-6',
     }
     return map[orModelId] ?? orModelId.replace('anthropic/', '').replace(/\./g, '-')
