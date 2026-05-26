@@ -1078,11 +1078,28 @@ export default async function handler(req, res) {
     let fallbackTried = false
     let usedProvider = USE_ANTHROPIC_DIRECT ? 'Anthropic (direct)' : 'OpenRouter'
 
+    // Capture Anthropic error details supaya bisa di-debug dari client tanpa akses server log.
+    // Body shape Anthropic error: { type:'error', error:{ type:'invalid_request_error', message:'...' } }
+    let anthropicError = null
+    if (!upstream.ok && USE_ANTHROPIC_DIRECT) {
+      anthropicError = {
+        status: upstream.status,
+        type: body?.error?.type ?? body?.type ?? null,
+        message: body?.error?.message ?? body?.message ?? (typeof body?.raw === 'string' ? body.raw : null),
+        anthropicModel: toAnthropicModelId(primaryModel),
+        bodyPreview: JSON.stringify(body ?? {}).slice(0, 500),
+      }
+      console.error('[atmaja-chat] Anthropic direct failed:', anthropicError)
+    }
+
     // === AUTO-FALLBACK: Kalau Anthropic direct gagal (404 model invalid, dll),
     // automatic retry via OpenRouter (kalau key tersedia). Ini critical supaya
     // user tidak stuck error 404 saat Anthropic native model ID berubah/deprecated.
     if (!upstream.ok && USE_ANTHROPIC_DIRECT && process.env.OPENROUTER_API_KEY) {
-      console.warn('[atmaja-chat] Anthropic direct failed, fallback to OpenRouter:', upstream.status)
+      console.warn('[atmaja-chat] Falling back to OpenRouter due to Anthropic error', upstream.status)
+      await traceStep(trace, 'atmaja_thinking', 'warning', {
+        detail: `Anthropic direct gagal (HTTP ${upstream.status}: ${anthropicError?.message ?? 'unknown'}). Retry via OpenRouter.`,
+      })
       const orResult = await (async () => {
         const retry = await callOpenRouter(primaryModel, messages)
         return retry
@@ -1214,9 +1231,12 @@ export default async function handler(req, res) {
 
     sendJson(res, 200, {
       ok: true,
-      provider: 'OpenRouter',
+      provider: usedProvider,
+      anthropicEnabled: USE_ANTHROPIC_DIRECT,
+      anthropicError: anthropicError,
       model: (body?.model ?? usedModel) || null,
       requestedModel: primaryModel,
+      anthropicModelTried: USE_ANTHROPIC_DIRECT ? toAnthropicModelId(primaryModel) : null,
       fallbackUsed: fallbackTried,
       truncated: finalTruncated,
       finishReason: lastFinishReason,
