@@ -132,6 +132,17 @@ function clampText(value, limit) {
 }
 
 // === ACTION: list briefs (GET, requires n8n auth) ===
+// Estimate brief processing step berdasarkan elapsed time (W1 typical durations).
+// Used by handleList untuk give Matthew approximate progress di in-progress briefs.
+function estimateProgressStep(elapsedMs) {
+  // W1 timing: validate ~1s, C-Suite paralel ~10-20s, Synth ~15-30s, Callback ~1s = ~30-60s total
+  if (elapsedMs < 3000) return { step: 'validating', stepNum: 1, of: 5, progressPct: 10 }
+  if (elapsedMs < 8000) return { step: 'c-suite-dispatching', stepNum: 2, of: 5, progressPct: 25 }
+  if (elapsedMs < 25_000) return { step: 'c-suite-processing', stepNum: 3, of: 5, progressPct: 50 }
+  if (elapsedMs < 50_000) return { step: 'atmaja-synthesizing', stepNum: 4, of: 5, progressPct: 80 }
+  return { step: 'finalizing', stepNum: 5, of: 5, progressPct: 95 }
+}
+
 async function handleList(req, res, url) {
   if (!isAuthorizedN8n(req)) {
     sendJson(res, 401, { ok: false, error: 'n8n_token_required', note: 'Header: Authorization: Bearer <N8N_WEBHOOK_TOKEN>' })
@@ -139,12 +150,25 @@ async function handleList(req, res, url) {
   }
   const statusFilter = url.searchParams.get('status')
   const since = Number(url.searchParams.get('since') ?? 0)
+  const now = Date.now()
   const all = Array.from(briefStore.values())
   const filtered = all
     .filter((b) => !statusFilter || b.status === statusFilter)
     .filter((b) => !since || (b.updatedAt ?? 0) >= since)
     .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
     .slice(0, 100)
+    // ITEM #5: enrich in-progress briefs dengan estimated step + elapsed time
+    .map((b) => {
+      if (b.status === 'in_progress') {
+        const elapsedMs = now - (b.result?.submittedAt ?? b.receivedAt ?? now)
+        return {
+          ...b,
+          elapsedMs,
+          progress: estimateProgressStep(elapsedMs),
+        }
+      }
+      return b
+    })
 
   sendJson(res, 200, {
     ok: true,
@@ -285,6 +309,23 @@ async function handleSubmit(req, res) {
     sendJson(res, 422, { mode: 'offline', status: 'bridge_error', jobId, error: webhookPolicy.reason })
     return
   }
+  // ITEM #5: Pre-populate briefStore dengan status 'in_progress' supaya brief
+  // visible di Inbox saat masih running n8n workflow (sebelum callback)
+  const briefTitle = String(payload?.title ?? payload?.payload?.title ?? '').slice(0, 200)
+  const briefSummary = String(payload?.summary ?? payload?.payload?.summary ?? '').slice(0, 1000)
+  briefStore.set(jobId, {
+    briefId: jobId,
+    status: 'in_progress',
+    result: {
+      title: briefTitle || 'Brief processing...',
+      summary: briefSummary,
+      submittedAt: Date.now(),
+    },
+    receivedAt: Date.now(),
+    updatedAt: Date.now(),
+    source: payload?.source ?? 'gerai-app',
+  })
+
   try {
     const upstream = await fetch(webhookPolicy.url, {
       method: 'POST',
