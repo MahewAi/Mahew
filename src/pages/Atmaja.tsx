@@ -107,6 +107,29 @@ interface AtmajaMessage extends ChatMessage {
   videos?: AtmajaVideo[]
   /** PDF/dokumen yang Atmaja generate via [ATMAJA_DOC] marker */
   documents?: AtmajaDoc[]
+  /** Sandbox execution result dari [ATMAJA_EXEC] */
+  sandboxExec?: Array<{
+    ok: boolean
+    lang: string
+    codePreview: string
+    stdout?: string
+    stderr?: string
+    exitCode?: number | null
+    durationMs?: number | null
+    error?: string | null
+  }>
+  /** Structured scrape result dari [ATMAJA_SCRAPE] */
+  scrapeResults?: Array<{
+    ok: boolean
+    url: string
+    title?: string | null
+    structured?: Record<string, unknown> | null
+    error?: string | null
+  }>
+  /** Skill proposals baru dari [ATMAJA_SKILL_PROPOSE] */
+  skillProposals?: Array<{ id: string; name: string; triggers: string[] }>
+  /** Skill yang aktif di turn ini */
+  skillsActivated?: string[]
 }
 
 const STORAGE_KEY = 'gerai:atmaja-thread'
@@ -1034,6 +1057,17 @@ export default function Atmaja() {
           }
         }
 
+        // Strip server-handled markers dari display text supaya chat clean.
+        // Server udah parse [ATMAJA_EXEC], [ATMAJA_SCRAPE], [ATMAJA_SKILL_PROPOSE], [ATMAJA_SCHEDULE_CREATE]
+        // dan kembaliin result via dedicated fields. Sisanya cuma noise di chat.
+        finalText = finalText
+          .replace(/\[ATMAJA_EXEC(?:\s+lang=["'][^"']+["'])?\][\s\S]*?\[\/ATMAJA_EXEC\]/g, '')
+          .replace(/\[ATMAJA_SCRAPE\s+url=["'][^"']+["']\s+schema=\{[\s\S]*?\}\s*\]/g, '')
+          .replace(/\[ATMAJA_SKILL_PROPOSE\][\s\S]*?\[\/ATMAJA_SKILL_PROPOSE\]/g, '')
+          .replace(/\[ATMAJA_SCHEDULE_CREATE\][\s\S]*?\[\/ATMAJA_SCHEDULE_CREATE\]/g, '')
+          .replace(/\n{3,}/g, '\n\n')
+          .trim()
+
         const displayText = withVisualFollowUp(finalText, modelText, visuals)
         const reply: AtmajaMessage = {
           id: `m-${Date.now() + 1}`,
@@ -1043,6 +1077,11 @@ export default function Atmaja() {
         }
         if (visuals.length > 0) reply.visuals = visuals
         if (finalDocs.length > 0) reply.documents = finalDocs
+        // Attach Phase 1-3 results dari API ke message untuk render card di chat
+        if (result.sandboxExec && result.sandboxExec.length > 0) reply.sandboxExec = result.sandboxExec
+        if (result.scrapeResults && result.scrapeResults.length > 0) reply.scrapeResults = result.scrapeResults
+        if (result.skillProposals && result.skillProposals.length > 0) reply.skillProposals = result.skillProposals
+        if (result.skillsActivated && result.skillsActivated.length > 0) reply.skillsActivated = result.skillsActivated
 
         setMessages((prev) => {
           const userIndex = prev.findIndex((message) => message.id === userMsg.id)
@@ -2408,6 +2447,45 @@ function MessageBubble({ message, reduceMotion }: { message: AtmajaMessage; redu
             ))}
           </div>
         )}
+        {/* Sandbox exec output — dari marker [ATMAJA_EXEC] yang sudah di-eksekusi server */}
+        {message.sandboxExec && message.sandboxExec.length > 0 && (
+          <div className="mt-2 grid gap-2">
+            {message.sandboxExec.map((exec, idx) => (
+              <SandboxExecCard key={`sx-${idx}`} exec={exec} index={idx} />
+            ))}
+          </div>
+        )}
+        {/* Structured scrape result — dari marker [ATMAJA_SCRAPE] */}
+        {message.scrapeResults && message.scrapeResults.length > 0 && (
+          <div className="mt-2 grid gap-2">
+            {message.scrapeResults.map((scrape, idx) => (
+              <ScrapeResultCard key={`sc-${idx}`} scrape={scrape} index={idx} />
+            ))}
+          </div>
+        )}
+        {/* Skill proposed — dari marker [ATMAJA_SKILL_PROPOSE] */}
+        {message.skillProposals && message.skillProposals.length > 0 && (
+          <div className="mt-2 grid gap-2">
+            {message.skillProposals.map((skill) => (
+              <SkillProposedCard key={skill.id} skill={skill} />
+            ))}
+          </div>
+        )}
+        {/* Skill activated badge — kalau turn ini ada skill yang aktif */}
+        {message.skillsActivated && message.skillsActivated.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {message.skillsActivated.map((skillName, idx) => (
+              <span
+                key={`sa-${idx}`}
+                className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2.5 py-1 text-[11px] font-medium text-accent-dark"
+                title="Skill aktif (sudah di-approve, trigger match)"
+              >
+                <Sparkles className="h-3 w-3" />
+                {skillName.trim()}
+              </span>
+            ))}
+          </div>
+        )}
         <p className={cn('mt-1 px-1 text-[10px] text-text-faint', isMatthew && 'text-right')}>
           {message.timeAgo}
         </p>
@@ -2517,6 +2595,158 @@ function AtmajaDocCard({ doc }: { doc: AtmajaDoc }) {
         </span>
       </button>
     </>
+  )
+}
+
+// === Sandbox exec output card ===
+// Render output dari [ATMAJA_EXEC] yang server udah jalankan di Vercel Sandbox.
+function SandboxExecCard({
+  exec,
+  index,
+}: {
+  exec: {
+    ok: boolean
+    lang: string
+    codePreview: string
+    stdout?: string
+    stderr?: string
+    exitCode?: number | null
+    durationMs?: number | null
+    error?: string | null
+  }
+  index: number
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const output = (exec.stdout ?? exec.stderr ?? exec.error ?? '').trim()
+  const previewLen = 600
+  const isLong = output.length > previewLen
+  const visible = expanded ? output : output.slice(0, previewLen)
+  const statusLabel = exec.ok ? 'OK' : 'ERROR'
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-border-soft bg-white/86 shadow-card">
+      <div className="flex items-center gap-2 border-b border-border-soft px-3 py-2">
+        <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-slate-900 text-white">
+          <Sparkles className="size-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[12px] font-black text-text-primary">
+            Sandbox Exec #{index + 1}
+            <span
+              className="ml-2 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold text-white shadow-soft"
+              style={{ backgroundColor: exec.ok ? '#10b981' : '#f43f5e' }}
+            >
+              {statusLabel}
+            </span>
+          </p>
+          <p className="text-[10px] font-semibold text-text-muted">
+            {exec.lang.toUpperCase()}
+            {exec.exitCode !== null && exec.exitCode !== undefined && ` · exit ${exec.exitCode}`}
+            {exec.durationMs !== null && exec.durationMs !== undefined && ` · ${exec.durationMs}ms`}
+          </p>
+        </div>
+      </div>
+      <pre className="m-0 max-h-72 overflow-auto bg-slate-950 px-3 py-2 text-[11px] leading-relaxed text-emerald-100 font-mono whitespace-pre-wrap break-words">
+        {visible || '(tidak ada output)'}
+      </pre>
+      {isLong && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="block w-full border-t border-border-soft px-3 py-1.5 text-[11px] font-semibold text-accent-dark hover:bg-accent-bg/40"
+        >
+          {expanded ? 'Lipat output' : `Tampilkan semua (${output.length} char)`}
+        </button>
+      )}
+    </div>
+  )
+}
+
+// === Structured scrape result card ===
+// Render output dari [ATMAJA_SCRAPE] — JSON terstruktur dari Cheerio.
+function ScrapeResultCard({
+  scrape,
+  index,
+}: {
+  scrape: {
+    ok: boolean
+    url: string
+    title?: string | null
+    structured?: Record<string, unknown> | null
+    error?: string | null
+  }
+  index: number
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const formatted = scrape.structured ? JSON.stringify(scrape.structured, null, 2) : ''
+  const previewLen = 500
+  const isLong = formatted.length > previewLen
+  const visible = expanded ? formatted : formatted.slice(0, previewLen)
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-border-soft bg-white/86 shadow-card">
+      <div className="flex items-center gap-2 border-b border-border-soft px-3 py-2">
+        <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-indigo-500/85 text-white">
+          <ArrowUpRight className="size-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[12px] font-black text-text-primary">
+            Scrape #{index + 1}: {scrape.title ?? 'Untitled'}
+          </p>
+          <p className="truncate text-[10px] font-semibold text-text-muted" title={scrape.url}>
+            {scrape.url}
+          </p>
+        </div>
+      </div>
+      {scrape.ok && formatted ? (
+        <>
+          <pre className="m-0 max-h-72 overflow-auto bg-slate-50 px-3 py-2 text-[11px] leading-relaxed text-text-primary font-mono whitespace-pre-wrap break-words">
+            {visible}
+          </pre>
+          {isLong && (
+            <button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              className="block w-full border-t border-border-soft px-3 py-1.5 text-[11px] font-semibold text-accent-dark hover:bg-accent-bg/40"
+            >
+              {expanded ? 'Lipat data' : 'Tampilkan semua'}
+            </button>
+          )}
+        </>
+      ) : (
+        <p className="px-3 py-2 text-[12px] text-rose-700">
+          {scrape.error ?? 'Tidak ada data terstruktur'}
+        </p>
+      )}
+    </div>
+  )
+}
+
+// === Skill proposed card ===
+// Notifikasi visual saat Atmaja propose skill baru via [ATMAJA_SKILL_PROPOSE].
+// Klik = redirect ke Skill Proposals panel untuk approve/reject.
+function SkillProposedCard({
+  skill,
+}: {
+  skill: { id: string; name: string; triggers: string[] }
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-purple-300/60 bg-gradient-to-br from-purple-50 to-white px-3.5 py-3 shadow-soft">
+      <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg bg-purple-500 text-white">
+        <Plus className="size-5" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[13px] font-extrabold leading-tight text-text-primary">
+          Skill baru di-propose: <span className="text-purple-700">{skill.name}</span>
+        </p>
+        <p className="mt-0.5 text-[11px] font-semibold text-text-muted">
+          {skill.triggers.length} trigger keyword · pending approval di Skill Proposals panel
+        </p>
+        <p className="mt-1 text-[10px] text-text-muted truncate" title={skill.triggers.join(', ')}>
+          {skill.triggers.slice(0, 4).join(' · ')}{skill.triggers.length > 4 ? ' …' : ''}
+        </p>
+      </div>
+    </div>
   )
 }
 

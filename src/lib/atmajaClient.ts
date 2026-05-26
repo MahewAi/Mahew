@@ -13,15 +13,48 @@ export interface AtmajaRemoteAttachment {
   previewText?: string
 }
 
+export interface SandboxExecResult {
+  ok: boolean
+  lang: string
+  codePreview: string
+  stdout?: string
+  stderr?: string
+  exitCode?: number | null
+  durationMs?: number | null
+  error?: string | null
+}
+
+export interface ScrapeResultItem {
+  ok: boolean
+  url: string
+  title?: string | null
+  structured?: Record<string, unknown> | null
+  error?: string | null
+}
+
+export interface SkillProposedItem {
+  id: string
+  name: string
+  triggers: string[]
+}
+
 export interface AtmajaRemoteReply {
   text: string
-  provider: 'OpenRouter'
+  provider: string
   model?: string
   usage?: {
     prompt_tokens?: number
     completion_tokens?: number
     total_tokens?: number
   } | null
+  /** Hasil sandbox execution dari marker [ATMAJA_EXEC] di reply Atmaja */
+  sandboxExec?: SandboxExecResult[]
+  /** Hasil structured scrape dari marker [ATMAJA_SCRAPE] di reply Atmaja */
+  scrapeResults?: ScrapeResultItem[]
+  /** Skill proposals yang baru dibuat dari marker [ATMAJA_SKILL_PROPOSE] */
+  skillProposals?: SkillProposedItem[]
+  /** Skill yang aktif (approved + trigger match) di turn ini */
+  skillsActivated?: string[]
 }
 
 export type AtmajaReplyErrorKind =
@@ -230,13 +263,20 @@ export async function requestAtmajaReplyWithError(
     return buildAtmajaError('empty_reply', response.status)
   }
 
+  const rawPayload = payload as Record<string, unknown>
   return {
     ok: true,
     reply: {
       text: payload.text.trim(),
-      provider: 'OpenRouter',
+      provider: typeof rawPayload.provider === 'string' ? rawPayload.provider : 'Anthropic (direct)',
       model: typeof payload.model === 'string' ? payload.model : undefined,
       usage: payload.usage ?? null,
+      sandboxExec: Array.isArray(rawPayload.sandboxExec) ? (rawPayload.sandboxExec as SandboxExecResult[]) : undefined,
+      scrapeResults: Array.isArray(rawPayload.scrapeResults) ? (rawPayload.scrapeResults as ScrapeResultItem[]) : undefined,
+      skillProposals: Array.isArray(rawPayload.skillProposals) ? (rawPayload.skillProposals as SkillProposedItem[]) : undefined,
+      skillsActivated: Array.isArray(rawPayload.skillsActivated)
+        ? (rawPayload.skillsActivated as string[])
+        : undefined,
     },
   }
 }
