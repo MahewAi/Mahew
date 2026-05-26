@@ -606,18 +606,21 @@ export default async function handler(req, res) {
   const ATMAJA_TEMPERATURE = 0.7 // Quality feedback: raised dari 0.45 supaya natural + insightful
 
   // Map OpenRouter model ID → Anthropic native model ID.
-  // Pakai ALIAS form (tanpa date suffix) supaya auto-route ke latest stable version
-  // di Anthropic. Date-versioned ID gampang berubah + 404 kalau date tidak match release.
+  // Anthropic 4.x convention dari OpenRouter: claude-{major}.{minor}-{tier}-{date}
+  // Contoh: anthropic/claude-4.7-opus-20260416 (verified dari OpenRouter response).
+  // Untuk Anthropic native, hilangkan "anthropic/" prefix + ganti "." dengan "-".
   function toAnthropicModelId(orModelId) {
+    // Mapping eksplisit yang sudah verified via OpenRouter trace
     const map = {
-      'anthropic/claude-opus-4.7': 'claude-opus-4-7',
-      'anthropic/claude-opus-4.7-fast': 'claude-opus-4-7',
-      'anthropic/claude-opus-4.6': 'claude-opus-4-6',
-      'anthropic/claude-opus-4.6-fast': 'claude-opus-4-6',
-      'anthropic/claude-opus-4.5': 'claude-opus-4-5',
-      'anthropic/claude-opus-4.1': 'claude-opus-4-1',
+      'anthropic/claude-opus-4.7': 'claude-4-7-opus-20260416',
+      'anthropic/claude-opus-4.7-fast': 'claude-4-7-opus-20260416',
+      // Other versions: pakai alias bare kalau Anthropic support, else fall back
+      'anthropic/claude-opus-4.6': 'claude-4-6-opus',
+      'anthropic/claude-opus-4.6-fast': 'claude-4-6-opus',
+      'anthropic/claude-opus-4.5': 'claude-4-5-opus',
+      'anthropic/claude-opus-4.1': 'claude-4-1-opus',
       'anthropic/claude-opus-4': 'claude-opus-4',
-      'anthropic/claude-sonnet-4.6': 'claude-sonnet-4-6',
+      'anthropic/claude-sonnet-4.6': 'claude-4-6-sonnet',
     }
     return map[orModelId] ?? orModelId.replace('anthropic/', '').replace(/\./g, '-')
   }
