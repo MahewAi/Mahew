@@ -810,7 +810,143 @@ export default async function handler(req, res) {
     return
   }
 
+  if (type === 'payments') {
+    await handlePayments(req, res, url)
+    return
+  }
+
   await handleMemory(req, res)
+}
+
+// ============================================================================
+// PAYMENTS HANDLER — track semua deposit ke provider (Anthropic, OpenRouter, OpenAI, Vercel, n8n)
+// KV key: atmaja:payments:matthew (array of payment records, latest first)
+// ============================================================================
+
+const PAYMENTS_KEY = 'atmaja:payments:matthew'
+const PAYMENTS_MAX = 200
+
+async function handlePayments(req, res, url) {
+  // GET ?type=payments → list all payments + summary per provider
+  if (req.method === 'GET') {
+    try {
+      const list = (await kv.get(PAYMENTS_KEY)) ?? []
+      const items = Array.isArray(list) ? list : []
+
+      // Aggregate per provider untuk summary
+      const summary = {}
+      let totalDeposited = 0
+      for (const p of items) {
+        if (p.type === 'deposit') {
+          const provider = p.provider || 'unknown'
+          if (!summary[provider]) {
+            summary[provider] = { totalDeposited: 0, depositCount: 0, lastDeposit: null }
+          }
+          summary[provider].totalDeposited += Number(p.amount) || 0
+          summary[provider].depositCount += 1
+          if (!summary[provider].lastDeposit || p.date > summary[provider].lastDeposit) {
+            summary[provider].lastDeposit = p.date
+          }
+          totalDeposited += Number(p.amount) || 0
+        }
+      }
+
+      sendJson(res, 200, {
+        ok: true,
+        payments: items,
+        count: items.length,
+        summary,
+        totalDepositedUsd: totalDeposited,
+      })
+    } catch (error) {
+      console.error('[payments] list error:', error?.message ?? error)
+      sendJson(res, 500, { ok: false, error: 'payments_list_failed' })
+    }
+    return
+  }
+
+  // POST ?type=payments → log new payment
+  if (req.method === 'POST') {
+    const contentType = getHeader(req, 'content-type') ?? ''
+    if (!contentType.includes('application/json')) {
+      sendJson(res, 415, { ok: false, error: 'unsupported_media_type' })
+      return
+    }
+    let payload
+    try {
+      payload = await readJsonBody(req, 8_000)
+    } catch (error) {
+      sendJson(res, error.statusCode ?? 400, {
+        ok: false,
+        error: error.message === 'payload_too_large' ? 'payload_too_large' : 'invalid_json',
+      })
+      return
+    }
+
+    const provider = String(payload?.provider ?? '').trim().slice(0, 60)
+    const amount = Number(payload?.amount)
+    const currency = String(payload?.currency ?? 'USD').trim().slice(0, 10).toUpperCase()
+    const paymentType = String(payload?.type ?? 'deposit').trim().slice(0, 20) // deposit | charge | refund
+    const date = String(payload?.date ?? new Date().toISOString().split('T')[0]).slice(0, 30)
+    const note = String(payload?.note ?? '').trim().slice(0, 400)
+    const method = String(payload?.method ?? '').trim().slice(0, 60) // credit_card, bank_transfer, etc
+
+    if (!provider) {
+      sendJson(res, 400, { ok: false, error: 'provider_required' })
+      return
+    }
+    if (!Number.isFinite(amount) || amount <= 0) {
+      sendJson(res, 400, { ok: false, error: 'amount_invalid', note: 'amount must be positive number' })
+      return
+    }
+
+    try {
+      const list = (await kv.get(PAYMENTS_KEY)) ?? []
+      const items = Array.isArray(list) ? list : []
+      const id = `pay-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+      const record = {
+        id,
+        provider,
+        type: paymentType,
+        amount,
+        currency,
+        date,
+        method,
+        note,
+        loggedAt: new Date().toISOString(),
+      }
+      items.unshift(record)
+      const trimmed = items.slice(0, PAYMENTS_MAX)
+      await kv.set(PAYMENTS_KEY, trimmed)
+      sendJson(res, 201, { ok: true, payment: record, total: trimmed.length })
+    } catch (error) {
+      console.error('[payments] create error:', error?.message ?? error)
+      sendJson(res, 500, { ok: false, error: 'payments_create_failed' })
+    }
+    return
+  }
+
+  // DELETE ?type=payments&id=X → remove payment record
+  if (req.method === 'DELETE') {
+    const id = url.searchParams.get('id')
+    if (!id) {
+      sendJson(res, 400, { ok: false, error: 'id_required' })
+      return
+    }
+    try {
+      const list = (await kv.get(PAYMENTS_KEY)) ?? []
+      const items = Array.isArray(list) ? list : []
+      const filtered = items.filter((p) => p.id !== id)
+      await kv.set(PAYMENTS_KEY, filtered)
+      sendJson(res, 200, { ok: true, deleted: id })
+    } catch (error) {
+      console.error('[payments] delete error:', error?.message ?? error)
+      sendJson(res, 500, { ok: false, error: 'payments_delete_failed' })
+    }
+    return
+  }
+
+  sendJson(res, 405, { ok: false, error: 'method_not_allowed' })
 }
 
 // ============================================================================
