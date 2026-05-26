@@ -38,16 +38,17 @@ function buildPdfContainer({ contentHtml, title, subtitle }: ExportPdfOptions): 
 
   const container = document.createElement('div')
   container.id = 'gerai-pdf-root'
-  // FIX (Bug B): place container at top:0 dengan visibility hidden + opacity 0,
-  // BUKAN top: 100vh (off-screen below). html2canvas pakai window dimensions sebagai
-  // virtual viewport — container off-screen below viewport sering kosong saat capture.
-  // Visibility hidden tetap render layout (valid getBoundingClientRect), just invisible.
+  // FIX (Bug B v2): Console showed canvas (719x0). Root cause: visibility:hidden →
+  // visible race + layout collapse. Solusi: ALWAYS visible (opacity 0.001), positioned
+  // di document flow normal but di luar viewport visual user via z-index -1 + filter alpha 0.
+  // display: block !important + height auto biar content menentukan tinggi.
   container.style.cssText = `
-    position: fixed;
+    position: absolute;
     left: 0;
     top: 0;
     width: 794px;
-    min-height: 1000px;
+    min-height: 100px;
+    height: auto;
     background: #FAF8F4;
     padding: 32px 36px;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -55,9 +56,9 @@ function buildPdfContainer({ contentHtml, title, subtitle }: ExportPdfOptions): 
     font-size: 11.5pt;
     line-height: 1.65;
     box-sizing: border-box;
-    z-index: -10;
-    opacity: 0;
-    visibility: hidden;
+    z-index: -1;
+    display: block !important;
+    opacity: 0.01;
     pointer-events: none;
     overflow: visible;
   `
@@ -420,29 +421,47 @@ export async function exportMessageAsPdf(options: ExportPdfOptions): Promise<boo
     // Scroll page ke container biar html2canvas bisa capture (kalau perlu)
     // Container ada di top: 100vh = below viewport, scrollIntoView sebentar
     const containerRect = container.getBoundingClientRect()
-    console.info('[exportPdf] container rect:', {
+    console.info('[exportPdf] container initial rect:', {
       top: containerRect.top,
       left: containerRect.left,
       width: containerRect.width,
       height: containerRect.height,
+      scrollHeight: container.scrollHeight,
+      offsetHeight: container.offsetHeight,
+      innerHTML_length: container.innerHTML.length,
+      children: container.children.length,
     })
 
-    // Make container VISIBLE briefly so html2canvas can read computed styles + images correctly.
-    // visibility:hidden bisa bikin canvas render kosong di beberapa browser. Pakai opacity 0.001
-    // dan z-index -10 supaya invisible to user tapi rendered.
-    container.style.visibility = 'visible'
-    container.style.opacity = '0.001'
-
-    // Wait extra untuk fonts + render after visibility change. Web fonts + MathJax + image
-    // butuh waktu paint. 1200ms cover slow connection / large content.
-    await new Promise((r) => window.setTimeout(r, 1200))
+    // Container sekarang permanently rendered dengan opacity 0.01 (no visibility flip race).
+    // Tunggu fonts + image + markdown render settle.
+    await new Promise((r) => window.setTimeout(r, 1000))
 
     const finalRect = container.getBoundingClientRect()
-    console.info('[exportPdf] container rect after visible:', {
+    console.info('[exportPdf] container final rect:', {
       top: finalRect.top,
       width: finalRect.width,
       height: finalRect.height,
+      scrollHeight: container.scrollHeight,
+      offsetHeight: container.offsetHeight,
     })
+
+    // Defensive: kalau height masih 0, force height via inline style supaya html2canvas
+    // dapat dimensions valid. Bisa terjadi kalau parent ancestor punya display:flex collapse.
+    if (finalRect.height < 100 || container.scrollHeight < 100) {
+      console.warn('[exportPdf] container height suspicious (<100px), forcing height')
+      container.style.height = 'auto'
+      container.style.minHeight = `${Math.max(container.scrollHeight, 1000)}px`
+      // Last resort: explicitly set computed height from content children
+      const childrenHeight = Array.from(container.children).reduce(
+        (sum, child) => sum + (child as HTMLElement).offsetHeight,
+        0,
+      )
+      if (childrenHeight > 0) {
+        container.style.height = `${childrenHeight + 80}px`
+        console.info('[exportPdf] forced height to', childrenHeight + 80, 'px')
+      }
+      await new Promise((r) => window.setTimeout(r, 300))
+    }
 
     // Generate PDF as Blob — jangan langsung .save() yang internal trigger download
     // tapi sering gagal di PWA standalone karena user gesture lost

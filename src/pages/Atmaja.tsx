@@ -2634,22 +2634,21 @@ function AtmajaDocCard({ doc }: { doc: AtmajaDoc }) {
 
   return (
     <>
-      {/* Hidden div untuk render markdown content — capture innerHTML saat user klik PDF.
-          FIX (Bug B): position fixed di top:0 dengan opacity 0 + zIndex -10. Sebelumnya
-          top:100vh bikin html2canvas capture kosong karena viewport virtual tidak include
-          y=100vh. Pakai fixed top:0 supaya MarkdownBlock ter-render dengan layout valid,
-          opacity 0 supaya invisible to user, zIndex negative supaya tidak block UI. */}
+      {/* Hidden div untuk capture innerHTML — position absolute supaya tetap di document flow
+          dengan layout valid, opacity 0.01 supaya rendered tapi invisible to user. JANGAN
+          pakai visibility:hidden (bikin canvas render kosong) atau top:100vh (off-screen,
+          html2canvas viewport tidak include). */}
       <div
         ref={hiddenContentRef}
         aria-hidden="true"
         style={{
-          position: 'fixed',
+          position: 'absolute',
           left: 0,
           top: 0,
           width: '794px',
-          opacity: 0,
+          opacity: 0.01,
           pointerEvents: 'none',
-          zIndex: -10,
+          zIndex: -1,
           overflow: 'visible',
         }}
       >
