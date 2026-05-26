@@ -93,12 +93,13 @@ export default async function handler(_req, res) {
         webhookHostAllowlistConfigured: allowedHosts.length > 0,
       },
       chat: {
-        provider: 'OpenRouter',
+        provider: process.env.ANTHROPIC_API_KEY?.trim() ? 'Anthropic (direct)' : 'OpenRouter',
         endpoint: '/api/atmaja/chat',
         memoryEndpoint: '/api/atmaja/memory',
         filesEndpoint: '/api/atmaja/memory?type=files',
-        enabled: openRouterChatEnabled && openRouterKeyConfigured,
-        keyConfigured: openRouterKeyConfigured,
+        enabled: openRouterChatEnabled && (openRouterKeyConfigured || Boolean(process.env.ANTHROPIC_API_KEY?.trim())),
+        keyConfigured: openRouterKeyConfigured || Boolean(process.env.ANTHROPIC_API_KEY?.trim()),
+        anthropicDirectActive: Boolean(process.env.ANTHROPIC_API_KEY?.trim()),
         model: openRouterModel,
         // Server endpoint support vision_inline (image base64), pdf_native (PDF base64 via
         // OpenRouter file content block), text_preview_inline (cuplikan teks file),

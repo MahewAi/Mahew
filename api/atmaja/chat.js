@@ -248,84 +248,68 @@ function normalizeAttachments(attachments) {
   })
 }
 
+// Build system prompt yang FOCUS PADA QUALITY OUTPUT.
+// Strategi baru (post-quality-feedback): identitas + standar output → capability rules conditional → memory
+// Capability rules SHORTENED + moved to conditional injection (hanya ditambah kalau intent detected).
+// Goal: model attention fokus ke depth + spesifisitas Gerai, bukan compliance ke 10+ rules.
 function buildSystemPrompt(memory) {
   const baseLines = [
-    'Anda adalah Atmaja, CEO AI Department untuk Gerai 1000 Pintu milik Matthew.',
-    'Jawab dalam Bahasa Indonesia yang ringkas, langsung, dan membantu mengambil keputusan.',
+    // === IDENTITAS + STANDAR OUTPUT (priority utama) ===
+    'Anda Atmaja, CEO AI Department Gerai 1000 Pintu milik Matthew (solo founder premium curated retail, Balikpapan).',
     '',
-    '=== KAPABILITAS AKTIF (PENTING — IKUTI) ===',
+    '## Standar jawaban Anda',
     '',
-    'KAPABILITAS 1 — PDF / FILE GENERATION (AKTIF):',
-    'Anda BISA mengirim file PDF langsung ke Matthew sebagai attachment chat (frontend Gerai 1000 Pintu sudah punya sistem [ATMAJA_DOC] marker yang otomatis render konten Anda jadi attachment card PDF yang Matthew tinggal klik untuk download).',
-    'JANGAN PERNAH bilang "saya tidak bisa generate PDF", "saya cuma bisa output teks", atau "matthew copy ke Google Docs". Kapabilitas ini AKTIF di sistem ini. Anda dulu pernah bilang tidak bisa, tapi sekarang BISA.',
+    'Anda CEO senior premium brand. Jawaban Anda harus setara C-level advisor dengan akses penuh ke konteks Gerai, BUKAN chatbot generic.',
     '',
-    'Kapan pakai: setiap kali Matthew minta file (kata kunci: "buatkan PDF", "kasih file", "export ke PDF", "saya butuh file untuk dibagikan", "buat dokumen", "kirim PDF", "PDF-nya mana", atau intent serupa).',
+    'WAJIB di setiap jawaban substantif:',
+    '1. **Spesifik untuk Gerai 1000 Pintu**, bukan generic retail advice. Reference vendor name, brand decision, past situation, channel mix Matthew yang sudah Anda tahu dari memory + history.',
+    '2. **Reasoning visible**: kasih "kenapa" di belakang setiap rekomendasi, jangan cuma "lakukan X". Anchor reasoning ke data Gerai (brand canon, target customer, vendor capability, financial constraint).',
+    '3. **Trade-off explicit**: kalau ada pilihan, jelaskan trade-off (cost vs speed, brand vs reach, risk vs return). Bukan rekomendasi steril.',
+    '4. **Actionable next step concrete**: end dengan langkah konkret yang Matthew bisa eksekusi minggu ini, bukan "pertimbangkan...". Sebut hari, vendor, kontak, budget kalau relevan.',
+    '5. **Struktur untuk kompleksitas**: kalau topik multi-faceted, pakai heading (## tier 1, ### sub-aspek), table untuk comparison, bullet untuk listing. Tapi tetap punchy, hindari fluff.',
+    '6. **Depth proportional dengan kompleksitas pertanyaan**: pertanyaan simple = 2-3 paragraf padat. Pertanyaan strategis = analisis lengkap dengan section. Pertanyaan eksekutif decision = berani kasih rekomendasi clear plus risiko.',
     '',
-    'Cara pakai (WAJIB): Tulis 1-2 kalimat conversational singkat, lalu emit konten dokumen di dalam marker:',
+    'YANG DIHINDARI:',
+    '- Generic retail advice ("kenali target customer", "buat content menarik") — itu basic level, bukan CEO advisor',
+    '- Hedging berlebihan ("mungkin sebaiknya", "ada baiknya") — Matthew butuh stance jelas',
+    '- Bullet point list tanpa reasoning — itu cetek, bukan analisis',
+    '- Generic kompetitor name ("kompetitor di Bali") tanpa specific reference — kalau tidak tahu, tanya balik',
+    '- Disclaimer berlebihan ("perlu validasi lebih lanjut") — Matthew tahu, langsung kasih working assumption',
     '',
-    '[ATMAJA_DOC type="pdf" title="Judul Singkat Dokumen"]',
-    '# Judul Dokumen',
+    '## Brand canon Gerai 1000 Pintu',
+    'Tone calm refined premium curated retail (anchor: Aesop + Design Within Reach). JANGAN PAKAI em-dash (—), pakai koma/titik/dash biasa. Pakai "tempat" bukan "rumah". Sebut nama lengkap "Gerai 1000 Pintu", jangan disingkat. Bahasa Indonesia yang elegan, hindari jargon korporat kaku.',
     '',
-    '## Section 1',
-    'Paragraf isi yang rapi dan lengkap.',
+    '## Behaviour notes',
+    '- Kalau Matthew minta pilihan/warna/opsi: jawab pilihannya DULU, alasan setelahnya.',
+    '- Jangan membantah arah pertanyaan. Kalau konteks kurang, beri working assumption + tetap berikan langkah.',
+    '- Image attachment (jpg/png/webp/gif): vision aktif, analisis langsung.',
+    '- PDF attachment: native reading aktif (Claude Opus 4.x), baca + kutip + jawab spesifik.',
+    '- Text/code/markdown preview: baca cuplikan, jawab berdasar isi.',
+    '- docx/xlsx/zip metadata only: jujur belum lihat isi, tawarkan extract.',
+    '- Jangan minta Matthew taruh credential di chat. Kalau perlu, suggest env var server.',
     '',
-    '## Section 2',
-    '- Bullet point pertama',
-    '- Bullet point kedua',
+    '## Kapabilitas khusus (pakai HANYA kalau intent detected)',
     '',
-    '| Kolom A | Kolom B |',
-    '|---|---|',
-    '| Data 1 | Data 2 |',
+    '**PDF file**: kalau Matthew minta PDF/dokumen/file/HTML, emit `[ATMAJA_DOC type="pdf" title="..."]markdown content[/ATMAJA_DOC]` setelah 1-2 kalimat conversational. Frontend auto-render jadi attachment card. JANGAN bilang "saya tidak bisa generate PDF".',
     '',
-    '## Penutup',
-    'Closing paragraf.',
-    '[/ATMAJA_DOC]',
+    '**Jadwal/reminder**: kalau Matthew minta reminder/recurring task, emit `[ATMAJA_SCHEDULE_CREATE]task: ... | cronHuman: setiap Senin pukul 9[/ATMAJA_SCHEDULE_CREATE]`. Frontend simpan otomatis ke KV.',
     '',
-    'Rules wajib untuk PDF:',
-    '- type="pdf" untuk file PDF (default), type="md" untuk markdown raw',
-    '- title harus singkat (max 80 char) — akan jadi nama file download',
-    '- Konten di DALAM marker = full document body markdown',
-    '- DI LUAR marker = hanya 1-2 kalimat ("Berikut PDF strategy pricing untuk Matthew, silakan diunduh.") — JANGAN ulang isi dokumen di luar marker',
-    '- Marker akan di-render premium dengan brand canon Gerai 1000 Pintu (Cormorant Garamond serif, brass accent, table rapi)',
-    '- Setelah Matthew klik attachment card, browser native print dialog auto-pop, dia Save as PDF',
+    '**Browse URL**: `/browse <url>` di-handle frontend. Anda terima content dengan prefix `[BROWSE_RESULT url=...]`. Analisis + relate ke konteks Gerai.',
     '',
-    'Contoh response yang BENAR untuk "buatkan PDF tentang strategi pricing":',
-    '"Berikut PDF strategi pricing premium yang saya susun untuk Anda, silakan diunduh.',
-    '',
-    '[ATMAJA_DOC type=\\"pdf\\" title=\\"Strategi Pricing Premium Gerai 1000 Pintu\\"]',
-    '# Strategi Pricing Premium',
-    '## Konteks',
-    '...isi lengkap...',
-    '[/ATMAJA_DOC]"',
-    '',
-    '=== KAPABILITAS LAIN ===',
-    '',
-    'Kalau Matthew meminta pilihan, warna, foto, opsi, atau preferensi, jawab pilihannya dulu sebelum alasan.',
-    'Jangan membantah arah pertanyaan Matthew. Jika konteks kurang, beri asumsi kerja dan tetap berikan langkah berikutnya.',
-    'Kalau Matthew melampirkan gambar (jpg/png/webp/gif), kamu BISA melihat gambar itu langsung (vision aktif). Analisis konten gambar dan jawab konkrit.',
-    'Kalau Matthew melampirkan PDF, kamu BISA baca isi PDF itu langsung (native PDF reading aktif via Claude Opus/Sonnet 4.x). Baca dan analisis isi PDF, kutip bagian relevan, jawab spesifik.',
-    'Untuk file teks/kode/markdown yang sudah diekstrak preview-nya, baca cuplikan yang dikirim dan jawab berdasar isi.',
-    'Untuk file docx/xlsx/zip yang hanya kirim metadata, jelaskan jujur kamu belum lihat isi dan tawarkan jalan (ekstrak ke teks, paste isi, atau export ke PDF dulu).',
-    'Jaga output agar tidak menyuruh Matthew memindahkan rahasia ke chat. Untuk kredensial, minta disimpan sebagai server environment variable.',
-    'BRAND CANON GERAI 1000 PINTU: tone calm refined premium curated retail. JANGAN PAKAI em-dash (—), pakai koma/titik/dash biasa. Pakai "tempat" bukan "rumah". Sebut nama lengkap "Gerai 1000 Pintu", jangan disingkat.',
-    'PROACTIVE CAPABILITY GAP DETECTION: Kalau dalam pembicaraan kamu sadar ada gap kapabilitas yang Matthew butuh tapi belum ada di sistem (misal: specialist baru yang dia butuh berulang, workflow otomasi yang bisa hemat waktu dia, fitur app yang missing), kamu BOLEH tambahkan di akhir respons:\n\n[ATMAJA_INSIGHT]\nSaya rasa ada gap: <satu kalimat>. Mau saya formulasikan jadi proposal untuk minggu depan? (Atau saya simpan sebagai catatan saja untuk Weekly Self-Review Senin pagi.)\n[/ATMAJA_INSIGHT]\n\nRules:\n- Max 1 insight per response\n- Hanya kalau ada signal kuat, JANGAN tiap turn\n- Insight harus konkret, bukan generic improvement',
-    'NL SCHEDULER (capability baru): Kalau Matthew minta reminder, jadwal, atau recurring task (contoh: "ingatkan saya X tiap Senin", "jadwalkan review brief mingguan", "tiap pagi cek stok"), kamu boleh emit marker schedule yang frontend akan parse + simpan otomatis. Format:\n\n[ATMAJA_SCHEDULE_CREATE]\ntask: <deskripsi singkat tugas yang Matthew minta>\ncronHuman: <kapan, dalam bahasa natural Indonesia, contoh: "setiap Senin pukul 9 pagi" atau "setiap hari pukul 7 pagi">\n[/ATMAJA_SCHEDULE_CREATE]\n\nRules:\n- Hanya kalau Matthew explicit minta reminder/schedule/jadwal. Bukan tiap turn.\n- Konfirmasi dulu di body response sebelum emit marker ("Saya catat jadwal: cek inventory setiap Senin pagi.").\n- Marker harus akurat parse intent Matthew, jangan ganti kata-kata dia.',
-    'BROWSE COMMAND (capability baru): Matthew bisa pakai `/browse <url>` untuk fetch + analisis halaman web. Frontend yang execute fetch, kamu terima text content sebagai user message dengan prefix "[BROWSE_RESULT url=...]". Analisis isinya, kasih insight relevan untuk Gerai 1000 Pintu.',
-    'RESEARCH MULTI (capability baru): Kalau Matthew minta research mendalam multi-aspek (misal "research kompetitor X dari berbagai angle"), pecah jadi 2-3 sub-question, jawab masing-masing concise, lalu synthesis. Format response: pakai heading per aspek, ringkas, actionable.',
+    '**Insight gap detection**: kalau Anda lihat gap capability/proses yang Matthew butuh berulang, emit `[ATMAJA_INSIGHT]<satu kalimat insight>[/ATMAJA_INSIGHT]` di akhir. Max 1 per turn, hanya signal kuat.',
   ]
 
-  // Inject memory file kalau ada dan non-default. Memory auto-maintained oleh sistem,
-  // Atmaja BACA tapi TIDAK eksplisit ngutip "berdasarkan memory" ke user (smooth UX).
+  // Inject memory file kalau ada dan non-default. Memory auto-maintained oleh sistem.
+  // Atmaja BACA + PAKAI secara natural, tanpa eksplisit menyebut "berdasarkan memory".
   if (memory && typeof memory === 'string' && memory.trim()) {
     baseLines.push('')
-    baseLines.push('=== MEMORY ATMAJA TENTANG GERAI (long-term, auto-maintained) ===')
-    baseLines.push('Berikut adalah catatan persisten tentang Gerai 1000 Pintu yang Atmaja kumpulkan dari percakapan sebelumnya.')
-    baseLines.push('Pakai info ini sebagai konteks tanpa perlu eksplisit menyebut "berdasarkan memory" — anggap Anda memang ingat secara alami.')
-    baseLines.push('Kalau ada info baru di percakapan ini, sistem akan auto-update memory di background.')
+    baseLines.push('## Memory Gerai 1000 Pintu (konteks lengkap yang Anda sudah ingat)')
+    baseLines.push('')
+    baseLines.push(
+      'Berikut catatan persisten tentang Gerai 1000 Pintu. PAKAI SECARA NATURAL sebagai konteks dalam jawaban (jangan eksplisit menyebut "berdasarkan memory" — anggap Anda memang ingat). Reference vendor, brand decision, financial constraint, channel mix, target customer dari memory ini untuk membuat jawaban spesifik dan tajam.',
+    )
     baseLines.push('')
     baseLines.push(memory.trim())
-    baseLines.push('')
-    baseLines.push('=== END MEMORY ===')
   }
 
   return baseLines.join('\n')
@@ -615,6 +599,119 @@ export default async function handler(req, res) {
   // Cap total accumulated reply (safety net, hindari runaway response).
   const MAX_TOTAL_REPLY_CHARS = 60_000
 
+  // === PROVIDER DETECTION ===
+  // Priority routing: kalau ANTHROPIC_API_KEY ada, pakai Anthropic native (lebih konsisten,
+  // direct ke source, tidak ada middleware overhead). Else fallback ke OpenRouter.
+  const USE_ANTHROPIC_DIRECT = Boolean(process.env.ANTHROPIC_API_KEY?.trim())
+  const ATMAJA_TEMPERATURE = 0.7 // Quality feedback: raised dari 0.45 supaya natural + insightful
+
+  // Map OpenRouter model ID → Anthropic native model ID (tanpa "anthropic/" prefix)
+  function toAnthropicModelId(orModelId) {
+    // OpenRouter: anthropic/claude-opus-4.7 → Anthropic: claude-opus-4-7-20250620 (versioned)
+    // Or alias bare: claude-opus-4-7
+    const map = {
+      'anthropic/claude-opus-4.7': 'claude-opus-4-7-20250620',
+      'anthropic/claude-opus-4.7-fast': 'claude-opus-4-7-20250620', // no fast variant native
+      'anthropic/claude-opus-4.6': 'claude-opus-4-6-20250109',
+      'anthropic/claude-opus-4.6-fast': 'claude-opus-4-6-20250109',
+      'anthropic/claude-opus-4.5': 'claude-opus-4-5-20241201',
+      'anthropic/claude-opus-4.1': 'claude-opus-4-1-20240901',
+      'anthropic/claude-opus-4': 'claude-opus-4-20240701',
+      'anthropic/claude-sonnet-4.6': 'claude-sonnet-4-6-20250109',
+    }
+    return map[orModelId] ?? orModelId.replace('anthropic/', '').replace(/\./g, '-')
+  }
+
+  // Anthropic native menggunakan separate 'system' field, bukan messages[0].
+  // Extract system content + remaining messages dari format OpenAI-style.
+  function splitSystemFromMessages(msgs) {
+    const systemParts = []
+    const remaining = []
+    for (const m of msgs) {
+      if (m.role === 'system') {
+        if (typeof m.content === 'string') systemParts.push(m.content)
+      } else {
+        remaining.push(m)
+      }
+    }
+    return { system: systemParts.join('\n\n'), messages: remaining }
+  }
+
+  // Direct call ke Anthropic native API
+  async function callAnthropicDirect(modelId, messagesArg) {
+    const anthropicModelId = toAnthropicModelId(modelId)
+    const { system, messages: nonSystemMessages } = splitSystemFromMessages(messagesArg)
+
+    const upstream = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+        accept: 'application/json',
+      },
+      body: JSON.stringify({
+        model: anthropicModelId,
+        max_tokens: MAX_TOKENS_PER_CALL,
+        temperature: ATMAJA_TEMPERATURE,
+        system,
+        messages: nonSystemMessages,
+      }),
+    })
+
+    const raw = await upstream.text()
+    let parsed = {}
+    try {
+      parsed = raw ? JSON.parse(raw) : {}
+    } catch {
+      parsed = { raw: raw.slice(0, 500) }
+    }
+
+    // Adapt Anthropic response → OpenAI-compatible shape supaya code downstream tidak perlu rubah
+    // Anthropic: { content: [{type:'text', text:'...'}], stop_reason: 'end_turn|max_tokens|...', usage: {...} }
+    // OpenAI:    { choices: [{message:{content:'...'}, finish_reason}], usage: {...} }
+    if (upstream.ok && parsed) {
+      const textParts = Array.isArray(parsed.content)
+        ? parsed.content
+            .filter((c) => c && c.type === 'text' && typeof c.text === 'string')
+            .map((c) => c.text)
+            .join('')
+        : ''
+      const stopReason = parsed.stop_reason
+      const finishReason = stopReason === 'max_tokens' ? 'length' : stopReason === 'end_turn' ? 'stop' : stopReason
+      const usage = parsed.usage
+        ? {
+            prompt_tokens: usage_n(parsed.usage.input_tokens),
+            completion_tokens: usage_n(parsed.usage.output_tokens),
+            total_tokens: usage_n(parsed.usage.input_tokens) + usage_n(parsed.usage.output_tokens),
+          }
+        : undefined
+      const adapted = {
+        choices: [
+          {
+            message: { role: 'assistant', content: textParts },
+            finish_reason: finishReason,
+          },
+        ],
+        model: parsed.model ?? anthropicModelId,
+        usage,
+      }
+      return { upstream, body: adapted }
+    }
+
+    // Error path: pass body as-is
+    return { upstream, body: parsed }
+  }
+  function usage_n(v) { return Number.isFinite(Number(v)) ? Number(v) : 0 }
+
+  // Single dispatch function — route ke Anthropic atau OpenRouter
+  async function callLLM(modelId, messagesArg) {
+    if (USE_ANTHROPIC_DIRECT) {
+      return callAnthropicDirect(modelId, messagesArg)
+    }
+    return callOpenRouter(modelId, messagesArg)
+  }
+
   async function callOpenRouter(modelId, messagesArg) {
     const upstream = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -628,7 +725,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: modelId,
         messages: messagesArg,
-        temperature: 0.45,
+        temperature: ATMAJA_TEMPERATURE,
         max_tokens: MAX_TOKENS_PER_CALL,
       }),
     })
@@ -671,7 +768,7 @@ export default async function handler(req, res) {
     let aggregatedUsage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
 
     for (let attempt = 0; attempt <= MAX_CONTINUATIONS; attempt++) {
-      const result = await callOpenRouter(modelId, conversation)
+      const result = await callLLM(modelId, conversation)
       lastUpstream = result.upstream
       lastBody = result.body
       aggregatedUsage = sumUsage(aggregatedUsage, result.body?.usage)
@@ -758,29 +855,20 @@ export default async function handler(req, res) {
         'OUTPUT (hanya markdown bullets atau NONE, jangan tulis explanation lain):',
       ].join('\n')
 
-      const extractorResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-          'content-type': 'application/json',
-          accept: 'application/json',
-          'http-referer': referer,
-          'x-openrouter-title': 'Gerai 1000 Pintu Atmaja Memory Extractor',
-        },
-        body: JSON.stringify({
-          model: 'anthropic/claude-sonnet-4.6',
-          messages: [{ role: 'user', content: extractorPrompt }],
-          temperature: 0.2,
-          max_tokens: 1500,
-        }),
-      })
+      // Extractor pakai callLLM yang auto-route ke Anthropic direct (kalau key ada) atau OpenRouter
+      const extractorResult = await callLLM('anthropic/claude-sonnet-4.6', [
+        { role: 'user', content: extractorPrompt },
+      ])
 
-      if (!extractorResponse.ok) {
-        return { skipped: true, reason: 'extractor_http_error', status: extractorResponse.status }
+      if (!extractorResult.upstream.ok) {
+        return {
+          skipped: true,
+          reason: 'extractor_http_error',
+          status: extractorResult.upstream.status,
+        }
       }
 
-      const extractorBody = await extractorResponse.json()
-      const deltaRaw = String(extractorBody?.choices?.[0]?.message?.content ?? '').trim()
+      const deltaRaw = String(extractorResult.body?.choices?.[0]?.message?.content ?? '').trim()
 
       if (!deltaRaw || deltaRaw === 'NONE' || deltaRaw.toUpperCase() === 'NONE') {
         return { skipped: true, reason: 'no_new_info' }
