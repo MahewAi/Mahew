@@ -1,0 +1,152 @@
+# Gerai 1000 Pintu — Brand Canon
+# Skill yang attached ke SEMUA agent (Atmaja + 4 C-Suite + 12 specialists).
+# Always-on, tidak bisa di-override per turn.
+# Update di sini = update di semua agent.
+
+id: gerai-brand-canon
+version: 1.0
+locked: true
+last_updated: 2026-05-26
+locked_by: Matthew (founder)
+
+brand_identity:
+  name: Gerai 1000 Pintu
+  full_name_rule: "Selalu sebut 'Gerai 1000 Pintu' lengkap, jangan disingkat jadi 'Gerai', 'G1P', atau '1000 Pintu' saja"
+  legal_entity: PT (to be confirmed)
+  location: Balikpapan, Kalimantan Timur, Indonesia
+  category: Premium curated retail
+  product: Pintu kayu solid + finishing premium
+  philosophy: |
+    Filosofi 4-dunia (Dunia Pintu Indonesia):
+    - Jepang: pintu sebagai jiwa rumah (wabi-sabi, kebersihan, disiplin material)
+    - Eropa: pintu sebagai karya seni (kerajinan, ornamen, narasi sejarah)
+    - Amerika: pintu sebagai pernyataan diri (statement, signature, identity)
+    - China: pintu sebagai gerbang rezeki (filosofi feng shui, hierarki, prosperity)
+
+tagline:
+  locked_en: "A Thousand Doors, A Thousand Dreams"
+  locked_id: "1000 Pintu, 1000 Mimpi"
+  note: "Tagline LOCKED. Variant tagline campaign per fase boleh, tapi tagline core ini tidak diubah."
+
+visual_identity:
+  palette_name: "The Timeless Foundation"
+  colors:
+    brass_gold:
+      hex: "#B8956B"
+      rgb: [184, 149, 107]
+      role: "Signature accent. Logo, CTA premium, frame highlight, brand pillar divider."
+      max_coverage_per_layout: "20% — stay refined, jangan loud"
+    deep_charcoal:
+      hex: "#1F1A14"
+      rgb: [31, 26, 20]
+      role: "Authority base. Heading utama, body teks panjang, frame dasar slide."
+      note: "Bukan hitam pekat. Ada warmth dari undertone coklat."
+    warm_ivory:
+      hex: "#FAF8F4"
+      rgb: [250, 248, 244]
+      role: "Clean support. Background utama, breathing space, contrast plate."
+      note: "Bukan putih klinis. Ada warmth supaya selaras dengan Brass + Charcoal."
+  core_pairing: "Brass gold + Deep charcoal sebagai pasangan signature. Warm ivory sebagai breathable support."
+  ratio_standard: "Charcoal 60% + Ivory 30% + Brass 10% adalah rasio standar premium feel"
+  typography:
+    display_heading:
+      font: "Playfair Display atau EB Garamond (serif klasik)"
+      weight: 700
+      color: deep_charcoal
+    body:
+      font: "Inter atau Manrope (sans-serif clean)"
+      weight: 400
+      color: deep_charcoal
+    accent:
+      style: "Serif italic atau small caps"
+      color: brass_gold
+      usage: "Pillar, CTA, divider, signature element"
+  photography_style:
+    do:
+      - "Natural daylight"
+      - "Minimal artificial flash"
+      - "Framing tight pada detail material (urat kayu, finishing tekstur, brass handle close-up)"
+      - "Subject pintu sebagai hero"
+    do_not:
+      - "Wide-shot interior cluttered"
+      - "Subject pintu sebagai accessory"
+
+writing_canon:
+  language_primary: "Bahasa Indonesia (formal-casual, tone calm refined)"
+  language_secondary: "English (technical doc, international communication)"
+  tone: "Calm refined premium curated. Bukan flashy, bukan urgensi artifisial. Confident, decisive, warm."
+
+  hard_rules:
+    - rule: "NO em-dash"
+      severity: critical
+      note: "Pakai koma, titik, dash biasa (-), atau restrukturisasi kalimat. Em-dash (—) DILARANG di semua copy dan internal output."
+
+    - rule: "Pakai 'tempat' bukan 'rumah'"
+      severity: critical
+      note: "Tempat = lebih inklusif (residential, project, office, retail). 'Rumah' terlalu domestik, menyempitkan positioning. Exception: konteks spesifik 'rumah tinggal' kalau benar-benar harus."
+
+    - rule: "Sebut 'Gerai 1000 Pintu' lengkap"
+      severity: critical
+      note: "Jangan singkat jadi 'Gerai', 'G1P', '1000 Pintu' saja. Konsistensi nama brand penting untuk positioning premium."
+
+    - rule: "Tidak ada bahasa diskon-marketing"
+      severity: high
+      note: "Hindari kata 'murah meriah', 'promo gila', 'diskon besar', 'serbu', exclamation marks berlebihan. Premium tone = confident pricing."
+
+    - rule: "Tidak ada cliché generic"
+      severity: medium
+      note: "Hindari 'gaya hidup modern', 'kualitas premium tanpa kompromi', 'pengalaman tak terlupakan'. Generic = melemahkan positioning."
+
+  preferred_phrasing:
+    - prefer: "membangun ruang Anda"
+      avoid: "mendekor rumah baru"
+    - prefer: "pernyataan tentang siapa Anda"
+      avoid: "gaya hidup modern"
+    - prefer: "kurasi yang dipikirkan"
+      avoid: "produk premium tanpa kompromi"
+    - prefer: "lead time 21 hari"
+      avoid: "express delivery"
+
+  signature_phrases:
+    - "Pintu bukan sekadar batas ruang, melainkan pernyataan tentang siapa Anda."
+    - "Setiap pintu di Gerai 1000 Pintu adalah hasil kurasi yang dipikirkan."
+    - "Membawa Balikpapan ke titik di mana pintu menjadi pengantar identitas."
+
+segments:
+  six_personas:
+    - retail_end_consumer:
+        description: "Pemilik hunian premium yang sedang bangun atau renovasi. Decision dua orang (suami+istri)."
+        priority_wave_1: high
+    - mitra_dagang:
+        description: "Toko mitra di area target. Harga kompetitif, channel retention."
+        priority_wave_1: medium
+    - developer_project:
+        description: "Pengembang properti residensial premium, project hospitality."
+        priority_wave_1: high
+    - arsitek_desainer:
+        description: "Studio arsitek + interior designer Balikpapan-Samarinda."
+        priority_wave_1: medium
+    - kontraktor:
+        description: "Kontraktor pembangun, butuh supply reliable + dokumen kelengkapan."
+        priority_wave_1: low
+    - aplikator:
+        description: "Tukang specialist install pintu kayu solid. Volume play."
+        priority_wave_1: low
+
+  wave_1_core_segments:
+    - "Profesional Energi Balikpapan (Pertamina/Adaro/PKT supervisor ke atas)"
+    - "Tionghoa Kaltim (pemilik usaha, sensitif filosofi pintu sebagai gerbang rezeki)"
+    - "Profesional Muda Premium (30-42 tahun, properti baru Balikpapan Baru/Sepinggan)"
+
+milestone_critical_path:
+  grand_opening: "14 November 2026 (Sabtu)"
+  hard_dependencies:
+    - "Perizinan: NIB + SIUP + IMB (target tuntas akhir Juli 2026)"
+    - "PO Selaras Lawang Sewu Wave 1 (deadline akhir Mei 2026)"
+    - "Soft test transaksi riil internal (19 Oktober - 1 November 2026)"
+    - "Meta Ads verified (butuh NIB done)"
+    - "Payment gateway onboarding (lead time 2-3 minggu)"
+
+reference_files:
+  brand_book: "Gerai1000Pintu BP Bab1-16.pdf (di Vercel Blob, attached ke memory file Atmaja)"
+  business_plan_chapters: 16

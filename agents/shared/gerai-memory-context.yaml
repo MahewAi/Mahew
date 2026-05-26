@@ -1,0 +1,134 @@
+# Gerai 1000 Pintu — Memory Context Mapping
+# Define section memory file (di Vercel KV: atmaja:memory:matthew) yang relevant per role.
+# Saat agent load memory, only fetch + inject relevant sections supaya context tetap focused.
+
+id: gerai-memory-context
+version: 1.0
+last_updated: 2026-05-26
+source: vercel-kv (atmaja:memory:matthew)
+format: markdown (8 sections, ~15K chars total)
+
+sections_master:
+  strategi_keputusan:
+    header: "## Strategi & Keputusan"
+    description: "Keputusan strategis, prioritas mingguan, framework decision yang Matthew + Atmaja sudah lock"
+    typical_content:
+      - "1 keputusan tertinggi leverage untuk minggu ini"
+      - "Trade-off yang sudah disepakati"
+      - "Risk register top 3"
+      - "Cost of delay angka aktual"
+
+  brand_canon:
+    header: "## Brand Canon"
+    description: "Identitas visual, copy rules, filosofi, do/don't list, palette hex codes"
+    typical_content:
+      - "Tagline locked"
+      - "Visual identity (palette, typography, photography)"
+      - "Writing canon (no em-dash, 'tempat' bukan 'rumah', dst)"
+      - "Filosofi 4-dunia"
+
+  operations_vendor:
+    header: "## Operations & Vendor"
+    description: "Vendor list, PO status, lead time, payment terms, SOP, supply chain"
+    typical_content:
+      - "Vendor utama: PT Selaras Lawang Sewu (lead time 21 hari, NET 30)"
+      - "PO deadline + status batch"
+      - "Logistik Jawa-Kaltim buffer (+5-10 hari risk)"
+      - "Lokasi finalisasi, sewa, build out"
+
+  tim_people:
+    header: "## Tim & People"
+    description: "Hiring pipeline, JD, Chief of Staff, freelance, role gap"
+    typical_content:
+      - "Hiring open: posisi + JD + deadline"
+      - "Freelance retainer aktif"
+      - "Role gap yang Matthew handle sendiri sementara"
+      - "Onboarding plan post-launch"
+
+  briefs_aktif:
+    header: "## Briefs Aktif"
+    description: "Brief yang sedang/baru selesai diproses lewat n8n W1 workflow. Auto-append dari handleResult callback."
+    typical_content:
+      - "- [Brief 2026-05-26] Title : summary 400 char"
+    note: "Section ini auto-update setiap brief completed. Atmaja baca untuk continuity."
+
+  todo_pending:
+    header: "## TODO / Pending"
+    description: "Task list yang menunggu Matthew decision atau action"
+    typical_content:
+      - "PO Selaras Wave 1 release (deadline akhir Mei 2026)"
+      - "Konsultan perizinan shortlist (deadline Jumat 29 Mei)"
+      - "Vendor sistem matrix decision (deadline pertengahan Juni)"
+
+  misc_personal:
+    header: "## Misc / Konteks Personal"
+    description: "Konteks personal Matthew yang relevan untuk decision: kondisi finansial, family, location, energy level"
+    typical_content:
+      - "Solo founder, no co-founder"
+      - "Self-funded, runway scenario"
+      - "Base di Balikpapan, akses ke network Kaltim"
+
+  files_dokumen:
+    header: "## Files / Dokumen"
+    description: "PDF library yang sudah upload ke Vercel Blob, reference untuk Atmaja"
+    typical_content:
+      - "Gerai1000Pintu BP Bab1-16.pdf (business plan utama)"
+
+role_section_priority:
+  ceo_atmaja:
+    description: "Atmaja CEO read SEMUA section. Dia orchestrator + decisor."
+    sections: [all]
+
+  coo_wira:
+    description: "Operations focus. Vendor, supply chain, SOP, capacity."
+    sections:
+      - operations_vendor
+      - tim_people
+      - todo_pending
+      - briefs_aktif
+
+  cmo_citra:
+    description: "Marketing + positioning. Brand canon penting, audience, channel."
+    sections:
+      - brand_canon
+      - strategi_keputusan
+      - misc_personal
+      - briefs_aktif
+
+  cfo_aksa:
+    description: "Finance. Unit economics, runway, capital allocation."
+    sections:
+      - strategi_keputusan
+      - operations_vendor
+      - todo_pending
+      - misc_personal
+
+  cco_lestari:
+    description: "Creative. Brand canon full, narrative, visual identity."
+    sections:
+      - brand_canon
+      - strategi_keputusan
+      - files_dokumen
+
+  specialists:
+    description: "12 specialist roles. Default = read brand_canon only. Custom override per specialist."
+    default_sections:
+      - brand_canon
+    override:
+      curator:
+        sections: [brand_canon, operations_vendor]
+      web_researcher:
+        sections: [brand_canon, strategi_keputusan]
+      brand_strategist:
+        sections: [brand_canon, strategi_keputusan, files_dokumen]
+      financial_analyst:
+        sections: [strategi_keputusan, operations_vendor]
+      editorial:
+        sections: [brand_canon]
+      document_writer:
+        sections: [brand_canon, strategi_keputusan]
+
+memory_update_pattern:
+  trigger: "Setiap turn substantive (user msg > 30 char + reply > 200 char)"
+  extractor: "Sonnet 4.6 (cheaper) pull delta + append ke section yang sesuai"
+  cap: "15000 chars total (auto-prune oldest dalam section kalau melebihi)"
