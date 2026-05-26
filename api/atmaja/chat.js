@@ -1225,8 +1225,49 @@ export default async function handler(req, res) {
       })
     }
 
+    // === SERVER-SIDE SCHEDULE PARSER ===
+    // Universal: kalau Atmaja emit [ATMAJA_SCHEDULE_CREATE]task: ... | cronHuman: ...[/ATMAJA_SCHEDULE_CREATE]
+    // langsung tulis ke KV dari server, bukan tergantung frontend parser. Supaya n8n,
+    // Telegram bot, atau client lain juga dapet schedule creation tanpa re-implement parser.
+    const scheduleMarkers = []
+    const SCHED_RE = /\[ATMAJA_SCHEDULE_CREATE\]([\s\S]*?)\[\/ATMAJA_SCHEDULE_CREATE\]/g
+    let schedMatch
+    while ((schedMatch = SCHED_RE.exec(replyText)) !== null) {
+      const inner = schedMatch[1]
+      const taskMatch = inner.match(/task:\s*([^|]+?)(?:\s*\|\s*cronHuman:|$)/i)
+      const cronHumanMatch = inner.match(/cronHuman:\s*(.+?)\s*$/i)
+      const task = taskMatch?.[1]?.trim()
+      const cronHuman = cronHumanMatch?.[1]?.trim()
+      if (task && cronHuman && task.length >= 3) {
+        try {
+          const list = (await kv.get('atmaja:schedules:matthew')) ?? []
+          const items = Array.isArray(list) ? list : []
+          const activeCount = items.filter((s) => s.status === 'active').length
+          if (activeCount < 50) {
+            const id = `sch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+            const newSchedule = {
+              id,
+              task: task.slice(0, 300),
+              cron: null,
+              cronHuman: cronHuman.slice(0, 200),
+              status: 'active',
+              createdAt: new Date().toISOString(),
+              nextRunAt: null,
+              lastRunAt: null,
+              source: 'atmaja_chat_marker',
+            }
+            items.unshift(newSchedule)
+            await kv.set('atmaja:schedules:matthew', items)
+            scheduleMarkers.push({ id, task, cronHuman })
+          }
+        } catch (error) {
+          console.error('[atmaja-chat] schedule marker parse failed:', error?.message ?? error)
+        }
+      }
+    }
+
     await traceStep(trace, 'output_sent', 'done', {
-      detail: `${replyText.trim().length} char dikirim ke Matthew`,
+      detail: `${replyText.trim().length} char dikirim ke Matthew${scheduleMarkers.length ? `, ${scheduleMarkers.length} schedule dibuat` : ''}`,
     })
     await finalizeTrace(trace, {
       status: 'completed',
@@ -1256,6 +1297,7 @@ export default async function handler(req, res) {
         textsSent,
         metadataOnly: metadataOnlyCount,
       },
+      schedulesCreated: scheduleMarkers,
       memoryUpdate,
       sessionId,
     })
