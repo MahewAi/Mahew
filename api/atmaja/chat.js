@@ -761,6 +761,17 @@ export default async function handler(req, res) {
     // Adapt content blocks: OpenAI image_url → Anthropic image, file → document
     const anthropicMessages = adaptMessagesForAnthropic(nonSystemMessages)
 
+    // Anthropic native API: Opus 4.7+ deprecate `temperature` (returns 400). Sertakan
+    // hanya untuk model lama (4.5, 4.6, 4.1, 4). Untuk 4.7+ pakai default model.
+    const supportsTemperature = !/claude-opus-4-7|claude-opus-4-8|claude-opus-5/.test(anthropicModelId)
+    const body = {
+      model: anthropicModelId,
+      max_tokens: MAX_TOKENS_PER_CALL,
+      system,
+      messages: anthropicMessages,
+    }
+    if (supportsTemperature) body.temperature = ATMAJA_TEMPERATURE
+
     const upstream = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -769,13 +780,7 @@ export default async function handler(req, res) {
         'content-type': 'application/json',
         accept: 'application/json',
       },
-      body: JSON.stringify({
-        model: anthropicModelId,
-        max_tokens: MAX_TOKENS_PER_CALL,
-        temperature: ATMAJA_TEMPERATURE,
-        system,
-        messages: anthropicMessages,
-      }),
+      body: JSON.stringify(body),
     })
 
     const raw = await upstream.text()
