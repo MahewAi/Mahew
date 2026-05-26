@@ -296,6 +296,8 @@ function buildSystemPrompt(memory) {
     '',
     '**Browse URL**: `/browse <url>` di-handle frontend. Anda terima content dengan prefix `[BROWSE_RESULT url=...]`. Analisis + relate ke konteks Gerai.',
     '',
+    '**Structured scrape** (untuk competitor research / price monitor): emit `[ATMAJA_SCRAPE url="..." schema={...}]` dengan schema JSON. Server fetch URL, run Cheerio extract berdasar selector CSS, return JSON terstruktur ke Anda di response. Schema syntax: `{"title":"h1","price":".price","items":{"selector":".product-card","fields":{"name":".name","price":".price","link":"a@href"}}}` — pakai `selector@attr` untuk ambil HTML attribute. Use case: scrape Tokopedia/Shopee/Mitra10 price, kompetitor product range, news headline. JANGAN pakai untuk site yang butuh JS rendering (instagram, twitter, dll — pakai /browse text mode).',
+    '',
     '**Sandboxed code execution**: kalau Matthew minta hitungan kompleks (NPV, IRR, break-even, reverse calendar math, projection cashflow multi-skenario, parse CSV, statistical analysis), JANGAN cuma estimasi mental. Emit `[ATMAJA_EXEC lang="js"]code[/ATMAJA_EXEC]` (atau lang="python" untuk data-heavy). Server akan run di Vercel Sandbox isolated, return stdout. Selesai itu, baca result + lanjutkan reasoning dengan angka asli. Contoh: NPV calc 5 tahun dengan discount rate 12%, break-even unit per bulan dengan revenue ramp. Code harus self-contained (no external dep, no network), output via console.log atau print. JANGAN pakai untuk simple math yang bisa di-mental, JANGAN pakai untuk text/markdown generation.',
     '',
     '**Insight gap detection**: kalau Anda lihat gap capability/proses yang Matthew butuh berulang, emit `[ATMAJA_INSIGHT]<satu kalimat insight>[/ATMAJA_INSIGHT]` di akhir. Max 1 per turn, hanya signal kuat.',
@@ -1227,6 +1229,47 @@ export default async function handler(req, res) {
       })
     }
 
+    // === SERVER-SIDE SCRAPE MARKER ===
+    // [ATMAJA_SCRAPE url="..." schema={...}] → call /api/agent/browse dengan schema → return structured.
+    const scrapeResults = []
+    const SCRAPE_RE = /\[ATMAJA_SCRAPE\s+url=["']([^"']+)["']\s+schema=(\{[\s\S]*?\})\s*\]/g
+    let scrapeMatch
+    let scrapeCount = 0
+    while ((scrapeMatch = SCRAPE_RE.exec(replyText)) !== null && scrapeCount < 2) {
+      scrapeCount += 1
+      const scrapeUrl = scrapeMatch[1]
+      const schemaStr = scrapeMatch[2]
+      let schema = null
+      try {
+        schema = JSON.parse(schemaStr)
+      } catch (parseErr) {
+        scrapeResults.push({ ok: false, url: scrapeUrl, error: 'schema_invalid_json' })
+        continue
+      }
+      try {
+        const browseHost = process.env.PUBLIC_APP_URL ?? `https://${getHeader(req, 'host') ?? 'gerai.mahewwork.com'}`
+        const browseResp = await fetch(`${browseHost}/api/agent/browse`, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'origin': browseHost,
+          },
+          body: JSON.stringify({ url: scrapeUrl, schema }),
+        })
+        const browseBody = await browseResp.json().catch(() => ({}))
+        scrapeResults.push({
+          ok: browseResp.ok && browseBody.ok,
+          url: scrapeUrl,
+          title: browseBody.title ?? null,
+          structured: browseBody.structured ?? null,
+          error: browseResp.ok && browseBody.ok ? null : (browseBody.error ?? `HTTP ${browseResp.status}`),
+        })
+      } catch (error) {
+        console.error('[atmaja-chat] scrape marker call failed:', error?.message ?? error)
+        scrapeResults.push({ ok: false, url: scrapeUrl, error: error?.message ?? 'unknown' })
+      }
+    }
+
     // === SERVER-SIDE SCHEDULE PARSER ===
     // Universal: kalau Atmaja emit [ATMAJA_SCHEDULE_CREATE]task: ... | cronHuman: ...[/ATMAJA_SCHEDULE_CREATE]
     // langsung tulis ke KV dari server, bukan tergantung frontend parser. Supaya n8n,
@@ -1316,7 +1359,7 @@ export default async function handler(req, res) {
     }
 
     await traceStep(trace, 'output_sent', 'done', {
-      detail: `${replyText.trim().length} char dikirim ke Matthew${scheduleMarkers.length ? `, ${scheduleMarkers.length} schedule dibuat` : ''}${execResults.length ? `, ${execResults.length} sandbox exec` : ''}`,
+      detail: `${replyText.trim().length} char dikirim ke Matthew${scheduleMarkers.length ? `, ${scheduleMarkers.length} schedule dibuat` : ''}${execResults.length ? `, ${execResults.length} sandbox exec` : ''}${scrapeResults.length ? `, ${scrapeResults.length} scrape` : ''}`,
     })
     await finalizeTrace(trace, {
       status: 'completed',
@@ -1348,6 +1391,7 @@ export default async function handler(req, res) {
       },
       schedulesCreated: scheduleMarkers,
       sandboxExec: execResults,
+      scrapeResults,
       memoryUpdate,
       sessionId,
     })

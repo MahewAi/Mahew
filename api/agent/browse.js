@@ -12,6 +12,7 @@
 // - Timeout 8s to prevent slow fetches blocking function
 
 import { isRequestAllowed, consumeRateLimit, makeSendJsonWithId } from '../_shared.js'
+import * as cheerio from 'cheerio'
 
 const RATE_LIMIT_MAX = Number(process.env.AGENT_BROWSE_RATE_LIMIT ?? 10)
 const RATE_LIMIT_WINDOW_MS = 60_000
@@ -138,6 +139,77 @@ function decodeHtmlEntities(s) {
     .replace(/&#x([0-9a-fA-F]+);/g, (_, n) => String.fromCharCode(parseInt(n, 16)))
 }
 
+// === STRUCTURED EXTRACTION via Cheerio ===
+// Atmaja kasih schema, return structured JSON. Use case: competitor scrape, price monitor.
+// Schema bentuk:
+//   {
+//     "title": "h1.product-name",         // field tunggal, ambil text content
+//     "price": ".price",
+//     "image": "img.hero@src",             // @attr syntax untuk ambil attribute
+//     "items": {                            // nested list dari multiple elements
+//       "selector": ".product-card",
+//       "fields": {
+//         "name": ".name",
+//         "price": ".price",
+//         "link": "a@href"
+//       }
+//     }
+//   }
+function extractSelector($, selector) {
+  if (!selector || typeof selector !== 'string') return null
+  // Support "selector@attr" syntax untuk ambil attribute
+  const attrMatch = selector.match(/^(.+?)@([\w-]+)$/)
+  if (attrMatch) {
+    const [, sel, attr] = attrMatch
+    const el = $(sel.trim()).first()
+    return el.attr(attr) ?? null
+  }
+  const el = $(selector).first()
+  if (!el.length) return null
+  return el.text().trim().replace(/\s+/g, ' ').slice(0, 500)
+}
+
+function extractList($, listConfig) {
+  if (!listConfig || typeof listConfig !== 'object') return []
+  const { selector, fields, max = 50 } = listConfig
+  if (!selector || !fields || typeof fields !== 'object') return []
+  const items = []
+  $(selector).slice(0, max).each((_, el) => {
+    const $el = $(el)
+    const item = {}
+    for (const [fieldName, fieldSel] of Object.entries(fields)) {
+      if (typeof fieldSel !== 'string') continue
+      const attrMatch = fieldSel.match(/^(.+?)@([\w-]+)$/)
+      if (attrMatch) {
+        const [, sel, attr] = attrMatch
+        item[fieldName] = $el.find(sel.trim()).first().attr(attr) ?? null
+      } else {
+        const child = $el.find(fieldSel).first()
+        item[fieldName] = child.length
+          ? child.text().trim().replace(/\s+/g, ' ').slice(0, 500)
+          : null
+      }
+    }
+    items.push(item)
+  })
+  return items
+}
+
+function extractStructured(html, schema) {
+  const $ = cheerio.load(html)
+  const result = {}
+  for (const [key, value] of Object.entries(schema)) {
+    if (typeof value === 'string') {
+      // Simple selector
+      result[key] = extractSelector($, value)
+    } else if (value && typeof value === 'object' && value.selector && value.fields) {
+      // Nested list extraction
+      result[key] = extractList($, value)
+    }
+  }
+  return result
+}
+
 async function fetchWithTimeout(url, timeoutMs) {
   const controller = new AbortController()
   const t = setTimeout(() => controller.abort(), timeoutMs)
@@ -256,12 +328,26 @@ export default async function handler(req, res) {
     const extracted = extractReadable(html)
     const wordCount = (extracted.text.match(/\S+/g) ?? []).length
 
+    // STRUCTURED EXTRACTION: kalau payload bawa schema, jalankan Cheerio extraction
+    let structured = null
+    let structuredError = null
+    if (payload?.schema && typeof payload.schema === 'object') {
+      try {
+        structured = extractStructured(html, payload.schema)
+      } catch (error) {
+        structuredError = error?.message ?? 'cheerio_extract_failed'
+        console.error('[agent-browse] structured extract failed:', structuredError)
+      }
+    }
+
     sendJson(200, {
       ok: true,
       url: url.toString(),
       title: extracted.title,
       description: extracted.description,
       text: extracted.text,
+      structured,
+      structuredError,
       wordCount,
       bytes: totalBytes,
       fetchedAt: new Date().toISOString(),
