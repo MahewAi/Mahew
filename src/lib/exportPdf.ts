@@ -374,7 +374,127 @@ function openBlobInNewTab(blob: Blob): boolean {
   }
 }
 
+// === STRATEGY V3: Browser native print() via popup window ===
+// html2canvas terbukti unreliable (PDF kosong walau container valid dimensions),
+// ganti ke popup window + auto print(). Browser native print engine handle PDF
+// conversion sendiri, jauh lebih reliable, no canvas dependency, works di semua browser.
+//
+// Flow:
+//   1. Buka popup window dengan branded HTML lengkap
+//   2. Setelah load, auto trigger window.print()
+//   3. User pilih "Save as PDF" di print dialog (Chrome/Edge default)
+//   4. User dapat PDF beneran dengan content
+//
+// Fallback kalau popup blocked: download .html, user buka manual + Ctrl+P
+export async function exportMessageAsPdfViaPrint(options: ExportPdfOptions): Promise<boolean> {
+  const { contentHtml, title, subtitle } = options
+  const now = new Date()
+  const dateStr = now.toLocaleDateString('id-ID', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  })
+  const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+  const safeTitle = String(title ?? 'Sintesis Atmaja').replace(/[<>]/g, '')
+  const safeSubtitle = String(
+    subtitle ?? `Gerai 1000 Pintu · ${dateStr} pukul ${timeStr} WITA`,
+  ).replace(/[<>]/g, '')
+
+  const printHtml = `<!doctype html>
+<html lang="id"><head>
+<meta charset="utf-8"><title>${safeTitle}</title>
+<style>
+  @page { size: A4; margin: 16mm 14mm 18mm 14mm; }
+  * { box-sizing: border-box; }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1F1A14; background: #FAF8F4; max-width: 800px; margin: 0 auto; padding: 24px 32px; font-size: 11.5pt; line-height: 1.65; }
+  h1 { font-family: Georgia, 'Cormorant Garamond', serif; font-size: 28pt; font-weight: 600; margin: 0 0 12px; color: #1F1A14; letter-spacing: -0.01em; }
+  h2 { font-size: 16pt; font-weight: 700; margin: 22px 0 10px; color: #1F1A14; }
+  h3 { font-size: 13pt; font-weight: 700; margin: 18px 0 8px; color: #1F1A14; }
+  p, li { margin: 8px 0; }
+  ul, ol { padding-left: 22px; }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 10.5pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #D4C8B0; padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: #F2E9D5; font-weight: 700; }
+  code { background: #F2E9D5; padding: 2px 5px; border-radius: 3px; font-family: 'JetBrains Mono', monospace; font-size: 10pt; }
+  pre { background: #1F1A14; color: #FAF8F4; padding: 14px 16px; border-radius: 8px; overflow-x: auto; font-size: 10pt; font-family: 'JetBrains Mono', monospace; page-break-inside: avoid; }
+  pre code { background: transparent; padding: 0; color: inherit; }
+  blockquote { border-left: 3px solid #B8956B; padding-left: 14px; margin: 14px 0; color: #6B6253; font-style: italic; }
+  strong { color: #1F1A14; }
+  hr { border: none; border-top: 1px solid #E6DDD0; margin: 22px 0; }
+  header { border-bottom: 2px solid #B8956B; padding-bottom: 14px; margin-bottom: 22px; display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; page-break-after: avoid; }
+  footer { margin-top: 36px; padding-top: 14px; border-top: 1px solid #E6DDD0; font-size: 8.5pt; color: #807767; display: flex; justify-content: space-between; }
+  .print-banner { background: #F2E9D5; border: 1px solid #D4C8B0; padding: 14px 18px; border-radius: 10px; margin-bottom: 22px; font-size: 11pt; color: #6B6253; }
+  @media print { .print-banner { display: none !important; } }
+</style>
+</head><body>
+  <div class="print-banner">
+    <strong>Print dialog akan otomatis muncul.</strong> Pilih <em>Save as PDF</em> di Destination, lalu klik Save. Margin sudah diatur otomatis untuk A4. Tutup tab ini setelah selesai.
+  </div>
+  <header>
+    <div>
+      <div style="font-size:9pt;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#A07A38;margin-bottom:6px;">Sintesis Atmaja</div>
+      <h1>${safeTitle}</h1>
+    </div>
+    <div style="text-align:right;font-size:9pt;color:#6B6253;">
+      <div style="font-family:Georgia,serif;font-size:13pt;font-weight:600;color:#1F1A14;margin-bottom:4px;">Gerai 1000 Pintu</div>
+      <div>${dateStr}</div>
+      <div>${timeStr} WITA</div>
+    </div>
+  </header>
+  <p style="font-size:10pt;color:#807767;font-style:italic;margin:0 0 22px;">${safeSubtitle}</p>
+  <div>${contentHtml}</div>
+  <footer>
+    <span style="font-family:Georgia,serif;font-size:11pt;color:#A07A38;">Atmaja</span>
+    <span>gerai.mahewwork.com</span>
+  </footer>
+  <script>
+    // Auto-trigger print() setelah content load. Browser tampilkan native print dialog,
+    // user pilih "Save as PDF" untuk dapat PDF beneran.
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        try { window.print() } catch (e) { console.error('print failed:', e) }
+      }, 500)
+    })
+    // Fallback: kalau load event sudah lewat (cached scenarios), trigger immediately
+    if (document.readyState === 'complete') {
+      setTimeout(() => { try { window.print() } catch {} }, 600)
+    }
+  </script>
+</body></html>`
+
+  const popup = window.open('', '_blank', 'noopener,noreferrer')
+  if (!popup) {
+    // Popup blocked — fallback ke download HTML
+    console.warn('[exportPdf] popup blocked, falling back to HTML download')
+    const blob = new Blob([printHtml], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${safeFilename(safeTitle)}.html`
+    document.body.appendChild(a)
+    a.click()
+    setTimeout(() => {
+      try { document.body.removeChild(a) } catch {}
+      URL.revokeObjectURL(url)
+    }, 2000)
+    showResultToast('Popup blocked. HTML ter-download, buka file lalu Ctrl+P → Save as PDF.', false)
+    return true
+  }
+
+  // Tulis HTML ke popup. Browser akan auto load + trigger print() via script di body.
+  popup.document.write(printHtml)
+  popup.document.close()
+  showResultToast('Print dialog akan terbuka. Pilih Save as PDF untuk download.')
+  return true
+}
+
+// Legacy html2pdf path — kept untuk backward compat tapi tidak dipanggil lagi karena unreliable.
 export async function exportMessageAsPdf(options: ExportPdfOptions): Promise<boolean> {
+  // Default sekarang pakai print-via-popup yang proven reliable
+  return exportMessageAsPdfViaPrint(options)
+}
+
+// @ts-expect-error legacy fallback, kept for reference
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function _exportMessageAsPdfViaHtml2Canvas_LEGACY(options: ExportPdfOptions): Promise<boolean> {
   const generatingToast = showGeneratingToast()
   const container = buildPdfContainer(options)
   document.body.appendChild(container)
