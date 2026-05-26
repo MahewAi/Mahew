@@ -605,19 +605,19 @@ export default async function handler(req, res) {
   const USE_ANTHROPIC_DIRECT = Boolean(process.env.ANTHROPIC_API_KEY?.trim())
   const ATMAJA_TEMPERATURE = 0.7 // Quality feedback: raised dari 0.45 supaya natural + insightful
 
-  // Map OpenRouter model ID → Anthropic native model ID (tanpa "anthropic/" prefix)
+  // Map OpenRouter model ID → Anthropic native model ID.
+  // Pakai ALIAS form (tanpa date suffix) supaya auto-route ke latest stable version
+  // di Anthropic. Date-versioned ID gampang berubah + 404 kalau date tidak match release.
   function toAnthropicModelId(orModelId) {
-    // OpenRouter: anthropic/claude-opus-4.7 → Anthropic: claude-opus-4-7-20250620 (versioned)
-    // Or alias bare: claude-opus-4-7
     const map = {
-      'anthropic/claude-opus-4.7': 'claude-opus-4-7-20250620',
-      'anthropic/claude-opus-4.7-fast': 'claude-opus-4-7-20250620', // no fast variant native
-      'anthropic/claude-opus-4.6': 'claude-opus-4-6-20250109',
-      'anthropic/claude-opus-4.6-fast': 'claude-opus-4-6-20250109',
-      'anthropic/claude-opus-4.5': 'claude-opus-4-5-20241201',
-      'anthropic/claude-opus-4.1': 'claude-opus-4-1-20240901',
-      'anthropic/claude-opus-4': 'claude-opus-4-20240701',
-      'anthropic/claude-sonnet-4.6': 'claude-sonnet-4-6-20250109',
+      'anthropic/claude-opus-4.7': 'claude-opus-4-7',
+      'anthropic/claude-opus-4.7-fast': 'claude-opus-4-7',
+      'anthropic/claude-opus-4.6': 'claude-opus-4-6',
+      'anthropic/claude-opus-4.6-fast': 'claude-opus-4-6',
+      'anthropic/claude-opus-4.5': 'claude-opus-4-5',
+      'anthropic/claude-opus-4.1': 'claude-opus-4-1',
+      'anthropic/claude-opus-4': 'claude-opus-4',
+      'anthropic/claude-sonnet-4.6': 'claude-sonnet-4-6',
     }
     return map[orModelId] ?? orModelId.replace('anthropic/', '').replace(/\./g, '-')
   }
@@ -950,23 +950,54 @@ export default async function handler(req, res) {
   }
 
   try {
-    await traceStep(trace, 'atmaja_thinking', 'running', { detail: `Model: ${primaryModel}` })
+    await traceStep(trace, 'atmaja_thinking', 'running', {
+      detail: `Model: ${primaryModel} (provider: ${USE_ANTHROPIC_DIRECT ? 'Anthropic direct' : 'OpenRouter'})`,
+    })
     let { upstream, body, accumulatedText, lastFinishReason, continuations, aggregatedUsage } =
       await callWithAutoContinuation(primaryModel, messages)
     let usedModel = primaryModel
     let fallbackTried = false
+    let usedProvider = USE_ANTHROPIC_DIRECT ? 'Anthropic (direct)' : 'OpenRouter'
+
+    // === AUTO-FALLBACK: Kalau Anthropic direct gagal (404 model invalid, dll),
+    // automatic retry via OpenRouter (kalau key tersedia). Ini critical supaya
+    // user tidak stuck error 404 saat Anthropic native model ID berubah/deprecated.
+    if (!upstream.ok && USE_ANTHROPIC_DIRECT && process.env.OPENROUTER_API_KEY) {
+      console.warn('[atmaja-chat] Anthropic direct failed, fallback to OpenRouter:', upstream.status)
+      const orResult = await (async () => {
+        const retry = await callOpenRouter(primaryModel, messages)
+        return retry
+      })()
+      if (orResult.upstream.ok) {
+        upstream = orResult.upstream
+        body = orResult.body
+        accumulatedText = body?.choices?.[0]?.message?.content ?? ''
+        lastFinishReason = extractFinishReason(body)
+        aggregatedUsage = sumUsage(aggregatedUsage, body?.usage)
+        usedProvider = 'OpenRouter (Anthropic fallback)'
+        fallbackTried = true
+      }
+    }
 
     if (!upstream.ok) {
+      const providerLabel = USE_ANTHROPIC_DIRECT ? 'Anthropic' : 'OpenRouter'
+      const errorLabel = USE_ANTHROPIC_DIRECT ? 'anthropic_error' : 'openrouter_error'
+      const errorNote =
+        body?.error?.message ??
+        body?.message ??
+        (typeof body?.error === 'string' ? body.error : null) ??
+        `${providerLabel} request failed.`
       await finalizeTrace(trace, {
         status: 'error',
-        error: `OpenRouter HTTP ${upstream.status}: ${body?.error?.message ?? 'failed'}`,
+        error: `${providerLabel} HTTP ${upstream.status}: ${errorNote}`,
       })
       sendJson(res, upstream.status, {
         ok: false,
-        error: 'openrouter_error',
+        error: errorLabel,
         upstreamStatus: upstream.status,
         modelTried: primaryModel,
-        note: body?.error?.message ?? body?.message ?? 'OpenRouter request failed.',
+        provider: providerLabel,
+        note: errorNote,
       })
       return
     }
