@@ -39,7 +39,33 @@ async function getOpenRouterCreditInfo() {
   }
 }
 
-export default async function handler(_req, res) {
+// Debug helper: fetch list models Anthropic punya dengan API key yang tersedia
+async function fetchAnthropicModels() {
+  if (!process.env.ANTHROPIC_API_KEY) return null
+  try {
+    const upstream = await fetch('https://api.anthropic.com/v1/models', {
+      headers: {
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        accept: 'application/json',
+      },
+    })
+    const data = await upstream.json()
+    return { status: upstream.status, ok: upstream.ok, data }
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'unknown' }
+  }
+}
+
+export default async function handler(req, res) {
+  // Support ?action=anthropic-models untuk debug — cek model IDs yang tersedia
+  const url = new URL(req.url ?? '/', `http://${req.headers?.host ?? 'localhost'}`)
+  if (url.searchParams.get('action') === 'anthropic-models') {
+    const models = await fetchAnthropicModels()
+    res.writeHead(200, jsonHeaders)
+    res.end(JSON.stringify({ ok: true, anthropic: models }))
+    return
+  }
   const hasWebhook = Boolean(process.env.ATMAJA_BRIEF_WEBHOOK_URL)
   const hasToken = Boolean(process.env.ATMAJA_BRIDGE_TOKEN)
   const openRouterChatEnabled = process.env.ATMAJA_OPENROUTER_ENABLED === 'true'
