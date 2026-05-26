@@ -12,6 +12,7 @@
 //   POST (action=result)  : bearer N8N_WEBHOOK_TOKEN (server-to-server n8n callback)
 //   GET  (action=list)    : bearer N8N_WEBHOOK_TOKEN
 
+import { kv } from '@vercel/kv'
 import { isRequestAllowed } from '../_shared.js'
 import { readMemory, writeMemory } from '../atmaja/memory.js'
 
@@ -28,9 +29,45 @@ const CALLBACK_RATE_LIMIT = Number(process.env.N8N_CALLBACK_RATE_LIMIT ?? 30)
 const recentRequestsByIp = new Map()
 const recentCallbacksByIp = new Map()
 
-// Shared in-memory brief store. Reset on cold start. Akan migrate ke Vercel KV nanti.
-const briefStore = globalThis.__geraiBriefStore ?? new Map()
-globalThis.__geraiBriefStore = briefStore
+// === Brief storage backed by Vercel KV (Upstash Redis) ===
+// Sebelumnya: in-memory Map, reset tiap cold-start serverless function.
+// Sekarang: KV persistent, survive cold-start + cross-instance. Pattern identik
+// dengan proposals/payments/schedules di memory.js.
+const BRIEFS_KEY = 'atmaja:briefs:matthew:list'
+const BRIEFS_MAX = 200
+
+async function readAllBriefs() {
+  try {
+    const stored = await kv.get(BRIEFS_KEY)
+    if (Array.isArray(stored)) return stored
+    return []
+  } catch (error) {
+    console.error('[briefs] readAllBriefs failed:', error?.message ?? error)
+    return []
+  }
+}
+
+async function writeAllBriefs(arr) {
+  try {
+    // Trim ke BRIEFS_MAX terbaru by updatedAt desc supaya KV tidak balloon.
+    const trimmed = [...arr]
+      .sort((a, b) => (b?.updatedAt ?? 0) - (a?.updatedAt ?? 0))
+      .slice(0, BRIEFS_MAX)
+    await kv.set(BRIEFS_KEY, trimmed)
+    return trimmed
+  } catch (error) {
+    console.error('[briefs] writeAllBriefs failed:', error?.message ?? error)
+    return arr
+  }
+}
+
+async function upsertBrief(brief) {
+  const all = await readAllBriefs()
+  const idx = all.findIndex((b) => b?.briefId === brief.briefId)
+  if (idx >= 0) all[idx] = { ...all[idx], ...brief }
+  else all.push(brief)
+  return writeAllBriefs(all)
+}
 
 const VALID_STATUSES = new Set(['completed', 'failed', 'degraded', 'partial', 'in_progress', 'queued'])
 
@@ -151,7 +188,7 @@ async function handleList(req, res, url) {
   const statusFilter = url.searchParams.get('status')
   const since = Number(url.searchParams.get('since') ?? 0)
   const now = Date.now()
-  const all = Array.from(briefStore.values())
+  const all = await readAllBriefs()
   const filtered = all
     .filter((b) => !statusFilter || b.status === statusFilter)
     .filter((b) => !since || (b.updatedAt ?? 0) >= since)
@@ -175,8 +212,7 @@ async function handleList(req, res, url) {
     action: 'list',
     count: filtered.length,
     storeSize: all.length,
-    storageMode: 'in_memory_ephemeral',
-    note: 'In-memory store, reset on cold start. Migrate Vercel KV planned.',
+    storageMode: 'vercel_kv_persistent',
     briefs: filtered,
   })
 }
@@ -219,13 +255,7 @@ async function handleResult(req, res) {
     updatedAt: Date.now(),
     source: 'n8n',
   }
-  briefStore.set(briefId, stored)
-  // Trim store kalau > 200 entries
-  if (briefStore.size > 200) {
-    const sorted = Array.from(briefStore.entries()).sort((a, b) => (b[1].updatedAt ?? 0) - (a[1].updatedAt ?? 0))
-    briefStore.clear()
-    for (const [k, v] of sorted.slice(0, 100)) briefStore.set(k, v)
-  }
+  const trimmed = await upsertBrief(stored)
 
   // ITEM #3 INTEGRATION: append brief summary ke memory file section "Briefs Aktif"
   // supaya Atmaja chat next turn aware of brief result. Best-effort, jangan block 202.
@@ -259,7 +289,7 @@ async function handleResult(req, res) {
     accepted: true,
     briefId,
     status,
-    storeSize: briefStore.size,
+    storeSize: trimmed.length,
     note: 'Client should poll GET /api/agent/briefs?action=list&since=<receivedAt-1>',
   })
 }
@@ -309,11 +339,11 @@ async function handleSubmit(req, res) {
     sendJson(res, 422, { mode: 'offline', status: 'bridge_error', jobId, error: webhookPolicy.reason })
     return
   }
-  // ITEM #5: Pre-populate briefStore dengan status 'in_progress' supaya brief
+  // ITEM #5: Pre-populate brief KV dengan status 'in_progress' supaya brief
   // visible di Inbox saat masih running n8n workflow (sebelum callback)
   const briefTitle = String(payload?.title ?? payload?.payload?.title ?? '').slice(0, 200)
   const briefSummary = String(payload?.summary ?? payload?.payload?.summary ?? '').slice(0, 1000)
-  briefStore.set(jobId, {
+  await upsertBrief({
     briefId: jobId,
     status: 'in_progress',
     result: {
@@ -411,8 +441,7 @@ export default async function handler(req, res) {
 // POST hasil ke /api/agent/briefs?action=digest-save dengan bearer.
 // Matthew lihat di PWA via GET ?action=digest (bisa same-origin atau bearer).
 //
-// Storage: in-memory globalThis (sama dengan briefStore) + Vercel KV persistent
-// untuk cross-instance + history.
+// Storage: Vercel KV (persistent + cross-instance) — sama dengan brief list.
 
 const DIGEST_LATEST_KEY = 'atmaja:digest:matthew:latest'
 const DIGEST_HISTORY_KEY = 'atmaja:digest:matthew:history'
