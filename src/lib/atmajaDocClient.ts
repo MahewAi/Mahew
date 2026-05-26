@@ -81,6 +81,18 @@ export function userWantsPdf(userMessage: string): boolean {
   return PDF_INTENT_RE.test(String(userMessage ?? ''))
 }
 
+// === INTENT SUPPRESSION ===
+// User eksplisit minta lihat dulu di chat sebelum dijadikan PDF/file.
+// Phrase: "sblm jadi pdf", "tampilkan dulu", "kasih briefnya dulu", "jangan pdf",
+// "sini saya liat dulu", "preview dulu", "tunjukin dulu", "review dulu".
+// Kalau detected, frontend SKIP synthesize ke PDF meski response panjang/structured.
+const PDF_SUPPRESS_RE =
+  /\b(sblm|sebelum|jangan|tanpa|bukan|skip|no|tidak usah|gausah|ga usah|nggak usah|engga usah)\s*(jadi\s+)?(pdf|file|dokumen|attachment|lampiran)|kasih\s+(briefnya|brief|sintesis|sintesa|isi|teks|content|raw)\s+(dulu|aja|saja|nya)|(tampilkan|tunjukin|tunjukan|tunjukkan|tampilin|kasih liat|kasih lihat|liat|lihat|preview|review|baca|cek)\s+(dulu|aja|saja|isinya|isi)|di\s+chat\s+(dulu|aja|saja)|sini\s+saya\s+(liat|lihat|baca|cek|review)|(saya|aku)\s+(liat|lihat|baca|cek|review)\s+dulu/i
+
+export function userSuppressesPdf(userMessage: string): boolean {
+  return PDF_SUPPRESS_RE.test(String(userMessage ?? ''))
+}
+
 // Detect kalau Atmaja's RESPONSE punya struktur document — long + multi-heading +
 // ada HTML/markdown code blocks. Indikasi: Atmaja kasih document content padahal
 // user tidak explicit minta "pdf". Frontend synthesize attachment dari content ini.

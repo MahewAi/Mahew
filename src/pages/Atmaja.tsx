@@ -44,6 +44,7 @@ import {
   estimateDocSize,
   countWords,
   userWantsPdf,
+  userSuppressesPdf,
   isRefusalResponse,
   stripRefusalText,
   synthesizeDocFromResponse,
@@ -990,14 +991,27 @@ export default function Atmaja() {
         // Layer A: User explicit minta PDF/file/dokumen tapi Atmaja tidak emit marker
         // Layer B: Atmaja respond dengan content yang LOOKS LIKE document (long, headings,
         //   ada code block HTML/markdown) — auto-treat sebagai document attachment
+        // SUPPRESSION: kalau user eksplisit bilang "kasih briefnya dulu sblm jadi PDF",
+        // "tampilkan di chat dulu", "preview dulu" — SKIP auto-synthesize. Hormati intent.
         const matthewWantsPdf = userWantsPdf(userMsg.text)
+        const matthewSuppressesPdf = userSuppressesPdf(userMsg.text)
         const atmajaRefused = isRefusalResponse(insightResult.cleanedText)
         const responseLookSLikeDoc = looksLikeDocumentResponse(insightResult.cleanedText)
         let finalText = briefResult.cleanedText // brief marker also stripped from chat display
         const finalDocs = [...docResult.docs]
 
-        // Trigger synthesize kalau: explicit PDF intent ATAU response punya struktur document
-        const shouldSynthesize = finalDocs.length === 0 && (matthewWantsPdf || responseLookSLikeDoc)
+        // Trigger synthesize kalau: explicit PDF intent ATAU response punya struktur document.
+        // KECUALI user explicit suppress (lihat dulu, jangan PDF dulu).
+        const shouldSynthesize =
+          finalDocs.length === 0 &&
+          !matthewSuppressesPdf &&
+          (matthewWantsPdf || responseLookSLikeDoc)
+
+        // Kalau user suppress + Atmaja terlanjur emit [ATMAJA_DOC] marker → buang doc attachment.
+        // Hormati intent user: text tetap di chat, no PDF card.
+        if (matthewSuppressesPdf && finalDocs.length > 0) {
+          finalDocs.length = 0
+        }
 
         if (shouldSynthesize) {
           // Extract clean document content (strip HTML code blocks, convert to markdown)
