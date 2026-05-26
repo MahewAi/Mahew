@@ -447,20 +447,30 @@ export async function exportMessageAsPdfViaPrint(options: ExportPdfOptions): Pro
   </footer>
   <script>
     // Auto-trigger print() setelah content load. Browser tampilkan native print dialog,
-    // user pilih "Save as PDF" untuk dapat PDF beneran.
-    window.addEventListener('load', () => {
-      setTimeout(() => {
-        try { window.print() } catch (e) { console.error('print failed:', e) }
-      }, 500)
-    })
-    // Fallback: kalau load event sudah lewat (cached scenarios), trigger immediately
-    if (document.readyState === 'complete') {
-      setTimeout(() => { try { window.print() } catch {} }, 600)
+    // user pilih "Save as PDF" untuk dapat PDF beneran. Popup tidak boleh auto-close,
+    // user harus bisa interact dengan print dialog sampai selesai.
+    function triggerPrint() {
+      try {
+        window.focus()
+        window.print()
+      } catch (e) {
+        document.body.insertAdjacentHTML('beforeend',
+          '<div style="position:fixed;top:0;left:0;right:0;background:#A55974;color:#fff;padding:14px;font-family:sans-serif;font-size:14px;text-align:center;z-index:9999;">Print dialog gagal trigger otomatis. Tekan Ctrl+P (Cmd+P di Mac) untuk save as PDF.</div>')
+      }
     }
+    // Wait fonts + layout settle, then trigger print
+    if (document.readyState === 'complete') {
+      setTimeout(triggerPrint, 700)
+    } else {
+      window.addEventListener('load', () => setTimeout(triggerPrint, 700))
+    }
+    // Don't auto-close — user perlu interact dengan print dialog
   </script>
 </body></html>`
 
-  const popup = window.open('', '_blank', 'noopener,noreferrer')
+  // PENTING: jangan pakai noopener,noreferrer — bikin popup orphan + auto-close
+  // sebelum user sempat interact dengan print dialog. Default flags = popup stay alive.
+  const popup = window.open('', '_blank')
   if (!popup) {
     // Popup blocked — fallback ke download HTML
     console.warn('[exportPdf] popup blocked, falling back to HTML download')
