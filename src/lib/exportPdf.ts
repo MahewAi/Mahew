@@ -38,12 +38,16 @@ function buildPdfContainer({ contentHtml, title, subtitle }: ExportPdfOptions): 
 
   const container = document.createElement('div')
   container.id = 'gerai-pdf-root'
-  // Offscreen tapi tetap rendered (html2canvas butuh ini)
+  // FIX: position di-render di DOM tree dengan VALID viewport coordinates supaya
+  // html2canvas bisa capture content (sebelumnya left: -99999px bikin
+  // getBoundingClientRect return negative, canvas dimensions jadi 0 = PDF kosong).
+  // Place at top: 100vh = below current viewport, masih in DOM, user tidak lihat.
   container.style.cssText = `
-    position: fixed;
-    left: -99999px;
-    top: 0;
+    position: absolute;
+    left: 0;
+    top: 100vh;
     width: 794px;
+    min-height: 1000px;
     background: #FAF8F4;
     padding: 32px 36px;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -51,6 +55,8 @@ function buildPdfContainer({ contentHtml, title, subtitle }: ExportPdfOptions): 
     font-size: 11.5pt;
     line-height: 1.65;
     box-sizing: border-box;
+    z-index: -1;
+    pointer-events: none;
   `
 
   container.innerHTML = `
@@ -408,6 +414,19 @@ export async function exportMessageAsPdf(options: ExportPdfOptions): Promise<boo
 
     console.info('[exportPdf] html2pdf loaded, generating PDF blob...')
 
+    // Scroll page ke container biar html2canvas bisa capture (kalau perlu)
+    // Container ada di top: 100vh = below viewport, scrollIntoView sebentar
+    const containerRect = container.getBoundingClientRect()
+    console.info('[exportPdf] container rect:', {
+      top: containerRect.top,
+      left: containerRect.left,
+      width: containerRect.width,
+      height: containerRect.height,
+    })
+
+    // Wait extra untuk fonts + render after DOM insert
+    await new Promise((r) => window.setTimeout(r, 500))
+
     // Generate PDF as Blob — jangan langsung .save() yang internal trigger download
     // tapi sering gagal di PWA standalone karena user gesture lost
     const pdfBlob = (await html2pdfFactory()
@@ -419,9 +438,13 @@ export async function exportMessageAsPdf(options: ExportPdfOptions): Promise<boo
         html2canvas: {
           scale: 2,
           useCORS: true,
-          logging: false,
+          logging: true, // enable supaya kita lihat di console kalau ada issue
           letterRendering: true,
           backgroundColor: '#FAF8F4',
+          windowWidth: 850,
+          windowHeight: 1200,
+          scrollX: 0,
+          scrollY: -window.scrollY, // adjust supaya capture absolute position correctly
         },
         jsPDF: {
           unit: 'mm',
