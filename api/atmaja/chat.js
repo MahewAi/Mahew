@@ -296,6 +296,8 @@ function buildSystemPrompt(memory) {
     '',
     '**Browse URL**: `/browse <url>` di-handle frontend. Anda terima content dengan prefix `[BROWSE_RESULT url=...]`. Analisis + relate ke konteks Gerai.',
     '',
+    '**Sandboxed code execution**: kalau Matthew minta hitungan kompleks (NPV, IRR, break-even, reverse calendar math, projection cashflow multi-skenario, parse CSV, statistical analysis), JANGAN cuma estimasi mental. Emit `[ATMAJA_EXEC lang="js"]code[/ATMAJA_EXEC]` (atau lang="python" untuk data-heavy). Server akan run di Vercel Sandbox isolated, return stdout. Selesai itu, baca result + lanjutkan reasoning dengan angka asli. Contoh: NPV calc 5 tahun dengan discount rate 12%, break-even unit per bulan dengan revenue ramp. Code harus self-contained (no external dep, no network), output via console.log atau print. JANGAN pakai untuk simple math yang bisa di-mental, JANGAN pakai untuk text/markdown generation.',
+    '',
     '**Insight gap detection**: kalau Anda lihat gap capability/proses yang Matthew butuh berulang, emit `[ATMAJA_INSIGHT]<satu kalimat insight>[/ATMAJA_INSIGHT]` di akhir. Max 1 per turn, hanya signal kuat.',
     '',
     '**Brief multi-perspective**: Kalau Matthew minta keputusan strategis yang BUTUH input multi-perspective (4 C-level: COO + CMO + CFO + CCO masing-masing kasih insight, lalu Atmaja synth) — bukan sekedar single advisory yang Anda bisa jawab sendiri — emit marker brief workflow. Frontend akan trigger workflow #1 n8n yang fan-out ke 4 C-level paralel, hasilnya kembali jadi brief structured di Inbox. Format:\n\n[ATMAJA_BRIEF_REQUEST]\ntitle: <judul singkat 5-10 kata>\nsummary: <konteks brief 1-3 kalimat, detail apa yang harus diputuskan + constraint relevant>\n[/ATMAJA_BRIEF_REQUEST]\n\nKapan pakai: keputusan strategis kompleks (launch timing, vendor switching, pricing structure, brand positioning major, hire framework). JANGAN pakai untuk single-domain question (technical detail, simple research, conversational).\n\nSebelum emit marker, tulis 1-2 kalimat conversational ("Decision ini butuh review 4 C-level, saya kirim ke council, hasilnya akan landed di Brief Inbox dalam 1-2 menit.").',
@@ -1266,8 +1268,55 @@ export default async function handler(req, res) {
       }
     }
 
+    // === SERVER-SIDE EXEC MARKER ===
+    // Atmaja emit [ATMAJA_EXEC lang="js"]code[/ATMAJA_EXEC] → execute di Vercel Sandbox.
+    // Result attached ke response sebagai sandboxExec[]. Frontend render output card.
+    // Best-effort: kalau sandbox gagal, log + skip, response chat tetap sukses.
+    const execResults = []
+    const EXEC_RE = /\[ATMAJA_EXEC(?:\s+lang=["']([^"']+)["'])?\]([\s\S]*?)\[\/ATMAJA_EXEC\]/g
+    let execMatch
+    let execCount = 0
+    while ((execMatch = EXEC_RE.exec(replyText)) !== null && execCount < 3) {
+      execCount += 1
+      const lang = (execMatch[1] || 'js').toLowerCase()
+      const code = execMatch[2].trim()
+      if (code.length < 5 || code.length > 10_000) continue
+      try {
+        const execHost = process.env.PUBLIC_APP_URL ?? `https://${getHeader(req, 'host') ?? 'gerai.mahewwork.com'}`
+        const execResp = await fetch(`${execHost}/api/atmaja/exec`, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'origin': execHost,
+            // forward server-to-server marker untuk bypass origin check via bearer kalau ada
+            ...(process.env.AGENT_INTERNAL_TOKEN ? { authorization: `Bearer ${process.env.AGENT_INTERNAL_TOKEN}` } : {}),
+          },
+          body: JSON.stringify({ code, lang }),
+        })
+        const execBody = await execResp.json().catch(() => ({}))
+        execResults.push({
+          ok: execResp.ok && execBody.ok,
+          lang,
+          codePreview: code.slice(0, 200),
+          stdout: execBody.stdout ?? '',
+          stderr: execBody.stderr ?? '',
+          exitCode: execBody.exitCode ?? null,
+          durationMs: execBody.durationMs ?? null,
+          error: execResp.ok && execBody.ok ? null : (execBody.error ?? `HTTP ${execResp.status}`),
+        })
+      } catch (error) {
+        console.error('[atmaja-chat] exec marker call failed:', error?.message ?? error)
+        execResults.push({
+          ok: false,
+          lang,
+          codePreview: code.slice(0, 200),
+          error: error?.message ?? 'unknown',
+        })
+      }
+    }
+
     await traceStep(trace, 'output_sent', 'done', {
-      detail: `${replyText.trim().length} char dikirim ke Matthew${scheduleMarkers.length ? `, ${scheduleMarkers.length} schedule dibuat` : ''}`,
+      detail: `${replyText.trim().length} char dikirim ke Matthew${scheduleMarkers.length ? `, ${scheduleMarkers.length} schedule dibuat` : ''}${execResults.length ? `, ${execResults.length} sandbox exec` : ''}`,
     })
     await finalizeTrace(trace, {
       status: 'completed',
@@ -1298,6 +1347,7 @@ export default async function handler(req, res) {
         metadataOnly: metadataOnlyCount,
       },
       schedulesCreated: scheduleMarkers,
+      sandboxExec: execResults,
       memoryUpdate,
       sessionId,
     })
