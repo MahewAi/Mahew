@@ -13,6 +13,7 @@
 //   GET  (action=list)    : bearer N8N_WEBHOOK_TOKEN
 
 import { isRequestAllowed } from '../_shared.js'
+import { readMemory, writeMemory } from '../atmaja/memory.js'
 
 const jsonHeaders = {
   'content-type': 'application/json; charset=utf-8',
@@ -201,6 +202,33 @@ async function handleResult(req, res) {
     briefStore.clear()
     for (const [k, v] of sorted.slice(0, 100)) briefStore.set(k, v)
   }
+
+  // ITEM #3 INTEGRATION: append brief summary ke memory file section "Briefs Aktif"
+  // supaya Atmaja chat next turn aware of brief result. Best-effort, jangan block 202.
+  if (status === 'completed' || status === 'partial') {
+    try {
+      const memory = await readMemory()
+      const briefTitle = String(payload?.result?.title ?? briefId).slice(0, 120)
+      const briefSummary = String(payload?.result?.summary ?? '').slice(0, 400)
+      const witaDate = new Date(Date.now() + 8 * 60 * 60 * 1000)
+        .toISOString()
+        .split('T')[0]
+      const briefBullet = `- [Brief ${witaDate}] ${briefTitle} ${briefSummary ? ': ' + briefSummary.replace(/\n/g, ' ') : ''}`.slice(0, 500)
+      let updatedMemory = memory
+      if (memory.includes('## Briefs Aktif')) {
+        updatedMemory = memory.replace(
+          '## Briefs Aktif\n',
+          `## Briefs Aktif\n${briefBullet}\n`,
+        )
+      } else {
+        updatedMemory = memory + `\n\n## Briefs Aktif\n${briefBullet}\n`
+      }
+      await writeMemory(updatedMemory)
+    } catch (memErr) {
+      console.error('[briefs-result] memory append failed:', memErr?.message ?? memErr)
+    }
+  }
+
   sendJson(res, 202, {
     ok: true,
     action: 'result',

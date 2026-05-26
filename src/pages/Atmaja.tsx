@@ -37,6 +37,7 @@ import {
 } from '@/lib/atmajaSchedulerClient'
 import { browseUrl, parseBrowseCommand, buildBrowseMessage } from '@/lib/atmajaBrowseClient'
 import { parseInsightMarkers } from '@/lib/atmajaInsightClient'
+import { parseBriefMarkers, submitBrief } from '@/lib/atmajaBriefClient'
 import { exportMessageAsPdf } from '@/lib/exportPdf'
 import {
   parseDocMarkers,
@@ -967,6 +968,23 @@ export default function Atmaja() {
         const scheduleResult = parseScheduleMarkers(result.text)
         const insightResult = parseInsightMarkers(scheduleResult.cleanedText)
         const docResult = parseDocMarkers(insightResult.cleanedText)
+        const briefResult = parseBriefMarkers(docResult.cleanedText)
+
+        // ITEM #3: Atmaja → Brief workflow integration
+        // Saat marker [ATMAJA_BRIEF_REQUEST] detected, fire-and-forget submit ke n8n W1.
+        // Result akan landed di Brief Inbox PWA (auto-callback via /api/agent/briefs?action=result).
+        if (briefResult.briefs.length > 0) {
+          void (async () => {
+            for (const brief of briefResult.briefs) {
+              const r = await submitBrief(brief)
+              if (r.ok) {
+                console.info('[atmaja-brief] submitted:', r.briefId ?? r.jobId, brief.title)
+              } else {
+                console.warn('[atmaja-brief] submit failed:', r.error)
+              }
+            }
+          })()
+        }
 
         // === FRONTEND SAFETY NET (2 layer) ===
         // Layer A: User explicit minta PDF/file/dokumen tapi Atmaja tidak emit marker
@@ -975,7 +993,7 @@ export default function Atmaja() {
         const matthewWantsPdf = userWantsPdf(userMsg.text)
         const atmajaRefused = isRefusalResponse(insightResult.cleanedText)
         const responseLookSLikeDoc = looksLikeDocumentResponse(insightResult.cleanedText)
-        let finalText = docResult.cleanedText
+        let finalText = briefResult.cleanedText // brief marker also stripped from chat display
         const finalDocs = [...docResult.docs]
 
         // Trigger synthesize kalau: explicit PDF intent ATAU response punya struktur document

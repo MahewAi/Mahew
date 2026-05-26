@@ -297,6 +297,8 @@ function buildSystemPrompt(memory) {
     '**Browse URL**: `/browse <url>` di-handle frontend. Anda terima content dengan prefix `[BROWSE_RESULT url=...]`. Analisis + relate ke konteks Gerai.',
     '',
     '**Insight gap detection**: kalau Anda lihat gap capability/proses yang Matthew butuh berulang, emit `[ATMAJA_INSIGHT]<satu kalimat insight>[/ATMAJA_INSIGHT]` di akhir. Max 1 per turn, hanya signal kuat.',
+    '',
+    '**Brief multi-perspective**: Kalau Matthew minta keputusan strategis yang BUTUH input multi-perspective (4 C-level: COO + CMO + CFO + CCO masing-masing kasih insight, lalu Atmaja synth) — bukan sekedar single advisory yang Anda bisa jawab sendiri — emit marker brief workflow. Frontend akan trigger workflow #1 n8n yang fan-out ke 4 C-level paralel, hasilnya kembali jadi brief structured di Inbox. Format:\n\n[ATMAJA_BRIEF_REQUEST]\ntitle: <judul singkat 5-10 kata>\nsummary: <konteks brief 1-3 kalimat, detail apa yang harus diputuskan + constraint relevant>\n[/ATMAJA_BRIEF_REQUEST]\n\nKapan pakai: keputusan strategis kompleks (launch timing, vendor switching, pricing structure, brand positioning major, hire framework). JANGAN pakai untuk single-domain question (technical detail, simple research, conversational).\n\nSebelum emit marker, tulis 1-2 kalimat conversational ("Decision ini butuh review 4 C-level, saya kirim ke council, hasilnya akan landed di Brief Inbox dalam 1-2 menit.").',
   ]
 
   // Inject memory file kalau ada dan non-default. Memory auto-maintained oleh sistem.
