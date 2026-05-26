@@ -641,10 +641,73 @@ export default async function handler(req, res) {
     return { system: systemParts.join('\n\n'), messages: remaining }
   }
 
+  // Adapt content blocks dari OpenAI-format ke Anthropic-format
+  // - image_url block: { type:'image_url', image_url:{ url:'data:...;base64,...' } }
+  //   → { type:'image', source:{ type:'base64', media_type:'image/jpeg', data:'<b64>' } }
+  // - file (PDF) block: { type:'file', file:{ filename, file_data:'data:...;base64,...' } }
+  //   → { type:'document', source:{ type:'base64', media_type:'application/pdf', data:'<b64>' } }
+  // - text block: passed through
+  function adaptContentBlocksForAnthropic(content) {
+    if (typeof content === 'string') return content
+    if (!Array.isArray(content)) return content
+    return content.map((block) => {
+      if (!block || typeof block !== 'object') return block
+
+      // OpenAI image_url → Anthropic image source/base64
+      if (block.type === 'image_url' && block.image_url?.url) {
+        const url = String(block.image_url.url)
+        const match = url.match(/^data:([^;]+);base64,(.+)$/)
+        if (match) {
+          return {
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: match[1],
+              data: match[2],
+            },
+          }
+        }
+        // Non-data URL: pakai url source (Anthropic support)
+        return {
+          type: 'image',
+          source: { type: 'url', url },
+        }
+      }
+
+      // OpenAI file (PDF) → Anthropic document source/base64
+      if (block.type === 'file' && block.file?.file_data) {
+        const fileData = String(block.file.file_data)
+        const match = fileData.match(/^data:([^;]+);base64,(.+)$/)
+        if (match) {
+          return {
+            type: 'document',
+            source: {
+              type: 'base64',
+              media_type: match[1] || 'application/pdf',
+              data: match[2],
+            },
+          }
+        }
+      }
+
+      // text block + lainnya passed through
+      return block
+    })
+  }
+
+  function adaptMessagesForAnthropic(messages) {
+    return messages.map((m) => ({
+      role: m.role,
+      content: adaptContentBlocksForAnthropic(m.content),
+    }))
+  }
+
   // Direct call ke Anthropic native API
   async function callAnthropicDirect(modelId, messagesArg) {
     const anthropicModelId = toAnthropicModelId(modelId)
     const { system, messages: nonSystemMessages } = splitSystemFromMessages(messagesArg)
+    // Adapt content blocks: OpenAI image_url → Anthropic image, file → document
+    const anthropicMessages = adaptMessagesForAnthropic(nonSystemMessages)
 
     const upstream = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -659,7 +722,7 @@ export default async function handler(req, res) {
         max_tokens: MAX_TOKENS_PER_CALL,
         temperature: ATMAJA_TEMPERATURE,
         system,
-        messages: nonSystemMessages,
+        messages: anthropicMessages,
       }),
     })
 
