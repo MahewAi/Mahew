@@ -247,25 +247,105 @@ function showResultToast(message: string, isError = false) {
   }, 2400)
 }
 
+// Detect PWA standalone mode (display-mode: standalone atau iOS standalone)
+function isPwaStandalone(): boolean {
+  try {
+    if (window.matchMedia('(display-mode: standalone)').matches) return true
+    if ((window.navigator as { standalone?: boolean }).standalone === true) return true
+    return false
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Trigger native browser download dari blob.
+ * Reliable di PWA standalone karena pakai synchronous anchor click pattern
+ * yang preserve user gesture context.
+ */
+function downloadBlobAsFile(blob: Blob, filename: string): boolean {
+  try {
+    const blobUrl = URL.createObjectURL(blob)
+    console.info('[exportPdf] blob URL created:', blobUrl, 'size:', blob.size, 'bytes')
+
+    // Method 1: Anchor click approach (most reliable across browsers)
+    const a = document.createElement('a')
+    a.href = blobUrl
+    a.download = filename
+    a.rel = 'noopener'
+    a.style.display = 'none'
+    document.body.appendChild(a)
+
+    // Dispatch synthetic mouse click — better preserve user gesture context than .click()
+    const clickEvent = new MouseEvent('click', {
+      view: window,
+      bubbles: true,
+      cancelable: true,
+    })
+    a.dispatchEvent(clickEvent)
+    console.info('[exportPdf] anchor click dispatched, download triggered for:', filename)
+
+    // Cleanup after delay (browser needs time to start download)
+    window.setTimeout(() => {
+      try { document.body.removeChild(a) } catch {}
+      URL.revokeObjectURL(blobUrl)
+      console.info('[exportPdf] cleanup done, blob URL revoked')
+    }, 2000)
+
+    return true
+  } catch (err) {
+    console.error('[exportPdf] downloadBlobAsFile failed:', err)
+    return false
+  }
+}
+
+/**
+ * Fallback: open blob URL di tab baru. Browser akan render PDF inline,
+ * user bisa save manual via Ctrl+S atau browser PDF viewer download button.
+ * Pakai ini kalau direct download anchor click gagal (PWA standalone aggressive).
+ */
+function openBlobInNewTab(blob: Blob, _filename: string): boolean {
+  try {
+    const blobUrl = URL.createObjectURL(blob)
+    console.info('[exportPdf] fallback: opening blob in new tab')
+    const newWindow = window.open(blobUrl, '_blank', 'noopener,noreferrer')
+    if (!newWindow) {
+      console.warn('[exportPdf] window.open returned null — popup blocked')
+      // Last resort: navigate current window to blob URL
+      window.location.href = blobUrl
+    }
+    // Don't revoke immediately — new tab needs time to load
+    window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000)
+    return true
+  } catch (err) {
+    console.error('[exportPdf] openBlobInNewTab failed:', err)
+    return false
+  }
+}
+
 export async function exportMessageAsPdf(options: ExportPdfOptions): Promise<boolean> {
   const generatingToast = showGeneratingToast()
   const container = buildPdfContainer(options)
   document.body.appendChild(container)
+
+  const standalone = isPwaStandalone()
+  console.info('[exportPdf] PWA standalone mode:', standalone, '| UA:', navigator.userAgent.slice(0, 80))
 
   const cleanup = () => {
     try { document.body.removeChild(container) } catch {}
     try { document.body.removeChild(generatingToast) } catch {}
   }
 
-  // FIX (MEDIUM #16): Add timeout supaya spinner tidak hang forever
-  // kalau html2pdf.js load gagal (network down, CDN issue)
-  const TIMEOUT_MS = 45_000 // 45s — cukup untuk dokumen besar (10-20s typical)
+  // Timeout supaya spinner tidak hang forever
+  const TIMEOUT_MS = 45_000
   let timedOut = false
   const timeoutHandle = window.setTimeout(() => {
     timedOut = true
     cleanup()
     showResultToast('PDF generation timeout (45s). Coba lagi atau dokumen lebih kecil.', true)
   }, TIMEOUT_MS)
+
+  const filename = `${safeFilename(options.title ?? 'Sintesis_Atmaja')}.pdf`
 
   try {
     // Beri waktu DOM untuk render (fonts, layout) sebelum capture
@@ -274,17 +354,22 @@ export async function exportMessageAsPdf(options: ExportPdfOptions): Promise<boo
     // Lazy import html2pdf (cached setelah first call)
     const html2pdfModule = await import('html2pdf.js')
     if (timedOut) return false
-    const html2pdf = (html2pdfModule.default ?? html2pdfModule) as unknown as () => {
-      from: (el: HTMLElement) => {
-        set: (opts: Record<string, unknown>) => {
-          save: () => Promise<void>
-        }
-      }
+
+    // Type definition untuk html2pdf chain API. Pakai outputPdf('blob') supaya
+    // kita bisa manual control download (lebih reliable di PWA standalone).
+    type Html2PdfInstance = {
+      from: (el: HTMLElement) => Html2PdfInstance
+      set: (opts: Record<string, unknown>) => Html2PdfInstance
+      output: (type: 'blob' | 'datauristring' | 'arraybuffer') => Promise<Blob | string | ArrayBuffer>
+      save: () => Promise<void>
     }
+    const html2pdfFactory = (html2pdfModule.default ?? html2pdfModule) as unknown as () => Html2PdfInstance
 
-    const filename = `${safeFilename(options.title ?? 'Sintesis_Atmaja')}.pdf`
+    console.info('[exportPdf] html2pdf loaded, generating PDF blob...')
 
-    await html2pdf()
+    // Generate PDF as Blob — jangan langsung .save() yang internal trigger download
+    // tapi sering gagal di PWA standalone karena user gesture lost
+    const pdfBlob = (await html2pdfFactory()
       .from(container)
       .set({
         margin: [12, 10, 14, 10], // mm: top, left, bottom, right
@@ -305,19 +390,47 @@ export async function exportMessageAsPdf(options: ExportPdfOptions): Promise<boo
         },
         pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', 'thead', 'pre', 'blockquote'] },
       })
-      .save()
+      .output('blob')) as Blob
 
     if (timedOut) return false
     window.clearTimeout(timeoutHandle)
     cleanup()
-    showResultToast('PDF berhasil di-download')
-    return true
+
+    console.info('[exportPdf] PDF blob generated, size:', pdfBlob.size, 'bytes, type:', pdfBlob.type)
+
+    // Try Method 1: Direct download via anchor click
+    const downloaded = downloadBlobAsFile(pdfBlob, filename)
+
+    if (downloaded) {
+      showResultToast(
+        standalone
+          ? 'PDF di-download. Cek Downloads folder atau notification bar HP.'
+          : 'PDF berhasil di-download',
+      )
+      return true
+    }
+
+    // Method 2 fallback: Open blob in new tab
+    console.warn('[exportPdf] direct download failed, trying new tab fallback')
+    const openedTab = openBlobInNewTab(pdfBlob, filename)
+    if (openedTab) {
+      showResultToast(
+        'PDF terbuka di tab baru. Save manual via Ctrl+S (atau download icon di PDF viewer).',
+      )
+      return true
+    }
+
+    showResultToast('Gagal trigger download. Cek browser settings + pop-up.', true)
+    return false
   } catch (err) {
     if (timedOut) return false
     window.clearTimeout(timeoutHandle)
     console.error('[exportPdf] html2pdf failed:', err)
     cleanup()
-    showResultToast('Gagal generate PDF, coba lagi', true)
+    showResultToast(
+      `Gagal generate PDF: ${err instanceof Error ? err.message : 'unknown'}`,
+      true,
+    )
     return false
   }
 }
