@@ -38,14 +38,14 @@ function buildPdfContainer({ contentHtml, title, subtitle }: ExportPdfOptions): 
 
   const container = document.createElement('div')
   container.id = 'gerai-pdf-root'
-  // FIX: position di-render di DOM tree dengan VALID viewport coordinates supaya
-  // html2canvas bisa capture content (sebelumnya left: -99999px bikin
-  // getBoundingClientRect return negative, canvas dimensions jadi 0 = PDF kosong).
-  // Place at top: 100vh = below current viewport, masih in DOM, user tidak lihat.
+  // FIX (Bug B): place container at top:0 dengan visibility hidden + opacity 0,
+  // BUKAN top: 100vh (off-screen below). html2canvas pakai window dimensions sebagai
+  // virtual viewport — container off-screen below viewport sering kosong saat capture.
+  // Visibility hidden tetap render layout (valid getBoundingClientRect), just invisible.
   container.style.cssText = `
-    position: absolute;
+    position: fixed;
     left: 0;
-    top: 100vh;
+    top: 0;
     width: 794px;
     min-height: 1000px;
     background: #FAF8F4;
@@ -55,8 +55,11 @@ function buildPdfContainer({ contentHtml, title, subtitle }: ExportPdfOptions): 
     font-size: 11.5pt;
     line-height: 1.65;
     box-sizing: border-box;
-    z-index: -1;
+    z-index: -10;
+    opacity: 0;
+    visibility: hidden;
     pointer-events: none;
+    overflow: visible;
   `
 
   container.innerHTML = `
@@ -424,8 +427,22 @@ export async function exportMessageAsPdf(options: ExportPdfOptions): Promise<boo
       height: containerRect.height,
     })
 
-    // Wait extra untuk fonts + render after DOM insert
-    await new Promise((r) => window.setTimeout(r, 500))
+    // Make container VISIBLE briefly so html2canvas can read computed styles + images correctly.
+    // visibility:hidden bisa bikin canvas render kosong di beberapa browser. Pakai opacity 0.001
+    // dan z-index -10 supaya invisible to user tapi rendered.
+    container.style.visibility = 'visible'
+    container.style.opacity = '0.001'
+
+    // Wait extra untuk fonts + render after visibility change. Web fonts + MathJax + image
+    // butuh waktu paint. 1200ms cover slow connection / large content.
+    await new Promise((r) => window.setTimeout(r, 1200))
+
+    const finalRect = container.getBoundingClientRect()
+    console.info('[exportPdf] container rect after visible:', {
+      top: finalRect.top,
+      width: finalRect.width,
+      height: finalRect.height,
+    })
 
     // Generate PDF as Blob — jangan langsung .save() yang internal trigger download
     // tapi sering gagal di PWA standalone karena user gesture lost
@@ -438,13 +455,19 @@ export async function exportMessageAsPdf(options: ExportPdfOptions): Promise<boo
         html2canvas: {
           scale: 2,
           useCORS: true,
-          logging: true, // enable supaya kita lihat di console kalau ada issue
+          allowTaint: false,
+          logging: true,
           letterRendering: true,
           backgroundColor: '#FAF8F4',
+          // Pakai container width sebagai windowWidth — supaya html2canvas viewport match
+          // BUKAN screen size (yang bisa lebih kecil di mobile dan crop content).
           windowWidth: 850,
-          windowHeight: 1200,
+          // height auto dari content, BUKAN cap 1200 (yang motong content panjang jadi blank).
           scrollX: 0,
-          scrollY: -window.scrollY, // adjust supaya capture absolute position correctly
+          scrollY: 0,
+          // Force render dari element sendiri, bukan dari window
+          foreignObjectRendering: false,
+          removeContainer: true,
         },
         jsPDF: {
           unit: 'mm',

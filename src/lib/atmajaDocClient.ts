@@ -82,40 +82,27 @@ export function userWantsPdf(userMessage: string): boolean {
 }
 
 // === INTENT SUPPRESSION ===
-// User eksplisit minta lihat dulu di chat sebelum dijadikan PDF/file.
-// Phrase: "sblm jadi pdf", "tampilkan dulu", "kasih briefnya dulu", "jangan pdf",
-// "sini saya liat dulu", "preview dulu", "tunjukin dulu", "review dulu".
-// Kalau detected, frontend SKIP synthesize ke PDF meski response panjang/structured.
+// User minta TEXT/BRIEF (bukan PDF). Default behavior: kalau user minta brief/update/sintesis/workflow
+// dan tidak explicit sebut PDF/file/dokumen, response harus di chat saja.
 const PDF_SUPPRESS_RE =
-  /\b(sblm|sebelum|jangan|tanpa|bukan|skip|no|tidak usah|gausah|ga usah|nggak usah|engga usah)\s*(jadi\s+)?(pdf|file|dokumen|attachment|lampiran)|kasih\s+(briefnya|brief|sintesis|sintesa|isi|teks|content|raw)\s+(dulu|aja|saja|nya)|(tampilkan|tunjukin|tunjukan|tunjukkan|tampilin|kasih liat|kasih lihat|liat|lihat|preview|review|baca|cek)\s+(dulu|aja|saja|isinya|isi)|di\s+chat\s+(dulu|aja|saja)|sini\s+saya\s+(liat|lihat|baca|cek|review)|(saya|aku)\s+(liat|lihat|baca|cek|review)\s+dulu/i
+  /\b(sblm|sebelum|jangan|tanpa|bukan|skip|no|tidak usah|gausah|ga usah|nggak usah|engga usah)\s*(jadi\s+)?(pdf|file|dokumen|attachment|lampiran)|(kasih|berikan|bikinkan|tolong\s+kasih|tolong\s+berikan|buatkan|update|perbaiki|rapikan|bagusin|rapih(?:in|kan)?|polish)\s+(briefnya|brief|sintesis|sintesa|workflow|workflownya|isi|teks|content|raw|update|revisi|draft|outline|rangkuman|ringkasan)|(tampilkan|tunjukin|tunjukan|tunjukkan|tampilin|kasih liat|kasih lihat|liat|lihat|preview|review|baca|cek)\s+(dulu|aja|saja|isinya|isi)|di\s+chat\s+(dulu|aja|saja)|sini\s+saya\s+(liat|lihat|baca|cek|review)|(saya|aku)\s+(liat|lihat|baca|cek|review)\s+dulu/i
 
 export function userSuppressesPdf(userMessage: string): boolean {
   return PDF_SUPPRESS_RE.test(String(userMessage ?? ''))
 }
 
-// Detect kalau Atmaja's RESPONSE punya struktur document — long + multi-heading +
-// ada HTML/markdown code blocks. Indikasi: Atmaja kasih document content padahal
-// user tidak explicit minta "pdf". Frontend synthesize attachment dari content ini.
+// Detect kalau Atmaja respons dengan raw HTML code block — harus di-convert jadi PDF
+// supaya tidak tampil sebagai mentah di chat. NARROW intentionally: jangan trigger
+// hanya karena response panjang+structured (itu normal jawaban Atmaja, bukan signal PDF).
+// User yang TIDAK eksplisit sebut PDF tetap dapat text di chat. Atmaja
+// emit [ATMAJA_DOC] marker explicitly kalau memang butuh PDF.
 export function looksLikeDocumentResponse(responseText: string): boolean {
   if (!responseText || responseText.length < 1500) return false
 
-  // Pattern 1: response punya raw HTML code block (```html ... ```)
-  const hasHtmlBlock = /```html[\s\S]*?```/i.test(responseText)
-
-  // Pattern 2: response opening dengan "Berikut HTML/file/dokumen/PDF/markdown"
-  const offerPhrase = /\bberikut\s+(html|file|dokumen|pdf|markdown|md|workflow|sintesis|brief)\s+\w/i.test(
-    responseText.slice(0, 500),
-  )
-
-  // Pattern 3: multi-heading (3+ H1/H2 markers di markdown)
-  const headingCount = (responseText.match(/^#{1,2}\s+\S/gm) ?? []).length
-  const hasMultipleHeadings = headingCount >= 3
-
-  // Pattern 4: ada table markdown (| header | dst)
-  const hasTable = /\n\s*\|.+\|\s*\n\s*\|[\s:|-]+\|/m.test(responseText)
-
-  // Document response = panjang + (HTML block OR offer phrase OR multi-heading + table)
-  return hasHtmlBlock || offerPhrase || (hasMultipleHeadings && hasTable)
+  // HANYA trigger pada raw HTML code block (```html ... ```) yang harus di-convert.
+  // Heading+table multi-paragraph adalah jawaban prose normal, bukan signal PDF.
+  // Frasa "Berikut workflow/brief" adalah intro Indonesia normal, bukan signal PDF.
+  return /```html[\s\S]*?```/i.test(responseText)
 }
 
 // Extract content yang appropriate untuk PDF dari response yang ada raw HTML.
