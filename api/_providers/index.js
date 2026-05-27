@@ -9,10 +9,13 @@
 
 import { getProvider, PROVIDER } from '../_models.js'
 import * as anthropic from './anthropic.js'
+import * as google from './google.js'
+import * as deepseek from './deepseek.js'
 
 const ADAPTERS = {
   [PROVIDER.ANTHROPIC]: anthropic,
-  // [PROVIDER.GOOGLE]: google,   // aktif setelah _providers/google.js dibuat
+  [PROVIDER.GOOGLE]: google,
+  [PROVIDER.DEEPSEEK]: deepseek,
   // [PROVIDER.OPENAI]: openai,   // aktif kalau perlu OpenAI chat (saat ini cuma image/video)
 }
 
@@ -35,6 +38,7 @@ export async function callLLM({ modelId, messages, maxTokens, temperature }) {
 function providerCallFn(providerKey) {
   if (providerKey === PROVIDER.ANTHROPIC) return 'callAnthropic'
   if (providerKey === PROVIDER.GOOGLE) return 'callGoogle'
+  if (providerKey === PROVIDER.DEEPSEEK) return 'callDeepSeek'
   if (providerKey === PROVIDER.OPENAI) return 'callOpenAI'
   throw new Error('no_call_fn_for_' + providerKey)
 }
@@ -49,16 +53,22 @@ export function getProviderStatus() {
       scope: 'chat (Atmaja CEO + C-suite + specialist)',
     },
     google: {
-      enabled: false,
-      keyConfigured: Boolean(process.env.GOOGLE_AI_API_KEY?.trim()),
+      enabled: google.isGoogleConfigured(),
+      keyConfigured: google.isGoogleConfigured(),
       keyEnvName: 'GOOGLE_AI_API_KEY',
-      note: 'adapter belum di-install',
+      scope: 'chat (Gemini 2.5/2.0 Pro+Flash, eksperimen multi-modal)',
     },
     openai: {
       enabled: Boolean(process.env.OPENAI_API_KEY?.trim()),
       keyConfigured: Boolean(process.env.OPENAI_API_KEY?.trim()),
       keyEnvName: 'OPENAI_API_KEY',
       scope: 'image + video generation only',
+    },
+    deepseek: {
+      enabled: deepseek.isDeepSeekConfigured(),
+      keyConfigured: deepseek.isDeepSeekConfigured(),
+      keyEnvName: 'DEEPSEEK_API_KEY',
+      scope: 'chat (V3 + R1 reasoner, paling hemat untuk eksperimen)',
     },
   }
 }

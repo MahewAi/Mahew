@@ -60,20 +60,52 @@ modelSpecs:
         model: "claude-sonnet-4-6"
         temperature: 0.7
 
-    - name: "gemini-pro"
-      label: "Gemini 2 Pro (eksperimen)"
-      description: "Google Gemini untuk explore alternatif provider."
+    - name: "gemini-2-5-pro"
+      label: "Gemini 2.5 Pro (content tier, multimodal)"
+      description: "Google Gemini 2.5 Pro. Bagus untuk multi-modal + reasoning panjang. Free tier 1500 req/hari di Gemini Flash."
       preset:
         endpoint: "google"
-        model: "gemini-2.0-pro-exp"
+        model: "gemini-2.5-pro"
         temperature: 0.7
 
-    - name: "gpt-4o-experiment"
-      label: "GPT-4o (compare benchmark)"
-      description: "Untuk compare jawaban dengan Claude/Gemini."
+    - name: "gemini-2-5-flash"
+      label: "Gemini 2.5 Flash (cepat + murah)"
+      description: "Untuk task ringan. Free tier 1500 req/hari di AI Studio API."
+      preset:
+        endpoint: "google"
+        model: "gemini-2.5-flash"
+        temperature: 0.7
+
+    - name: "gpt-5"
+      label: "GPT-5 (benchmark)"
+      description: "OpenAI GPT-5 (kalau released sudah). Untuk compare jawaban dengan Claude/Gemini."
       preset:
         endpoint: "openAI"
-        model: "gpt-4o"
+        model: "gpt-5"
+        temperature: 0.7
+
+    - name: "gpt-5-5"
+      label: "GPT-5.5 (latest)"
+      description: "OpenAI GPT-5.5 kalau available. Set OPENAI_API_KEY di env Railway dulu."
+      preset:
+        endpoint: "openAI"
+        model: "gpt-5.5"
+        temperature: 0.7
+
+    - name: "deepseek-reasoner"
+      label: "DeepSeek R1 Reasoner (murah + jago)"
+      description: "DeepSeek R1 reasoning model. $0.55/$2.19 per 1M tokens. Bagus untuk problem solving + cost-sensitive."
+      preset:
+        endpoint: "deepseek"
+        model: "deepseek-reasoner"
+        temperature: 0.7
+
+    - name: "deepseek-chat"
+      label: "DeepSeek V3 (paling murah)"
+      description: "DeepSeek V3 chat. $0.27/$1.10 per 1M tokens. Untuk eksperimen volume tinggi."
+      preset:
+        endpoint: "deepseek"
+        model: "deepseek-chat"
         temperature: 0.7
 
 # Custom endpoints

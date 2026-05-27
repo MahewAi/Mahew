@@ -7,6 +7,7 @@ export const PROVIDER = {
   ANTHROPIC: 'anthropic',
   GOOGLE: 'google',
   OPENAI: 'openai',
+  DEEPSEEK: 'deepseek',
   OPENROUTER: 'openrouter', // legacy fallback, deprecated
 }
 
@@ -28,9 +29,32 @@ export const MODELS = {
   'anthropic/claude-opus-4':        { provider: PROVIDER.ANTHROPIC, tier: 'content',       anthropicId: 'claude-opus-4' },
   'anthropic/claude-sonnet-4.6':    { provider: PROVIDER.ANTHROPIC, tier: 'orchestration', anthropicId: 'claude-sonnet-4-6' },
 
-  // === Google Gemini (placeholder, akan aktif setelah GOOGLE_AI_API_KEY set + adapter live) ===
-  // 'google/gemini-2-pro':            { provider: PROVIDER.GOOGLE, tier: 'orchestration' },
-  // 'google/gemini-2-flash':          { provider: PROVIDER.GOOGLE, tier: 'fast' },
+  // === Google Gemini (adapter live; aktif kalau GOOGLE_AI_API_KEY set di Vercel) ===
+  // Native model name di-pakai sebagai googleId untuk Gemini REST API.
+  'google/gemini-2.5-pro':            { provider: PROVIDER.GOOGLE, tier: 'content',       googleId: 'gemini-2.5-pro' },
+  'google/gemini-2.5-flash':          { provider: PROVIDER.GOOGLE, tier: 'orchestration', googleId: 'gemini-2.5-flash' },
+  'google/gemini-2.0-pro':            { provider: PROVIDER.GOOGLE, tier: 'content',       googleId: 'gemini-2.0-pro' },
+  'google/gemini-2.0-flash':          { provider: PROVIDER.GOOGLE, tier: 'fast',          googleId: 'gemini-2.0-flash' },
+  'google/gemini-2.0-flash-thinking': { provider: PROVIDER.GOOGLE, tier: 'content',       googleId: 'gemini-2.0-flash-thinking-exp' },
+
+  // Native ID-style (untuk LibreChat Custom Endpoint yang kirim raw model name)
+  'gemini-2.5-pro':                   { provider: PROVIDER.GOOGLE, tier: 'content',       googleId: 'gemini-2.5-pro' },
+  'gemini-2.5-flash':                 { provider: PROVIDER.GOOGLE, tier: 'orchestration', googleId: 'gemini-2.5-flash' },
+  'gemini-2.0-pro':                   { provider: PROVIDER.GOOGLE, tier: 'content',       googleId: 'gemini-2.0-pro' },
+  'gemini-2.0-flash':                 { provider: PROVIDER.GOOGLE, tier: 'fast',          googleId: 'gemini-2.0-flash' },
+
+  // Native Anthropic ID-style (untuk LibreChat Custom Endpoint)
+  'claude-opus-4-7':                  { provider: PROVIDER.ANTHROPIC, tier: 'content',       anthropicId: 'claude-opus-4-7' },
+  'claude-opus-4-6':                  { provider: PROVIDER.ANTHROPIC, tier: 'content',       anthropicId: 'claude-opus-4-6' },
+  'claude-sonnet-4-6':                { provider: PROVIDER.ANTHROPIC, tier: 'orchestration', anthropicId: 'claude-sonnet-4-6' },
+
+  // === DeepSeek (paling murah: V3 $0.27/$1.10, R1 $0.55/$2.19 per 1M tokens) ===
+  'deepseek/deepseek-chat':           { provider: PROVIDER.DEEPSEEK, tier: 'orchestration', deepseekId: 'deepseek-chat' },
+  'deepseek/deepseek-reasoner':       { provider: PROVIDER.DEEPSEEK, tier: 'content',       deepseekId: 'deepseek-reasoner' },
+
+  // Native DeepSeek ID-style
+  'deepseek-chat':                    { provider: PROVIDER.DEEPSEEK, tier: 'orchestration', deepseekId: 'deepseek-chat' },
+  'deepseek-reasoner':                { provider: PROVIDER.DEEPSEEK, tier: 'content',       deepseekId: 'deepseek-reasoner' },
 }
 
 // Whitelist model yang boleh dipakai untuk chat. Floor enforcement.
