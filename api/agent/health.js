@@ -1,42 +1,9 @@
+// Phase C: provider abstraction. Health endpoint return per-provider matrix.
+import { getProviderStatus } from '../_providers/index.js'
+
 const jsonHeaders = {
   'content-type': 'application/json; charset=utf-8',
   'cache-control': 'no-store',
-}
-
-// Threshold untuk credit low warning. Adjustable via env var.
-const CREDIT_LOW_THRESHOLD_USD = Number(process.env.OPENROUTER_CREDIT_LOW_THRESHOLD ?? 20)
-// Credit info di-cache supaya tidak hit OpenRouter setiap health check (rate limit + cost).
-let cachedCreditInfo = null
-let cachedCreditAt = 0
-const CREDIT_CACHE_TTL_MS = 5 * 60_000 // 5 menit
-
-async function getOpenRouterCreditInfo() {
-  const now = Date.now()
-  if (cachedCreditInfo && now - cachedCreditAt < CREDIT_CACHE_TTL_MS) {
-    return cachedCreditInfo
-  }
-  const apiKey = process.env.OPENROUTER_MANAGEMENT_KEY ?? process.env.OPENROUTER_API_KEY
-  if (!apiKey) return null
-  try {
-    const upstream = await fetch('https://openrouter.ai/api/v1/credits', {
-      headers: { authorization: `Bearer ${apiKey}`, accept: 'application/json' },
-    })
-    if (!upstream.ok) return null
-    const data = await upstream.json()
-    const total = Number(data?.data?.total_credits ?? 0)
-    const used = Number(data?.data?.total_usage ?? 0)
-    const info = {
-      totalCredits: total,
-      totalUsage: used,
-      remainingCredits: Math.max(0, total - used),
-      checkedAt: new Date().toISOString(),
-    }
-    cachedCreditInfo = info
-    cachedCreditAt = now
-    return info
-  } catch {
-    return null
-  }
 }
 
 // Debug helper: fetch list models Anthropic punya dengan API key yang tersedia
@@ -77,19 +44,9 @@ export default async function handler(req, res) {
     .map((host) => host.trim())
     .filter(Boolean)
 
-  // Build warnings array — checked + populated kalau ada concern
+  // Build warnings array — checked + populated kalau ada concern.
+  // OpenRouter credit check removed (Phase C migration). Gerai pakai Anthropic direct + OpenAI direct.
   const warnings = []
-  const creditInfo = await getOpenRouterCreditInfo()
-  if (creditInfo && creditInfo.remainingCredits < CREDIT_LOW_THRESHOLD_USD) {
-    warnings.push({
-      severity: creditInfo.remainingCredits < 5 ? 'critical' : 'warning',
-      type: 'openrouter_credit_low',
-      message: `OpenRouter credit sisa $${creditInfo.remainingCredits.toFixed(2)} di bawah threshold $${CREDIT_LOW_THRESHOLD_USD}. Top-up di https://openrouter.ai/credits sebelum chat habis.`,
-      remainingCredits: creditInfo.remainingCredits,
-      totalCredits: creditInfo.totalCredits,
-      checkedAt: creditInfo.checkedAt,
-    })
-  }
   if (!process.env.BLOB_READ_WRITE_TOKEN) {
     warnings.push({
       severity: 'info',
@@ -157,9 +114,10 @@ export default async function handler(req, res) {
           proposals: '/api/atmaja/memory?type=proposals',
         },
       },
-      // Warnings real-time, populated di runtime berdasar credit check + env state.
-      // Cached 5 menit supaya tidak hit OpenRouter setiap health probe.
+      // Warnings real-time, populated di runtime berdasar env state (blob/kv).
       warnings,
+      // Phase C: per-provider matrix. Caller bisa lihat key+enabled status untuk semua provider.
+      providers: getProviderStatus(),
       image: {
         provider: 'OpenAI',
         endpoint: '/api/openai/image',

@@ -1,6 +1,8 @@
 import { readMemory, writeMemory, incrementTurnCounter, getFileById, fetchFileBase64, listProposals, createProposal } from './memory.js'
 import { isRequestAllowed, getHeader, getRequestHost, parseCsv, getClientIp, consumeRateLimit as sharedConsumeRateLimit, attachRequestId } from '../_shared.js'
 import { kv } from '@vercel/kv'
+// Phase C: provider abstraction. callLLM dispatch ke Anthropic / Google / OpenAI via registry.
+import { callLLM as callLLMFromProvider } from '../_providers/index.js'
 
 // ============================================================================
 // LIVE EXECUTION TRACE (n8n-style workflow tracker)
@@ -866,10 +868,17 @@ export default async function handler(req, res) {
   }
   function usage_n(v) { return Number.isFinite(Number(v)) ? Number(v) : 0 }
 
-  // Single dispatch function — route ke Anthropic atau OpenRouter
+  // Single dispatch function — route via provider registry (api/_providers/index.js).
+  // Anthropic = primary kalau ANTHROPIC_API_KEY ada. Google/OpenAI adapter siap di registry kalau di-install.
+  // OpenRouter fallback inline di-keep untuk safety net (lihat call site di line ~1147).
   async function callLLM(modelId, messagesArg) {
     if (USE_ANTHROPIC_DIRECT) {
-      return callAnthropicDirect(modelId, messagesArg)
+      return callLLMFromProvider({
+        modelId,
+        messages: messagesArg,
+        maxTokens: MAX_TOKENS_PER_CALL,
+        temperature: ATMAJA_TEMPERATURE,
+      })
     }
     return callOpenRouter(modelId, messagesArg)
   }

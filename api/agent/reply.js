@@ -8,6 +8,8 @@
 // - max_tokens raised 900 → 2500 supaya substantive
 
 import { isRequestAllowed, getHeader, consumeRateLimit as sharedConsumeRateLimit } from '../_shared.js'
+// Phase C: provider abstraction. callLLM dispatch ke Anthropic / Google / OpenAI via registry.
+import { callLLM as callLLMFromProvider } from '../_providers/index.js'
 import { readMemory } from '../atmaja/memory.js'
 
 const jsonHeaders = {
@@ -601,7 +603,9 @@ export default async function handler(req, res) {
   }
 
   async function callLLM(modelId) {
-    if (USE_ANTHROPIC_DIRECT) return callAnthropicDirect(modelId)
+    if (USE_ANTHROPIC_DIRECT) {
+      return callLLMFromProvider({ modelId, messages, maxTokens: MAX_TOKENS, temperature: TEMPERATURE })
+    }
     return callOpenRouter(modelId)
   }
 
