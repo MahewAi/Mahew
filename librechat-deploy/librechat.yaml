@@ -1,0 +1,111 @@
+# LibreChat config untuk deploy Gerai 1000 Pintu playground
+# https://www.librechat.ai/docs/configuration/librechat_yaml
+#
+# Tujuan: playground multi-provider buat Matthew + tim. Akses Claude / Gemini / GPT
+# raw tanpa filter Atmaja prompt. Atmaja brand-canon flow tetap di PWA Gerai
+# (gerai.mahewwork.com), bukan di sini.
+#
+# Versi config schema. Cek release notes LibreChat untuk versi terbaru.
+version: 1.1.5
+cache: true
+
+# Interface customization
+interface:
+  customWelcome: "Selamat datang di Gerai LibreChat playground. Pilih model di atas. Untuk Atmaja brand-canon, pakai gerai.mahewwork.com."
+  privacyPolicy:
+    externalUrl: "https://gerai.mahewwork.com/privacy"
+    openNewTab: true
+  endpointsMenu: true
+  modelSelect: true
+  parameters: true
+  sidePanel: true
+  presets: true
+  prompts: true
+  bookmarks: true
+  multiConvo: true
+  agents: true
+
+# Rate limiting (per IP) — protect against abuse
+rateLimits:
+  fileUploads:
+    ipMax: 100
+    ipWindowInMinutes: 60
+    userMax: 50
+    userWindowInMinutes: 60
+
+# Model spec list — recommended defaults. Native providers configured via .env (ANTHROPIC_API_KEY dll).
+modelSpecs:
+  enforce: false
+  prioritize: true
+  list:
+    - name: "atmaja-style-opus"
+      label: "Atmaja Style (Opus 4.7, no canon filter)"
+      description: "Opus 4.7 dengan tone Atmaja tapi BUKAN endpoint Gerai. Tidak punya memory file."
+      iconURL: "https://gerai.mahewwork.com/icon.svg"
+      default: true
+      preset:
+        endpoint: "anthropic"
+        model: "claude-opus-4-7"
+        temperature: 0.7
+        promptPrefix: |
+          Kamu Atmaja, AI orchestrator Gerai 1000 Pintu. Tone calm refined premium curated.
+          Hindari em-dash. Pakai "tempat" bukan "rumah". Sebut "Gerai 1000 Pintu" lengkap.
+          Filosofi 4-dunia: Jepang jiwa, Eropa seni, Amerika pernyataan, China legacy.
+
+    - name: "claude-sonnet-orchestration"
+      label: "Claude Sonnet 4.6 (C-Suite tier)"
+      description: "Sonnet 4.6 untuk orchestration tier (sama dengan C-Suite Gerai)."
+      preset:
+        endpoint: "anthropic"
+        model: "claude-sonnet-4-6"
+        temperature: 0.7
+
+    - name: "gemini-pro"
+      label: "Gemini 2 Pro (eksperimen)"
+      description: "Google Gemini untuk explore alternatif provider."
+      preset:
+        endpoint: "google"
+        model: "gemini-2.0-pro-exp"
+        temperature: 0.7
+
+    - name: "gpt-4o-experiment"
+      label: "GPT-4o (compare benchmark)"
+      description: "Untuk compare jawaban dengan Claude/Gemini."
+      preset:
+        endpoint: "openAI"
+        model: "gpt-4o"
+        temperature: 0.7
+
+# Custom endpoints
+endpoints:
+  custom:
+    # Atmaja Gerai (PHASE D++ — uncomment after /v1/chat/completions OpenAI-compat shim deployed di Gerai)
+    # Setelah shim live, Matthew bisa pakai Atmaja FULL (dengan memory file, file library,
+    # trace, dll) langsung dari LibreChat UI.
+    #
+    # - name: "Atmaja Gerai (full memory)"
+    #   apiKey: "${GERAI_BEARER_TOKEN}"
+    #   baseURL: "https://gerai.mahewwork.com/api/v1"
+    #   models:
+    #     default: ["atmaja-opus-4.7", "atmaja-sonnet-4.6"]
+    #     fetch: false
+    #   titleConvo: true
+    #   titleModel: "atmaja-sonnet-4.6"
+    #   summarize: false
+    #   summaryModel: "atmaja-sonnet-4.6"
+    #   forcePrompt: false
+    #   modelDisplayLabel: "Atmaja Gerai"
+    #   iconURL: "https://gerai.mahewwork.com/icon.svg"
+
+# MCP servers (Phase D++) — uncomment setelah api/mcp/index.js deployed di Gerai
+# Tools yang akan tersedia: read_memory, list_briefs, get_brief, search_files, create_proposal
+#
+# mcpServers:
+#   gerai:
+#     type: "streamable-http"
+#     url: "https://gerai.mahewwork.com/api/mcp"
+#     headers:
+#       Authorization: "Bearer ${GERAI_BEARER_TOKEN}"
+#     timeout: 30000
+#     iconPath: "https://gerai.mahewwork.com/icon.svg"
+#     serverInstructions: "Tools untuk akses memory, briefs, files, dan proposals Gerai 1000 Pintu."
