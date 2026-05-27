@@ -217,6 +217,51 @@ async function handleList(req, res, url) {
   })
 }
 
+// === ACTION: stats (GET, n8n auth) — aggregate counts by status ===
+// Used by n8n W7 Performance Analytics untuk pipeline metrics.
+async function handleStats(req, res) {
+  if (!isAuthorizedN8n(req)) {
+    sendJson(res, 401, { ok: false, error: 'n8n_token_required' })
+    return
+  }
+  const all = await readAllBriefs()
+  const counts = {
+    total: all.length,
+    pending: 0,
+    in_progress: 0,
+    completed: 0,
+    failed: 0,
+    other: 0,
+  }
+  let oldestOpenMs = null
+  const now = Date.now()
+  for (const b of all) {
+    const st = b.status || 'other'
+    if (counts[st] !== undefined) {
+      counts[st] += 1
+    } else {
+      counts.other += 1
+    }
+    if (st === 'pending' || st === 'in_progress') {
+      const submittedAt = b.result?.submittedAt ?? b.receivedAt ?? null
+      if (submittedAt && (!oldestOpenMs || submittedAt < oldestOpenMs)) {
+        oldestOpenMs = submittedAt
+      }
+    }
+  }
+  const open = counts.pending + counts.in_progress
+  const closed = counts.completed + counts.failed
+  sendJson(res, 200, {
+    ok: true,
+    total: counts.total,
+    open,
+    closed,
+    counts,
+    oldestOpenAgeMs: oldestOpenMs ? (now - oldestOpenMs) : null,
+    generatedAt: new Date().toISOString(),
+  })
+}
+
 // === ACTION: result (POST, requires n8n auth) ===
 async function handleResult(req, res) {
   if (!isAuthorizedN8n(req)) {
@@ -411,7 +456,10 @@ export default async function handler(req, res) {
     if (action === 'digest') {
       return handleDigestRead(req, res, url)
     }
-    sendJson(res, 400, { ok: false, error: 'unknown_action', note: 'GET support ?action=list | ?action=digest' })
+    if (action === 'stats') {
+      return handleStats(req, res)
+    }
+    sendJson(res, 400, { ok: false, error: 'unknown_action', note: 'GET support ?action=list | ?action=digest | ?action=stats' })
     return
   }
 

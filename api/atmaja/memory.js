@@ -131,7 +131,7 @@ export async function getMemoryStats() {
 
 const PROPOSALS_KEY = 'atmaja:proposals:matthew'
 const PROPOSALS_MAX_ACTIVE = 50
-const VALID_PROPOSAL_TYPES = new Set(['specialist', 'workflow', 'skill', 'prompt-refinement', 'integration', 'feature'])
+const VALID_PROPOSAL_TYPES = new Set(['specialist', 'workflow', 'skill', 'prompt-refinement', 'integration', 'feature', 'memory_curation', 'system_alert'])
 const VALID_PROPOSAL_STATUS = new Set(['pending', 'approved', 'rejected', 'implemented'])
 
 function generateProposalId() {
@@ -714,6 +714,9 @@ async function handleFiles(req, res) {
 // ============================================================================
 
 async function handleMemory(req, res) {
+  const url = new URL(req.url ?? '/', `http://${getHeader(req, 'host') ?? 'localhost'}`)
+  const action = (url.searchParams.get('action') ?? '').toLowerCase()
+
   if (req.method === 'GET') {
     const memory = await readMemory()
     const stats = await getMemoryStats()
@@ -724,6 +727,68 @@ async function handleMemory(req, res) {
       charCount: memory.length,
       maxChars: MAX_MEMORY_CHARS,
     })
+    return
+  }
+
+  // POST ?action=append body { section, content, source }
+  // Atomic section append. Section di-create kalau belum ada.
+  // Used by n8n cron workflows (W7/W8/W9) supaya tidak race condition read-modify-write.
+  if (req.method === 'POST' && action === 'append') {
+    let payload
+    try {
+      payload = await readBody(req, 100_000)
+    } catch (error) {
+      sendJson(res, error.statusCode ?? 400, {
+        ok: false,
+        error: error.message === 'payload_too_large' ? 'payload_too_large' : 'invalid_json',
+      })
+      return
+    }
+    const section = String(payload?.section ?? '').trim().slice(0, 200)
+    const content = String(payload?.content ?? '').trim()
+    const source = String(payload?.source ?? 'unknown').trim().slice(0, 100)
+    if (!section || !content) {
+      sendJson(res, 400, { ok: false, error: 'section_and_content_required' })
+      return
+    }
+    if (content.length > 20_000) {
+      sendJson(res, 400, { ok: false, error: 'content_too_large', maxChars: 20_000 })
+      return
+    }
+    try {
+      const existing = await readMemory()
+      const headingPattern = new RegExp(`(^|\\n)##\\s+${section.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}\\b`, 'i')
+      let updated
+      if (headingPattern.test(existing)) {
+        // Section exists, append content directly after section heading line.
+        updated = existing.replace(
+          headingPattern,
+          (match) => `${match}\n\n${content}\n`
+        )
+      } else {
+        // Section doesn't exist, append new section at end.
+        const sep = existing.endsWith('\n') ? '\n' : '\n\n'
+        updated = `${existing}${sep}## ${section}\n\n${content}\n`
+      }
+      // Clamp to max chars (trim from top kalau over).
+      let clamped = updated
+      let trimmed = false
+      if (clamped.length > MAX_MEMORY_CHARS) {
+        clamped = clamped.slice(clamped.length - MAX_MEMORY_CHARS)
+        trimmed = true
+      }
+      const written = await writeMemory(clamped)
+      sendJson(res, 200, {
+        ok: true,
+        section,
+        contentLength: content.length,
+        memoryLength: written.length,
+        trimmed,
+        source,
+      })
+    } catch (error) {
+      sendJson(res, 500, { ok: false, error: 'append_failed', note: error?.message ?? 'unknown' })
+    }
     return
   }
 
@@ -1324,6 +1389,58 @@ async function handleProposals(req, res, url) {
     }
     const result = await createProposal(payload)
     sendJson(res, result.ok ? 200 : 400, result)
+    return
+  }
+
+  // POST ?type=proposals&action=batch body { source, proposals: [{...}, ...] }
+  // Batch create proposals (used by n8n W9 Memory Curator).
+  // Each proposal validated individually. Returns per-item result.
+  if (req.method === 'POST' && action === 'batch') {
+    let payload
+    try {
+      payload = await readBody(req, 80_000)
+    } catch (error) {
+      sendJson(res, error.statusCode ?? 400, {
+        ok: false,
+        error: error.message === 'payload_too_large' ? 'payload_too_large' : 'invalid_json',
+      })
+      return
+    }
+    const source = String(payload?.source ?? 'unknown').trim().slice(0, 100)
+    const proposals = Array.isArray(payload?.proposals) ? payload.proposals.slice(0, 20) : []
+    if (proposals.length === 0) {
+      sendJson(res, 400, { ok: false, error: 'proposals_array_required' })
+      return
+    }
+    const results = []
+    for (const p of proposals) {
+      const input = {
+        ...p,
+        proposedBy: p.proposedBy || `atmaja-${source}`,
+      }
+      // Common pattern dari W9: kind="memory_curation", section, reason, action
+      // Map ke standard proposal shape kalau caller pakai shorthand.
+      if (!input.title && p.section) input.title = `${p.type || 'Curation'}: ${p.section}`
+      if (!input.description && p.action) input.description = p.action
+      if (!input.rationale && p.reason) input.rationale = p.reason
+      if (!input.type && p.kind) input.type = p.kind
+      const result = await createProposal(input)
+      results.push({
+        ok: result.ok,
+        proposalId: result.proposal?.id || null,
+        error: result.error || null,
+        note: result.note || null,
+      })
+    }
+    const successCount = results.filter((r) => r.ok).length
+    sendJson(res, 200, {
+      ok: successCount > 0,
+      source,
+      total: results.length,
+      success: successCount,
+      failed: results.length - successCount,
+      results,
+    })
     return
   }
 
