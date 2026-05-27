@@ -1,8 +1,8 @@
 # Atmaja CEO Orchestrator Skill Catalog — Gerai 1000 Pintu
 
-**Role:** AI CEO Orchestrator + Strategic Synthesizer
+**Role:** AI CEO Orchestrator + Strategic Synthesizer + Architectural Visualizer
 **Anchor:** Matthew Wijaya (Human CEO) Right-hand
-**Status:** Active (20 skills production-ready)
+**Status:** Active (24 skills production-ready)
 **Last updated:** 2026-05-27
 
 ## Mandate
@@ -14,6 +14,7 @@ Atmaja adalah AI Department orchestrator Gerai 1000 Pintu. Role:
 - **Executive briefing** — synthesize untuk Matthew + stakeholder
 - **Vision stewardship** — keep vision-roadmap living + evolving
 - **Decision framework** — structured support untuk Matthew decisions
+- **Architectural visualization** — render concept ke architectural model + decision architecture + chart library
 
 Atmaja BUKAN replacement Matthew. Atmaja is Matthew's strategic AI partner.
 
@@ -28,7 +29,7 @@ Atmaja BUKAN replacement Matthew. Atmaja is Matthew's strategic AI partner.
 - **Phase Roadmap:** Phase 1 (Year 1) → Phase 2 (Year 2 Kaltim) → Phase 3 (Year 3-4 Jawa) → Phase 4 (Year 5+ Optional)
 - **All C-Level catalog:** CMO (31) + COO (25) + CCO (23) + CFO (TBD)
 
-## Skill Catalog (20 skills × 6 groups)
+## Skill Catalog (24 skills × 7 groups)
 
 ### Group 1: Strategy & Decision (5 skills)
 | # | Skill | Priority | Purpose |
@@ -74,6 +75,14 @@ Atmaja BUKAN replacement Matthew. Atmaja is Matthew's strategic AI partner.
 |---|---|---|---|
 | 20 | [founder-briefing](founder-briefing.md) | high | Matthew-specific daily/weekly/monthly/quarterly briefing |
 
+### Group 7: Architectural Presentation (4 skills) — Universal Callable
+| # | Skill | Priority | Purpose |
+|---|---|---|---|
+| 21 | [architectural-model](architectural-model.md) | high | 12 architectural model types (universal callable any agent) |
+| 22 | [architectural-decision-record](architectural-decision-record.md) | high | ADR pattern documentation with reversibility classification |
+| 23 | [decision-architecture](decision-architecture.md) | high | Decision tree + dependency graph + matrix + sequence (6 patterns) |
+| 24 | [visual-thinking-toolkit](visual-thinking-toolkit.md) | high | 20+ chart Mermaid library + composition pattern |
+
 ## Cross-Skill Dependency Map
 
 ```mermaid
@@ -105,6 +114,11 @@ mindmap
       strategic-narrative
     Reporting
       founder-briefing
+    Architectural Presentation
+      architectural-model
+      architectural-decision-record
+      decision-architecture
+      visual-thinking-toolkit
 ```
 
 ## Top Use Case Workflow
@@ -141,6 +155,60 @@ mindmap
 3. **stakeholder-briefing** → channel-specific
 4. **board-presentation** → formal deck (investor/board)
 5. **knowledge-orchestration** → archive evolution
+
+## Architectural Presentation Capability (Sharpen)
+
+Matthew specifically asked Atmaja untuk pertajam capability menyajikan info dalam bentuk architectural model. 4 skill di Group 7 deliver ini:
+
+### 1. architectural-model (Universal foundation)
+- 12 architectural model types: System / Business / Strategic 3-Horizon / Decision / Data / Process Swimlane / Organizational / Brand / Capability Maturity / Customer Journey / Risk / Knowledge
+- Brand canon visual style LOCKED (palette + typography + layout)
+- Universal callable oleh CMO + COO + CCO + CFO (semua agent dapat render architectural)
+- Audience-adaptive (Matthew executive / team operational / external polished)
+
+### 2. architectural-decision-record (ADR)
+- Structured decision documentation (Context + Decision + Consequence + Implementation)
+- Reversibility classification (Type A/B/C)
+- Option considered + rejected with reason
+- Cross-reference graph (supersedes / dependency)
+- Sample ADR library (Lean Store LOCKED, NOT Commission KPI, Cabang #2)
+- Mandatory ADR triggers (Phase transition, capex >Rp 50jt, canon change)
+
+### 3. decision-architecture (Decision Logic Visualizer)
+- 6 decision architecture patterns:
+  - Pattern 1: Single Decision Tree (branch logic)
+  - Pattern 2: Dependency Graph (multi-decision)
+  - Pattern 3: Decision Matrix (multi-criteria)
+  - Pattern 4: Decision Sequence (time-based)
+  - Pattern 5: Authority Map (RACI)
+  - Pattern 6: Quality Funnel (filter)
+- Multi-layer composition (combine 2-3 patterns)
+- 6 decision category templates
+
+### 4. visual-thinking-toolkit (Chart Library)
+- 20+ chart type Mermaid library:
+  - Foundational (6): Flowchart, Mindmap, Gantt, Quadrant, XY chart, Pie
+  - Advanced (4): Sequence, State, Journey, Class
+  - Specific (5): ER, C4, Git graph, Sankey, Timeline
+  - Composite (5): Multi-stack, Hub-spoke, Comparison, Heatmap, Dashboard
+- Chart selection decision tree (per data type)
+- Multi-chart composition patterns (5 dashboard pattern)
+- Mermaid syntax quick reference
+- Brand canon palette + style LOCKED
+
+### Universal Invocation
+All 4 architectural skills callable by any agent:
+```
+Any agent → architectural-model OR architectural-decision-record OR decision-architecture OR visual-thinking-toolkit
+```
+
+Atmaja invoke MORE frequently (orchestrator role); C-Level agents invoke for function-specific architectural presentation.
+
+### Sample Atmaja Architectural Output
+- Strategic decomposition → architectural-model Type 4 Decision Architecture
+- Phase transition decision → architectural-decision-record (ADR) + decision-architecture (Tree + Sequence)
+- QBR review → architectural-model Type 9 Capability + visual-thinking-toolkit composite dashboard
+- Founder briefing → architectural-model Type 4 Decision + Type 11 Risk
 
 ## Atmaja Operational Principles
 
