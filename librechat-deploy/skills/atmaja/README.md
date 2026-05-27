@@ -2,7 +2,7 @@
 
 **Role:** AI CEO Orchestrator + Strategic Synthesizer + Architectural Visualizer
 **Anchor:** Matthew Wijaya (Human CEO) Right-hand
-**Status:** Active (24 skills production-ready)
+**Status:** Active (28 skills production-ready)
 **Last updated:** 2026-05-27
 
 ## Mandate
@@ -29,7 +29,7 @@ Atmaja BUKAN replacement Matthew. Atmaja is Matthew's strategic AI partner.
 - **Phase Roadmap:** Phase 1 (Year 1) → Phase 2 (Year 2 Kaltim) → Phase 3 (Year 3-4 Jawa) → Phase 4 (Year 5+ Optional)
 - **All C-Level catalog:** CMO (31) + COO (25) + CCO (23) + CFO (TBD)
 
-## Skill Catalog (24 skills × 7 groups)
+## Skill Catalog (28 skills × 8 groups)
 
 ### Group 1: Strategy & Decision (5 skills)
 | # | Skill | Priority | Purpose |
@@ -83,6 +83,14 @@ Atmaja BUKAN replacement Matthew. Atmaja is Matthew's strategic AI partner.
 | 23 | [decision-architecture](decision-architecture.md) | high | Decision tree + dependency graph + matrix + sequence (6 patterns) |
 | 24 | [visual-thinking-toolkit](visual-thinking-toolkit.md) | high | 20+ chart Mermaid library + composition pattern |
 
+### Group 8: Agent Infrastructure (4 skills) — Cross-Agent System
+| # | Skill | Priority | Purpose |
+|---|---|---|---|
+| 25 | [self-learning-automation](self-learning-automation.md) | high | 3-loop continuous learning (Matthew preference + domain + canon) |
+| 26 | [memory-architecture](memory-architecture.md) | high | 4-tier memory (Founding LOCKED + Working + Notion + Obsidian) |
+| 27 | [websearch-configuration](websearch-configuration.md) | high | Source tier LOCKED + brand-aware filter + anchor monitor |
+| 28 | [learning-feedback-loop](learning-feedback-loop.md) | high | 5-stage cycle (Observe → Hypothesize → Test → Validate → Apply → Refine) |
+
 ## Cross-Skill Dependency Map
 
 ```mermaid
@@ -119,6 +127,11 @@ mindmap
       architectural-decision-record
       decision-architecture
       visual-thinking-toolkit
+    Agent Infrastructure
+      self-learning-automation
+      memory-architecture
+      websearch-configuration
+      learning-feedback-loop
 ```
 
 ## Top Use Case Workflow
@@ -209,6 +222,96 @@ Atmaja invoke MORE frequently (orchestrator role); C-Level agents invoke for fun
 - Phase transition decision → architectural-decision-record (ADR) + decision-architecture (Tree + Sequence)
 - QBR review → architectural-model Type 9 Capability + visual-thinking-toolkit composite dashboard
 - Founder briefing → architectural-model Type 4 Decision + Type 11 Risk
+
+## Agent Infrastructure (Self-Learning + Memory + Web Search)
+
+Matthew specifically requested infrastructure untuk:
+- **Self-learning automation** continuous (agent belajar dari interaksi)
+- **Memory** strengthened (Obsidian integration)
+- **Web search** configured (brand-aware sources)
+
+Group 8 deliver 4 cross-agent infrastructure skills:
+
+### 1. self-learning-automation
+- 3 learning loops: Matthew preference + Domain pattern + Brand canon refinement
+- Per-agent specialization (Atmaja decision, CMO persona, COO operational, CCO canon, CFO forecast)
+- 5 trigger types: Direct correction + Implicit signal + Canon auto + Customer outcome + Quarterly retro
+- LOCKED anti-sycophancy + brand canon erosion guard
+- Pattern require 3+ confirmation before applied
+
+### 2. memory-architecture (Obsidian-powered)
+- 4-tier memory hierarchy:
+  - **Tier 0 LOCKED Founding** (Brand Canon, 4-Dunia, 5 Nilai, Lean Store, BP)
+  - **Tier 1 Working** (session in-memory)
+  - **Tier 2 Short-term** (4-week Notion workspace)
+  - **Tier 3 Long-term** (permanent Obsidian vault)
+- Obsidian vault structure: 12-folder (founding + matthew + customers + projects + konsultasi + decisions + patterns + vendor + team + risk + knowledge + skill catalog)
+- File format: Frontmatter + bi-directional links + tag system (`#persona-retail`, `#dunia-jepang`, `#phase-1`, etc.)
+- Integration approach: Phase 1 Local vault + Git sync (privacy + offline); Phase 2 evaluate Obsidian Sync paid
+- Backup: Daily git + Weekly remote + Monthly cold storage + Quarterly cross-cloud
+- Privacy: Tier-based access, encryption, customer consent honored, UU PDP 2022 compliance
+
+### 3. websearch-configuration
+- Source tier LOCKED:
+  - **Tier 1 Anchor:** Aesop + DWR + Kinfolk + Architectural Digest + Wallpaper + Dezeen + ArchDaily Indonesia
+  - **Tier 2 Industry:** HDII + IAI + BPS + trade magazine + Bloomberg + Reuters
+  - **Tier 3 General:** Wikipedia + government + academic
+  - **Tier 4 Customer-specific:** Per-query public info
+  - **Forbidden:** Clickbait + AI content farm + mass-market generic + untrusted forum + pirated
+- Daily query budget: CMO 30 + Atmaja 20 + CCO 20 + COO 15 + CFO 10 = ~95/day
+- Privacy LOCKED: NO PII in query
+- Citation standard always attribute
+- Anchor monitoring weekly (Atmaja-led): Aesop+DWR+Kinfolk evolution tracking
+- Cache 24-48h avoid redundancy
+- Brand canon filter applied to result
+
+### 4. learning-feedback-loop
+- 5-stage cycle: Observe → Hypothesize → Test → Validate → Apply → Refine
+- 6 feedback source: Matthew direct (highest) + Customer outcome + Brand canon audit + Operational KPI + Cross-agent synthesis + External signal
+- 5 hypothesis test patterns: A/B style + Customer conversion + Channel + Canon edge + Operational
+- Anti-sycophancy LOCKED: Atmaja independent synthesis even when Matthew disagrees
+- 3+ confirmation evidence required for pattern
+- Founding knowledge LOCKED protected
+- Cross-agent learning propagation
+
+### Infrastructure Integration Flow
+
+```
+[Interaction] → self-learning-automation captures
+                     ↓
+                [memory-architecture stores]
+                Working → Notion → Obsidian
+                     ↓
+                [learning-feedback-loop tests]
+                Observe → Hypothesize → Test → Validate
+                     ↓
+                [websearch-configuration researches]
+                Anchor + Industry + Cultural reference
+                     ↓
+                [Applied across all C-Level agent]
+                Skill catalog + behavior refined
+                     ↓
+                [Quarterly audit Matthew]
+                Founding knowledge protected
+```
+
+### Obsidian Setup untuk Matthew
+
+**Recommended setup Phase 1:**
+1. Install Obsidian (free, local app)
+2. Create vault: `~/gerai-memory/`
+3. Initialize Git repo (private)
+4. Apply folder structure (refer memory-architecture.md)
+5. Set tags + frontmatter convention
+6. Initial seed: Tier 0 LOCKED Founding documents
+
+**Phase 2 (kalau perlu):**
+- Obsidian Sync paid (multi-device sync)
+- OR Self-hosted Syncthing
+
+**Agent access:**
+- Phase 1: Local file system (when AI Department runs on Matthew machine)
+- Phase 2 (cloud deploy): API integration via community plugin OR REST adapter
 
 ## Atmaja Operational Principles
 
