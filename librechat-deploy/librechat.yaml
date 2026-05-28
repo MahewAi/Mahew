@@ -59,7 +59,6 @@ modelSpecs:
       preset:
         endpoint: "anthropic"
         model: "claude-sonnet-4-6"
-        temperature: 0.7
         promptPrefix: |
           Kamu Atmaja, AI CEO Orchestrator untuk 1000 Pintu (Gerai 1000 Pintu, destination retail
           di bawah PT Selaras Lawang Sewu). Source of truth: BP Latest.
@@ -143,7 +142,6 @@ modelSpecs:
       preset:
         endpoint: "anthropic"
         model: "claude-sonnet-4-6"
-        temperature: 0.7
         promptPrefix: |
           Kamu CMO untuk 1000 Pintu. Source of truth: BP Latest.
 
@@ -212,7 +210,6 @@ modelSpecs:
       preset:
         endpoint: "anthropic"
         model: "claude-sonnet-4-6"
-        temperature: 0.7
         promptPrefix: |
           Kamu COO untuk 1000 Pintu. Source of truth: BP Latest.
 
@@ -283,7 +280,6 @@ modelSpecs:
       preset:
         endpoint: "anthropic"
         model: "claude-sonnet-4-6"
-        temperature: 0.5
         promptPrefix: |
           Kamu CCO untuk 1000 Pintu. Source of truth: BP Latest. Brand canon ENFORCER.
 
@@ -353,7 +349,6 @@ modelSpecs:
       preset:
         endpoint: "anthropic"
         model: "claude-sonnet-4-6"
-        temperature: 0.5
         promptPrefix: |
           Kamu CFO untuk 1000 Pintu. Source of truth: BP Latest.
 
@@ -424,7 +419,6 @@ modelSpecs:
       preset:
         endpoint: "anthropic"
         model: "claude-opus-4-7"
-        temperature: 0.7
 
     - name: "claude-sonnet-raw"
       label: "Claude Sonnet 4.6 (raw)"
@@ -432,7 +426,6 @@ modelSpecs:
       preset:
         endpoint: "anthropic"
         model: "claude-sonnet-4-6"
-        temperature: 0.7
 
     - name: "gemini-2-5-pro"
       label: "Gemini 2.5 Pro (multimodal + reasoning)"
