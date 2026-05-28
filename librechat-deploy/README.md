@@ -107,13 +107,15 @@ Setiap agent system prompt explicit REJECT:
 - 5 agents configured dengan BP-aligned system prompts
 - 8 playground models configured
 - 5 avatars generated (`avatars/`)
-- 122 skill catalog di `skills/` (BP-alignment partial — pending Phase D update)
+- 122 skill catalog di `skills/` — BP-aligned (Aesop/DWR/Kinfolk + 4-Dunia LOCKED + "Matthew Wijaya" + "premium curated" hilang)
+- Per-agent operational docs di `docs/agents/`
+- Validation + smoke-test scripts di `scripts/`
 
 ### 🟡 Pending (Manual Steps untuk Matthew)
 - Assign avatars per agent via LibreChat UI (Atmaja, CMO, COO, CCO, CFO)
-- Test conversation flow per agent
+- Test conversation flow per agent (lihat `scripts/smoke-test.md`)
 - Verify production deploy reflects yaml updates
-- Update skill catalog content ke BP terms (122 files — gradual)
+- Review + merge `bp-skill-cleanup` branch PR ke main
 
 ### ❌ Deferred (Phase D++)
 - **MCP server Gerai** — agent access ke Obsidian vault (`gerai-memory/`) sebagai memory layer
@@ -204,6 +206,7 @@ Production usage estimate:
 
 ## Notes
 
-- Skill catalog di `skills/` content masih partial old (Aesop+DWR+Kinfolk references, 4-Dunia LOCKED, dll). Update gradual saat di-invoke. Vault Obsidian (`gerai-memory/`) is source of truth.
+- Skill catalog di `skills/` sudah BP-aligned per cleanup 2026-05-28 (commit `8689cc9` di branch `bp-skill-cleanup`). Vault Obsidian (`gerai-memory/`) is source of truth.
 - Agent system prompts di yaml ini = production source of truth untuk LibreChat agents.
-- Untuk update skill catalog content batch: pending decision Matthew.
+- Per-agent operational manual di `docs/agents/` (which agent untuk task apa, sample prompt, BP section reference).
+- Smoke test scenarios di `scripts/smoke-test.md` (10 scenario per agent, BP compliance check).
