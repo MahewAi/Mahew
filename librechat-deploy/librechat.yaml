@@ -483,25 +483,23 @@ modelSpecs:
         temperature: 0.7
 
 # Custom endpoints
-endpoints:
-  custom:
-    # Atmaja Gerai (PHASE D++, uncomment after /v1/chat/completions OpenAI-compat shim deployed)
-    # Setelah shim live, Matthew bisa pakai Atmaja FULL (dengan memory file, file library,
-    # trace, dll) langsung dari LibreChat UI.
-    #
-    # - name: "Atmaja Gerai (full memory)"
-    #   apiKey: "${GERAI_BEARER_TOKEN}"
-    #   baseURL: "https://gerai.mahewwork.com/api/v1"
-    #   models:
-    #     default: ["atmaja-opus-4.7", "atmaja-sonnet-4.6"]
-    #     fetch: false
-    #   titleConvo: true
-    #   titleModel: "atmaja-sonnet-4.6"
-    #   summarize: false
-    #   summaryModel: "atmaja-sonnet-4.6"
-    #   forcePrompt: false
-    #   modelDisplayLabel: "Atmaja Gerai"
-    #   iconURL: "https://gerai.mahewwork.com/icon.svg"
+# Currently empty (Phase D++). Setelah OpenAI-compat shim live di Gerai (/v1/chat/completions),
+# uncomment block di bawah supaya Matthew bisa pakai Atmaja Gerai FULL (dengan memory file,
+# file library, trace) langsung dari LibreChat UI.
+#
+# Format saat aktif nanti:
+# endpoints:
+#   custom:
+#     - name: "Atmaja Gerai (full memory)"
+#       apiKey: "${GERAI_BEARER_TOKEN}"
+#       baseURL: "https://gerai.mahewwork.com/api/v1"
+#       models:
+#         default: ["atmaja-opus-4.7", "atmaja-sonnet-4.6"]
+#         fetch: false
+#       titleConvo: true
+#       titleModel: "atmaja-sonnet-4.6"
+#       modelDisplayLabel: "Atmaja Gerai"
+#       iconURL: "https://gerai.mahewwork.com/icon.svg"
 
 # MCP servers (Phase D++), uncomment setelah api/mcp/index.js deployed di Gerai
 # Tools tersedia: read_memory (Obsidian vault), list_briefs, get_brief, search_files, create_proposal
