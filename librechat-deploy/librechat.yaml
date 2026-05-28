@@ -33,7 +33,7 @@ interface:
   multiConvo: true
   agents: true
 
-# Rate limiting (per IP) — protect against abuse
+# Rate limiting (per IP), protect against abuse
 rateLimits:
   fileUploads:
     ipMax: 100
@@ -41,7 +41,7 @@ rateLimits:
     userMax: 50
     userWindowInMinutes: 60
 
-# Model spec list — AI Department agents + multi-provider playground
+# Model spec list, AI Department agents + multi-provider playground
 modelSpecs:
   enforce: false
   prioritize: true
@@ -76,7 +76,7 @@ modelSpecs:
           - Positioning: "Dunia Pintu Indonesia"
           - Tone of voice: Inspiratif, berpengetahuan, hangat, jelas, terpercaya
           - "Advisor yang membantu, BUKAN sales yang memaksa"
-          - "Premium tetapi inklusif" (BP Section 6.1) — semua segmen harga
+          - "Premium tetapi inklusif" (BP Section 6.1), semua segmen harga
           - Color palette: "The Timeless Foundation" (LOCKED)
 
           EDITORIAL RULES (per BP):
@@ -110,7 +110,7 @@ modelSpecs:
           Mitra Dagang = channel partner, BUKAN customer persona.
 
           DECISION HIERARCHY (LOCKED):
-          1. Brand canon (LOCKED — overrides all)
+          1. Brand canon (LOCKED, overrides all)
           2. Strategic direction (Matthew/Atmaja)
           3. Financial sustainability (CFO veto)
           4. Operational feasibility (COO veto)
@@ -181,7 +181,7 @@ modelSpecs:
           BRAND CANON (LOCKED):
           - Tone: Inspiratif, berpengetahuan, hangat, jelas, terpercaya
           - "Advisor yang membantu, BUKAN sales yang memaksa"
-          - "Premium tetapi inklusif" — semua segmen harga
+          - "Premium tetapi inklusif", semua segmen harga
           - Tagline: "1000 Pintu, 1000 Mimpi" / "A Thousand Doors, A Thousand Dreams"
           - Pakai "tempat" not "rumah"
           - Tidak em-dash
@@ -221,7 +221,7 @@ modelSpecs:
           - SOP toko, alur kerja Marketing Advisor, customer journey
           - Delivery flow, sistem "reward", aftersales
 
-          LEAN STORE CONCEPT (LOCKED — BP Bab 8 + 14):
+          LEAN STORE CONCEPT (LOCKED, BP Bab 8 + 14):
           - 2 staf per toko: Marketing Advisor + Office Boy/Staf Gudang
           - Self-Ordering Kiosk menggantikan kasir
           - Tim Konsultasi Pusat menggantikan konsultan teknis per cabang
@@ -252,7 +252,7 @@ modelSpecs:
           - Ruang konsultasi tenang
           - Identitas brand konsisten cross-cabang
 
-          ROADMAP 7 SEKTOR (BP Bab 16 — menuju Mother Store Nov 2026):
+          ROADMAP 7 SEKTOR (BP Bab 16, menuju Mother Store Nov 2026):
           1. Marketing & Branding
           2. Design Tata Toko
           3. SDM (MA + Office Boy + Door Expert)
@@ -314,7 +314,7 @@ modelSpecs:
           - Persona naming: End User (BUKAN Retail), Procurement Korporat (BUKAN Mitra Dagang)
           - "Advisor yang membantu, bukan sales yang memaksa"
 
-          FILOSOFI "DUNIA PINTU" (BP Section 3.5) — Positioning Core:
+          FILOSOFI "DUNIA PINTU" (BP Section 3.5), Positioning Core:
           "Tempat di mana wawasan dan impian bertemu."
 
           4 Negara hanya cultural context (BP Section 1.5), BUKAN mandatory archetype:
@@ -396,7 +396,7 @@ modelSpecs:
 
           BRAND CANON:
           - "Advisor yang membantu, bukan sales yang memaksa"
-          - "Premium tetapi inklusif" — semua segmen harga
+          - "Premium tetapi inklusif", semua segmen harga
           - LOCKED: NO commission KPI Door Expert/MA
           - Konsistensi cross-cabang
 
@@ -415,11 +415,11 @@ modelSpecs:
           Skill catalog: librechat-deploy/skills/cfo/ (15 skills)
 
     # =========================================================================
-    # PLAYGROUND (Multi-provider raw — untuk eksperimen + compare)
+    # PLAYGROUND (Multi-provider raw, untuk eksperimen + compare)
     # =========================================================================
 
     - name: "claude-opus-strategic"
-      label: "Claude Opus 4.7 (strategic — no agent prompt)"
+      label: "Claude Opus 4.7 (strategic, no agent prompt)"
       description: "Opus 4.7 raw tanpa system prompt agent. Untuk strategic deep analysis. Default-nya Atmaja, ini untuk eksplorasi raw."
       preset:
         endpoint: "anthropic"
@@ -485,7 +485,7 @@ modelSpecs:
 # Custom endpoints
 endpoints:
   custom:
-    # Atmaja Gerai (PHASE D++ — uncomment after /v1/chat/completions OpenAI-compat shim deployed)
+    # Atmaja Gerai (PHASE D++, uncomment after /v1/chat/completions OpenAI-compat shim deployed)
     # Setelah shim live, Matthew bisa pakai Atmaja FULL (dengan memory file, file library,
     # trace, dll) langsung dari LibreChat UI.
     #
@@ -503,7 +503,7 @@ endpoints:
     #   modelDisplayLabel: "Atmaja Gerai"
     #   iconURL: "https://gerai.mahewwork.com/icon.svg"
 
-# MCP servers (Phase D++) — uncomment setelah api/mcp/index.js deployed di Gerai
+# MCP servers (Phase D++), uncomment setelah api/mcp/index.js deployed di Gerai
 # Tools tersedia: read_memory (Obsidian vault), list_briefs, get_brief, search_files, create_proposal
 #
 # mcpServers:
