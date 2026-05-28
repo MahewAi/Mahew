@@ -43,7 +43,7 @@ Secondary:
 ### Pillar 1: Education (Authority building)
 - **Why this pillar:** Establish Gerai 1000 Pintu sebagai sumber knowledge
 - **Sub-topic cluster:**
-  - Filosofi 4-Dunia (Jepang, Eropa, Amerika, China)
+  - Filosofi Dunia Pintu (4-negara cultural context) (Jepang, Eropa, Amerika, China)
   - Material guide (kayu solid vs engineered)
   - Photography style premium retail
   - Door fitting standards
@@ -111,11 +111,11 @@ Secondary:
 mindmap
   root((Gerai Content Strategy))
     Education
-      Filosofi 4-Dunia
+      Filosofi Dunia Pintu (4-negara cultural context)
         Jepang detail
         Eropa craftsmanship
         Amerika scale
-        China legacy
+        China gerbang rezeki
       Material guide
       Photography style
       Door fitting
@@ -166,7 +166,7 @@ Switch: DISCUSSION jika pillar weighting ambigu
 
 **Output summary:**
 - 4 pillar: Education (50%) + Inspiration (30%) + Community (15%) + Commerce (5%)
-- Q3 focus pre-launch awareness, theme "Filosofi 4-Dunia"
+- Q3 focus pre-launch awareness, theme "Filosofi Dunia Pintu (4-negara cultural context)"
 - 24 post total Q3 (8/month)
 - Persona priority: Arsitek + Retail
 - Budget Rp 10jt: Rp 5jt content production, Rp 3jt KOL, Rp 2jt boost

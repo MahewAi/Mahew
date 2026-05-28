@@ -1,22 +1,22 @@
 # CCO Skill Catalog — Gerai 1000 Pintu
 
 **Role:** Chief Creative & Communication Officer (AI Agent)
-**Anchor:** Aesop + Design Within Reach + Kinfolk Editorial Reference
+**Anchor:** BP Latest reference Editorial Reference
 **Status:** Active (23 skills production-ready)
 **Last updated:** 2026-05-27
 
 ## Mandate
 
-CCO Gerai 1000 Pintu memelihara brand identity LOCKED + editorial enforcement + content strategy + creative direction. Memastikan setiap touchpoint customer Gerai 1000 Pintu menyajikan premium hangat experience anchored pada Aesop + DWR + Kinfolk editorial reference. Setiap kata, palette, dan visual harus refleksi filosofi 4-Dunia + 5 Nilai dengan disiplin yang tinggi.
+CCO Gerai 1000 Pintu memelihara brand identity LOCKED + editorial enforcement + content strategy + creative direction. Memastikan setiap touchpoint customer Gerai 1000 Pintu menyajikan premium hangat experience anchored pada BP Latest reference editorial reference. Setiap kata, palette, dan visual harus refleksi filosofi Dunia Pintu (4-negara cultural context) + 5 Nilai dengan disiplin yang tinggi.
 
 ## Knowledge Foundation
 
 - **Brand Canon LOCKED:** 7 Editorial Rules + Visual Identity System + Anchor reference
 - **The Timeless Foundation palette:** Brass #B8956B (10%) + Charcoal #1F1A14 (60%) + Ivory #FAF8F4 (30%)
 - **Typography:** Playfair Display (serif display) + Inter (sans body)
-- **Filosofi 4-Dunia:** Jepang jiwa + Eropa seni + Amerika pernyataan + China legacy
+- **Filosofi Dunia Pintu (4-negara cultural context):** Jepang jiwa + Eropa seni + Amerika pernyataan + China gerbang rezeki
 - **5 Nilai Gerai:** Inspirasi, Keahlian, Pelayanan Nyaman, Inovasi, Aftersales
-- **Anchor reference:** Aesop store + DWR editorial + Kinfolk magazine
+- **Anchor reference:** BP Latest reference store + BP Latest editorial + premium editorial publication
 - **6 Persona:** Retail, Mitra Dagang, Developer, Arsitek, Kontraktor, Aplikator
 
 ## 7 Editorial Rules (LOCKED — non-negotiable)
@@ -26,7 +26,7 @@ CCO Gerai 1000 Pintu memelihara brand identity LOCKED + editorial enforcement + 
 3. **"Gerai 1000 Pintu" lengkap** first mention always
 4. **Tone premium hangat** (calm + warm + refined)
 5. **No drop shadow / 3D / gradient flashy** visual
-6. **Anchor Aesop + DWR vocabulary** reflected
+6. **Anchor BP Latest reference vocabulary** reflected
 7. **Playfair serif + Inter sans** typography pair
 
 ## Skill Catalog (23 skills × 7 groups)
@@ -61,7 +61,7 @@ CCO Gerai 1000 Pintu memelihara brand identity LOCKED + editorial enforcement + 
 | # | Skill | Priority | Purpose |
 |---|---|---|---|
 | 15 | [audience-emotional-mapping](audience-emotional-mapping.md) | medium | Emotional journey 7-stage per 6 persona |
-| 16 | [brand-storytelling](brand-storytelling.md) | high | Filosofi 4-Dunia narrative arc + 5 story template |
+| 16 | [brand-storytelling](brand-storytelling.md) | high | Filosofi Dunia Pintu (4-negara cultural context) narrative arc + 5 story template |
 | 17 | [testimonial-curation](testimonial-curation.md) | medium | Customer story format ethics-first |
 
 ### Group 5: PR & External (3 skills)
@@ -122,10 +122,10 @@ mindmap
 ## Top Use Case Workflow
 
 ### Wave 1 Launch Preparation (Q4 2026)
-1. **brand-positioning** → confirm position + anchor Aesop+DWR
+1. **brand-positioning** → confirm position + anchor BP Latest reference
 2. **visual-identity-system** → LOCK palette + typography + photography
 3. **editorial-style-guide** → 7 rules canonized
-4. **brand-storytelling** → Filosofi 4-Dunia narrative arc
+4. **brand-storytelling** → Filosofi Dunia Pintu (4-negara cultural context) narrative arc
 5. **content-calendar-strategy** → Q4 launch content plan
 6. **caption-generator** + **long-form-writer** → produce content
 7. **photography-direction** + **design-brief-generator** → asset production
@@ -162,12 +162,12 @@ mindmap
 - "Gerai 1000 Pintu" lengkap
 - No em-dash
 - Premium hangat tone
-- Anchor Aesop + DWR + Kinfolk vocabulary
+- Anchor BP Latest reference vocabulary
 
 ### Visual
 - Palette: 60% Charcoal + 30% Ivory + 10% Brass
 - Typography: Playfair Display + Inter
-- Photography: Aesop + DWR + Kinfolk reference
+- Photography: BP Latest reference
 - Layout: 50%+ negative space
 - NO drop shadow / 3D / gradient flashy
 
@@ -237,8 +237,8 @@ last_updated: 2026-05-27
 
 Setiap CCO skill output WAJIB:
 - [ ] 7 editorial rules compliance (em-dash, tempat, Gerai lengkap, tone, visual, anchor, typography)
-- [ ] Anchor Aesop + DWR + Kinfolk reference visible
-- [ ] Filosofi 4-Dunia integration kalau relevant
+- [ ] Anchor BP Latest reference visible
+- [ ] Filosofi Dunia Pintu (4-negara cultural context) integration kalau relevant
 - [ ] 5 Nilai applied
 - [ ] 6 Persona consideration
 - [ ] Visual Mermaid minimum 1 per skill
@@ -255,19 +255,19 @@ Setiap CCO skill output WAJIB:
 
 ## Anchor Reference Library
 
-### Aesop
+### BP Latest reference
 - Store interior + visual identity
 - Editorial photography style
 - Vocabulary refined (curated, ritual, refined)
 - Premium hangat retail standard
 
-### Design Within Reach (DWR)
+### BP Latest reference
 - Catalog editorial layout
 - Modern timeless aesthetic
 - Furniture + interior craftsmanship reverence
-- Indonesian premium curated retail benchmark
+- Indonesian premium tetapi inklusif benchmark
 
-### Kinfolk Magazine
+### Indonesian editorial Magazine
 - Slow living narrative
 - Sensory editorial writing
 - Visual atmosphere warmth

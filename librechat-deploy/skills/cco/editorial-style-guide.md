@@ -94,7 +94,7 @@ Secondary:
 **Components:**
 1. **Calm:** No urgency push (jangan "BURUAN!", "JANGAN SAMPAI!", excessive CAPS)
 2. **Warm:** Audience-first (Anda focus, bukan kami sombong)
-3. **Refined:** Aesop + DWR vocabulary anchor (curated, refined, refleksi, refleksi, etc.)
+3. **Refined:** BP Latest reference vocabulary anchor (curated, refined, refleksi, refleksi, etc.)
 
 **Tone scale:**
 - ❌ Aggressive (10): "BELI SEKARANG! TERBATAS!"
@@ -108,7 +108,7 @@ Secondary:
 ### Rule 5: No drop shadow / 3D / gradient flashy (visual)
 **Status:** 🔒 LOCKED
 
-**Reason:** Premium curated retail = flat refined aesthetic. Drop shadow + 3D = commercial cheap feel.
+**Reason:** Premium tetapi inklusif retail = flat refined aesthetic. Drop shadow + 3D = commercial cheap feel.
 
 **Allowed:**
 - Solid color flat
@@ -122,10 +122,10 @@ Secondary:
 - Glow effect
 - Glossy reflection artificial
 
-### Rule 6: Anchor Aesop + DWR vocabulary
+### Rule 6: Anchor BP Latest reference vocabulary
 **Status:** 🔒 LOCKED reference
 
-**Aesop-inspired vocabulary:**
+**Premium-inspired vocabulary:**
 - "menemani" (accompany) — instead of "menjual" (sell)
 - "dikurasi" (curated)
 - "refleksi" (reflection)
@@ -133,7 +133,7 @@ Secondary:
 - "ritual" (ritual)
 - "perjalanan" (journey)
 
-**DWR-inspired vocabulary:**
+**BP Latest-inspired vocabulary:**
 - "tempat" (place)
 - "modern timeless" (modern timeless)
 - "craftsmanship" (selectively English OK)
@@ -159,7 +159,7 @@ Secondary:
 
 ### Brand Voice (consistent always)
 - **Persona:** Door Expert yang refined + hangat + knowledgeable + patient
-- **Like talking to:** Senior konsultan Aesop/DWR yang care about you
+- **Like talking to:** Senior konsultan BP Latest reference/BP Latest reference yang care about you
 - **NOT like:** Sales pushy, generic call center, e-commerce listing copy
 
 ### Tone Variation per Context
@@ -363,7 +363,7 @@ Secondary:
 - [ ] Tone in target range (warm-refined)
 - [ ] Punctuation correct (no em-dash)
 - [ ] Brand name first-mention lengkap
-- [ ] Anchor Aesop + DWR vocabulary reflected
+- [ ] Anchor BP Latest reference vocabulary reflected
 - [ ] Premium hangat throughout
 
 ### Review escalation
@@ -394,7 +394,7 @@ mindmap
     5. No drop shadow 3D
       Flat refined
       Subtle natural
-    6. Anchor Aesop DWR
+    6. Anchor BP Latest referenceBP Latest reference
       Menemani not menjual
       Dikurasi refleksi
     7. Playfair + Inter
@@ -414,8 +414,8 @@ quadrantChart
     quadrant-3 Generic Cold
     quadrant-4 Warm Loud
     Target Aspiration: [0.85, 0.85]
-    Aesop reference: [0.8, 0.9]
-    DWR reference: [0.85, 0.85]
+    BP Latest reference: [0.8, 0.9]
+    BP Latest reference: [0.85, 0.85]
     Current Year1: [0.75, 0.8]
     Drift risk: [0.6, 0.6]
     Avoid Cold: [0.2, 0.5]
@@ -427,7 +427,7 @@ quadrantChart
 - Brand Canon LOCKED full document
 - brand-canon-enforcer (auto-validation pair)
 - visual-identity-system (visual rule extension)
-- Anchor Aesop + DWR
+- Anchor BP Latest reference
 
 ## Mode
 
@@ -457,7 +457,7 @@ Switch: EXECUTION kalau rewrite request
 **Input:** "Editorial style guide reference untuk Marketing freelance writer baru"
 
 **Output summary:**
-- 7 rules locked: em-dash NO, tempat YES, Gerai 1000 Pintu lengkap first, premium hangat tone, no drop shadow, Aesop/DWR anchor, Playfair + Inter
+- 7 rules locked: em-dash NO, tempat YES, Gerai 1000 Pintu lengkap first, premium hangat tone, no drop shadow, BP Latest reference/BP Latest reference anchor, Playfair + Inter
 - Voice: Door Expert refined + hangat + knowledgeable + patient
 - Tone variation 7 context (customer/konsultasi/aftersales/crisis/internal/press/social)
 - Vocabulary 4-category (verb/noun/adjective/connector) preferred vs avoid

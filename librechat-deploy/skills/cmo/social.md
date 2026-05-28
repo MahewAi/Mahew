@@ -46,7 +46,7 @@ Secondary:
 | Senin | 09:00 | IG Feed photo | "Filosofi Jepang" | "Setiap pintu, setiap tatami..." | #Gerai1000Pintu #DuniaPintu #FilosofiJepang | Arsitek |
 | Selasa | 12:00 | IG Reel 15s | Door fitting | "Lihat detail brass..." | #Gerai1000Pintu #PintuPremium | Aplikator |
 | Rabu | 18:00 | IG Story | Behind scene | "Door Expert siap konsultasi" | story tag | All persona |
-| Kamis | 09:00 | IG Carousel | "4-Dunia eksplorasi" | "Eropa: karya seni..." | #Gerai1000Pintu #DuniaPintu | Retail, Arsitek |
+| Kamis | 09:00 | IG Carousel | "4-negara cultural reference eksplorasi" | "Eropa: karya seni..." | #Gerai1000Pintu #DuniaPintu | Retail, Arsitek |
 | Jumat | 17:00 | IG Live | Q&A Door Expert | (live) | #LiveKonsultasi | All |
 | Sabtu | 10:00 | IG Feed photo | Project showcase | "Project minggu ini..." | #Gerai1000Pintu | Retail |
 | Minggu | 11:00 | IG Story | Curated weekly | (story photo collection) | story tag | All |

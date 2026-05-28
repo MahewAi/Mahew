@@ -135,7 +135,7 @@ AFTER (recommended):
 │    Tempat yang Berkarakter"        │
 │                                    │
 │   Konsultasi gratis dengan         │
-│   Door Expert. Filosofi 4-Dunia.   │
+│   Door Expert. Filosofi Dunia Pintu (4-negara cultural context).   │
 │                                    │
 │   [Book Konsultasi Gratis →]      │  ✅ Specific CTA
 │                                    │

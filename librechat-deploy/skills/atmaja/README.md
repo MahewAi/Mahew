@@ -1,7 +1,7 @@
 # Atmaja CEO Orchestrator Skill Catalog — Gerai 1000 Pintu
 
 **Role:** AI CEO Orchestrator + Strategic Synthesizer + Architectural Visualizer
-**Anchor:** Matthew Wijaya (Human CEO) Right-hand
+**Anchor:** Matthew (Human CEO) Right-hand
 **Status:** Active (28 skills production-ready)
 **Last updated:** 2026-05-27
 
@@ -23,9 +23,9 @@ Atmaja BUKAN replacement Matthew. Atmaja is Matthew's strategic AI partner.
 - **BP Chapter 1-18:** Full business plan context
 - **Brand Canon LOCKED:** All editorial + visual rules
 - **5 Nilai Gerai:** Inspirasi, Keahlian, Pelayanan Nyaman, Inovasi, Aftersales
-- **Filosofi 4-Dunia:** Jepang, Eropa, Amerika, China
+- **Filosofi Dunia Pintu (4-negara cultural context):** Jepang, Eropa, Amerika, China
 - **Lean Store concept LOCKED:** 2-staf + Door Expert remote
-- **Anchor:** Aesop + Design Within Reach + Kinfolk magazine
+- **Anchor:** BP Latest reference magazine
 - **Phase Roadmap:** Phase 1 (Year 1) → Phase 2 (Year 2 Kaltim) → Phase 3 (Year 3-4 Jawa) → Phase 4 (Year 5+ Optional)
 - **All C-Level catalog:** CMO (31) + COO (25) + CCO (23) + CFO (TBD)
 
@@ -241,19 +241,19 @@ Group 8 deliver 4 cross-agent infrastructure skills:
 
 ### 2. memory-architecture (Obsidian-powered)
 - 4-tier memory hierarchy:
-  - **Tier 0 LOCKED Founding** (Brand Canon, 4-Dunia, 5 Nilai, Lean Store, BP)
+  - **Tier 0 LOCKED Founding** (Brand Canon, 4-negara cultural reference, 5 Nilai, Lean Store, BP)
   - **Tier 1 Working** (session in-memory)
   - **Tier 2 Short-term** (4-week Notion workspace)
   - **Tier 3 Long-term** (permanent Obsidian vault)
 - Obsidian vault structure: 12-folder (founding + matthew + customers + projects + konsultasi + decisions + patterns + vendor + team + risk + knowledge + skill catalog)
-- File format: Frontmatter + bi-directional links + tag system (`#persona-retail`, `#dunia-jepang`, `#phase-1`, etc.)
+- File format: Frontmatter + bi-directional links + tag system (`#persona-end-user`, `#dunia-jepang`, `#phase-1`, etc.)
 - Integration approach: Phase 1 Local vault + Git sync (privacy + offline); Phase 2 evaluate Obsidian Sync paid
 - Backup: Daily git + Weekly remote + Monthly cold storage + Quarterly cross-cloud
 - Privacy: Tier-based access, encryption, customer consent honored, UU PDP 2022 compliance
 
 ### 3. websearch-configuration
 - Source tier LOCKED:
-  - **Tier 1 Anchor:** Aesop + DWR + Kinfolk + Architectural Digest + Wallpaper + Dezeen + ArchDaily Indonesia
+  - **Tier 1 Anchor:** BP Latest reference + Architectural Digest + Wallpaper + Dezeen + ArchDaily Indonesia
   - **Tier 2 Industry:** HDII + IAI + BPS + trade magazine + Bloomberg + Reuters
   - **Tier 3 General:** Wikipedia + government + academic
   - **Tier 4 Customer-specific:** Per-query public info
@@ -261,7 +261,7 @@ Group 8 deliver 4 cross-agent infrastructure skills:
 - Daily query budget: CMO 30 + Atmaja 20 + CCO 20 + COO 15 + CFO 10 = ~95/day
 - Privacy LOCKED: NO PII in query
 - Citation standard always attribute
-- Anchor monitoring weekly (Atmaja-led): Aesop+DWR+Kinfolk evolution tracking
+- Anchor monitoring weekly (Atmaja-led): BP Latest reference evolution tracking
 - Cache 24-48h avoid redundancy
 - Brand canon filter applied to result
 
@@ -325,7 +325,7 @@ Atmaja sendiri WAJIB compliance:
 - "tempat" not "rumah"
 - "Gerai 1000 Pintu" lengkap
 - Premium hangat tone
-- Anchor Aesop + DWR + Kinfolk reference
+- Anchor BP Latest reference
 
 ### Principle 3: Multi-Agent Hierarchy of Priority
 When agents diverge, reconcile via:

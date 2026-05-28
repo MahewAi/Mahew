@@ -43,7 +43,7 @@ Secondary:
 |---|---|---|
 | Lead time | 25% | Critical untuk grand opening November |
 | Price (per unit) | 20% | Margin protection 38% GM target |
-| Quality consistency | 20% | Brand canon premium curated |
+| Quality consistency | 20% | Brand canon premium tetapi inklusif |
 | Payment terms | 15% | Cashflow Q4 |
 | Capacity (volume) | 10% | Wave 1 baseline + buffer 20% |
 | Risk (geographic, financial, operational) | 10% | Single-source dependency avoidance |
@@ -61,7 +61,7 @@ Secondary:
 **Strengths:**
 - Lead time 21 hari ideal untuk wave 1 sprint
 - NET 30 align dengan cashflow projection
-- Brand fit kuat (premium curated standard)
+- Brand fit kuat (premium tetapi inklusif standard)
 
 **Weaknesses:**
 - Single source dependency

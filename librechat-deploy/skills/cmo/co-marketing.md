@@ -48,7 +48,7 @@ Secondary:
 | What Gerai brings | What Partner brings | Joint value |
 |---|---|---|
 | Showroom + Door Expert konsultasi | Furniture catalog + customer base | Complete tempat experience |
-| 4-Dunia narrative | Lifestyle content + audience | Cross-category storytelling |
+| 4-negara cultural narrative | Lifestyle content + audience | Cross-category storytelling |
 | Premium positioning | Affordable adjacency | Customer journey upsell path |
 
 ## Collab Format Options
@@ -93,7 +93,7 @@ Partnership Venn diagram:
 
 ```mermaid
 flowchart LR
-    A[Gerai 1000 Pintu<br/>Premium curated retail<br/>6 persona] -.audience overlap.- C[Joint Value]
+    A[Gerai 1000 Pintu<br/>Premium tetapi inklusif retail<br/>6 persona] -.audience overlap.- C[Joint Value]
     B[Partner Brand<br/>Furniture/Lifestyle<br/>Persona overlap] -.audience overlap.- C
     C --> D[Cross-promotion campaign<br/>Bundle offering<br/>Shared content]
 ```

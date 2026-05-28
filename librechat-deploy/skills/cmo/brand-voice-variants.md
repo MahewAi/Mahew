@@ -120,7 +120,7 @@ Switch: NEED_CLARIFICATION jika persona target ambigu
 **Output summary:**
 - Variant A Premium Emotional: "Setiap pintu Gerai 1000 Pintu menyimpan cerita tempat Anda yang akan datang."
 - Variant B Friendly Gen Z: "Pintu yang bikin tempat lo beda. Cek sendiri di Gerai 1000 Pintu Balikpapan."
-- Variant C Story-driven: "Jepang jiwa, Eropa seni, Amerika pernyataan, China legacy. Setiap pintu di Gerai 1000 Pintu menjawab pertanyaan: tempat seperti apa yang ingin Anda tinggali?"
+- Variant C Story-driven: "Jepang jiwa, Eropa seni, Amerika pernyataan, China gerbang rezeki. Setiap pintu di Gerai 1000 Pintu menjawab pertanyaan: tempat seperti apa yang ingin Anda tinggali?"
 - Recommended for launch: Variant C (story-driven untuk launch awareness, hits Arsitek/Designer + Retail premium)
 - Brand canon: all ✅
 

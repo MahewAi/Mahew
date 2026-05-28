@@ -78,7 +78,7 @@ Investment Rp 50jt + Expected return Rp 200jt over 12 month
 - ROI: 400%+ over 12 month
 - Payback: 3-4 month
 
-#### 4-Dunia Educational Series Q1 2027
+#### 4-negara cultural reference Educational Series Q1 2027
 - Investment: Rp 60jt
 - Expected: 50+ konsultasi addressable + brand authority
 - Revenue: Rp 1.5M+ attributable Year 1-2

@@ -114,7 +114,7 @@ Switch: NEED_CLARIFICATION jika tone preference unclear
 **Input:** "Tulis copy hero homepage Gerai 1000 Pintu, persona primary Arsitek"
 
 **Output summary:**
-- 3 variants: (A) "Pintu yang Bercerita, Tempat yang Berkarakter" — story-driven, (B) "Premium curated retail. Pertama di Indonesia." — professional, (C) "Setiap pintu, setiap kisah." — emotional minimal
+- 3 variants: (A) "Pintu yang Bercerita, Tempat yang Berkarakter" — story-driven, (B) "Premium tetapi inklusif retail. Pertama di Indonesia." — professional, (C) "Setiap pintu, setiap kisah." — emotional minimal
 - Recommended: Variant A (story-driven resonant ke Arsitek + filosofi 4-dunia hint)
 - Brand canon check: all ✅
 - Subhead + CTA + microcopy lengkap per variant

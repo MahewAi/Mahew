@@ -69,13 +69,13 @@ Secondary:
 
 **Pillar 4: Showroom (3 layout)**
 - Layout A: Storefront subtle + welcome caption
-- Layout B: Section archetype (per 4-Dunia)
+- Layout B: Section archetype (per 4-negara cultural reference)
 - Layout C: Konsultasi pod atmosphere
 
 **Pillar 5: Community (3 layout)**
 - Layout A: Customer reaction (with consent)
 - Layout B: Cultural editorial piece
-- Layout C: Anchor reference homage (Aesop/DWR/Kinfolk)
+- Layout C: Anchor reference homage (BP Latest reference)
 
 #### Instagram Story Templates (9:16)
 **5 pillar × 4 slide template = 20 master**
@@ -117,7 +117,7 @@ Each pillar:
 
 #### Campaign Template
 - Wave 1 launch announcement
-- 4-Dunia series introduction
+- Dunia Pintu series introduction
 - Project showcase feature
 - Quarterly recap
 
@@ -125,7 +125,7 @@ Each pillar:
 
 #### Page Templates (Web Component)
 - Homepage hero
-- 4-Dunia section
+- 4-negara cultural section
 - Product catalog grid
 - Project case study
 - Door Expert konsultasi booking
@@ -342,7 +342,7 @@ mindmap
       Campaign launch
     Web Templates
       Homepage hero
-      4-Dunia section
+      4-negara cultural section
       Product grid
       Case study
       Booking form

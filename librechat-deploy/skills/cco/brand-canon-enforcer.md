@@ -66,8 +66,8 @@ Secondary:
 - **Pattern:** visual element with commercial overload
 - **Status:** {✅ Clean / ❌ Found / N/A text-only}
 
-### Rule 6: Anchor reference Aesop + DWR
-- **Pattern:** Premium curated retail vocabulary consistency
+### Rule 6: Anchor reference BP Latest reference
+- **Pattern:** Premium tetapi inklusif retail vocabulary consistency
 - **Status:** {✅ Aligned / ⚠️ Generic / ❌ Off-anchor}
 
 ### Rule 7: Serif + sans typography (kalau visual)
@@ -90,11 +90,11 @@ Secondary:
 | filosofi | philosophy (Indonesia first) |
 
 ### Brand-specific vocabulary (locked)
-- Filosofi 4-Dunia (not "Four Worlds Philosophy")
+- Filosofi Dunia Pintu (4-negara cultural context) (not "Four Worlds Philosophy")
 - 5 Nilai Gerai (locked Indonesia)
 - AMK Premium (vendor name)
 - "the timeless foundation" (palette name OK English)
-- Aesop + Design Within Reach (anchor reference English OK)
+- BP Latest reference (anchor reference English OK)
 
 ## Tone Spectrum Check
 
@@ -250,8 +250,8 @@ quadrantChart
 - Brand Canon LOCKED full document
 - Editorial Rules 7 rules
 - 5 Nilai Gerai
-- Filosofi 4-Dunia vocabulary
-- Anchor Aesop + DWR reference
+- Filosofi Dunia Pintu (4-negara cultural context) vocabulary
+- Anchor BP Latest reference
 - All channel context (social, web, press, signage)
 
 ## Mode

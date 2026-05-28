@@ -9,7 +9,7 @@ last_updated: 2026-05-27
 
 # Pricing Strategy
 
-Pricing strategy Gerai 1000 Pintu: tier per product, persona-specific, premium curated positioning, dynamic adjustment.
+Pricing strategy Gerai 1000 Pintu: tier per product, persona-specific, premium tetapi inklusif positioning, dynamic adjustment.
 
 ## Triggers
 
@@ -29,7 +29,7 @@ Secondary:
 
 **Category:** {Product line / Persona / Cabang}
 **Period:** {Year 1 / Year 2 / Steady-state}
-**Anchor:** Aesop + DWR premium curated positioning
+**Anchor:** BP Latest reference premium tetapi inklusif positioning
 
 ## Pricing Principles (LOCKED)
 
@@ -49,7 +49,7 @@ Secondary:
 - Anchor: customer outcome + experience value
 - Not just markup over cost
 - Premium hangat service included
-- Filosofi 4-Dunia framework value
+- Filosofi Dunia Pintu framework value
 
 ### Principle 4: Sustained Margin
 - Gross margin 30%+ minimum
@@ -67,7 +67,7 @@ Secondary:
 
 ### Tier 2: Curated Premium (Mid)
 - **Range:** Rp 20-40jt per pintu
-- **Description:** Filosofi 4-Dunia primary range
+- **Description:** Filosofi Dunia Pintu (4-negara cultural context) primary range
 - **Margin:** 30-32%
 - **Volume:** Highest revenue contribution
 - **Examples:** Hand-finished detail + brass hardware premium
@@ -164,7 +164,7 @@ Secondary:
 - Gold (Rp 1M+/year): 20%
 
 ### Anti-pattern (jangan)
-- ❌ Discount aggressive (premium curated dilution)
+- ❌ Discount aggressive (premium tetapi inklusif dilution)
 - ❌ Per-customer negotiation (fairness violation)
 - ❌ Discount as default (margin pressure)
 - ❌ Loss-leader pricing (race to bottom)
@@ -186,7 +186,7 @@ Secondary:
 - Gerai: Standardized + accessible (no architect required minimum)
 - Gap: More accessible same quality
 
-### International (Aesop store body care reference, not pintu)
+### International (BP Latest reference (premium retail experience, not pintu specific))
 - Anchor reference for retail experience
 - Gerai aspirational positioning
 
@@ -276,8 +276,8 @@ quadrantChart
     quadrant-3 Mass Market
     quadrant-4 Quality Affordable
     Gerai 1000 Pintu: [0.65, 0.9]
-    Aesop reference: [0.85, 0.95]
-    DWR reference: [0.85, 0.9]
+    BP Latest reference: [0.85, 0.95]
+    BP Latest reference: [0.85, 0.9]
     Boutique premium: [0.85, 0.7]
     Architect specifier: [0.9, 0.85]
     Mass-market toko: [0.2, 0.2]

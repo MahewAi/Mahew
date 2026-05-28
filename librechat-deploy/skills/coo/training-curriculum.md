@@ -90,14 +90,14 @@ Secondary:
 | 3 | M4 Customer interaction technique | Intermediate |
 | 4 | M5 Conflict + edge case handling | Intermediate |
 | 5 | M6 Sales psychology basics | Intermediate |
-| 6 | M7 Advanced storytelling 4-Dunia | Advanced |
+| 6 | M7 Advanced storytelling Dunia Pintu | Advanced |
 | 7 | M8 Cross-functional handoff | Advanced |
 | 8 | Certification exam | Advanced |
 
 ### Door Expert
 | Week | Module | Focus |
 |---|---|---|
-| 1 | M1 5 Nilai + Brand Canon + Filosofi 4-Dunia deep | Foundation |
+| 1 | M1 5 Nilai + Brand Canon + Filosofi Dunia Pintu (4-negara cultural context) deep | Foundation |
 | 1 | M2 Product Knowledge AMK + competitive catalog | Foundation |
 | 2 | M3 Industri konstruksi + arsitektur basics | Foundation |
 | 3 | M4 Indonesia + feng shui foundation | Intermediate |
@@ -141,11 +141,11 @@ Secondary:
 - Editorial Rules (7 rules)
 - 5 Nilai Gerai material
 - AMK Premium spec catalog
-- Filosofi 4-Dunia full
+- Filosofi Dunia Pintu (4-negara cultural context) full
 
 ### Recommended Reading
-- Aesop brand book reference
-- Design Within Reach style guide
+- BP Latest brand book reference
+- BP Latest style guide
 - Indonesian retail premium case studies
 - Customer service classic (Setting the Table, Unreasonable Hospitality)
 
@@ -208,7 +208,7 @@ Secondary:
 - Curriculum tone premium hangat (instructor demonstrate, not just lecture)
 - All material follow brand canon (no em-dash, etc.)
 - 5 Nilai applied di every module (not standalone)
-- Filosofi 4-Dunia integrated kalau relevant
+- Filosofi Dunia Pintu (4-negara cultural context) integrated kalau relevant
 ```
 
 ## Visual Output
@@ -229,7 +229,7 @@ gantt
     M5 Conflict handling :2026-10-06, 7d
     M6 Sales psychology :2026-10-13, 7d
     section Week 7-8 Advanced
-    M7 Storytelling 4-Dunia :2026-10-20, 7d
+    M7 Storytelling Dunia Pintu :2026-10-20, 7d
     M8 Cross-functional :2026-10-27, 7d
     section Cert
     Final exam :crit, milestone, 2026-11-03, 0d

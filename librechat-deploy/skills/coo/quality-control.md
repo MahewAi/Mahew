@@ -35,7 +35,7 @@ Secondary:
 ```markdown
 # QC Framework: {PRODUCT_CATEGORY} — {STAGE}
 
-**QC objective:** Ensure premium curated standard maintained
+**QC objective:** Ensure premium tetapi inklusif standard maintained
 **Target defect rate:** <2%
 **Acceptable rework:** <5%
 **Reject threshold:** >5% defect → return entire batch
@@ -133,7 +133,7 @@ IF Minor → Note + accept (deduct from premium tier inventory ke "regular")
 | QC duration per unit | <30 min | Time log |
 
 ## Brand Canon Alignment
-- "premium curated" standard = strict QC
+- "premium tetapi inklusif" standard = strict QC
 - Tone calm refined = no "asal jadi" tolerance
 - Door Expert authority validate final pre-delivery
 - No em-dash di QC report
@@ -210,7 +210,7 @@ Plus defect severity heatmap:
 - AMK product spec sheet
 - BP Chapter 7 (Quality standard)
 - vendor-scorecard skill output
-- Brand Canon (premium curated definition)
+- Brand Canon (premium tetapi inklusif definition)
 
 ## Mode
 
@@ -230,7 +230,7 @@ Switch: NEED_CLARIFICATION jika spec product belum ada
 - Defect categorization 3-tier (Critical/Major/Minor)
 - Reject workflow explicit
 - KPI tracking setup
-- Brand canon "premium curated" standard maintained
+- Brand canon "premium tetapi inklusif" standard maintained
 - Communication template ready-to-use
 
 ## Sample I/O

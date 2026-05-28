@@ -126,7 +126,7 @@ Secondary:
 **Production direction:**
 - Natural setting (customer's tempat)
 - Lighting: golden hour preferred
-- Cinematography: editorial Aesop reference
+- Cinematography: editorial BP Latest reference
 - Audio: clean, no overdub music heavy
 - Editing: pacing calm, no jump-cut aggressive
 
@@ -136,7 +136,7 @@ Secondary:
 1. Project intro (customer + tempat context + vision)
 2. Starting point (what they had, what they wanted)
 3. Discovery process (konsultasi)
-4. Decision narrative (4-Dunia application)
+4. Decision narrative (4-negara cultural application)
 5. Selection detail (specific pintu + reason)
 6. Delivery + installation
 7. Live with it (post-install reflection)
@@ -193,7 +193,7 @@ Secondary:
 ### Konsultasi experience
 - "Bisa cerita pengalaman konsultasi dengan Door Expert kami?"
 - "Apa yang paling melekat dari sesi tersebut?"
-- "Filosofi 4-Dunia membantu Anda berpikir tentang tempat Anda?"
+- "Filosofi Dunia Pintu (4-negara cultural context) membantu Anda berpikir tentang tempat Anda?"
 
 ### Decision moment
 - "Bagaimana Anda mencapai keputusan akhir?"
@@ -231,7 +231,7 @@ Secondary:
 
 ### Visual treatment
 - Photography per consent (face / hand / none)
-- Brand canon visual (Aesop + DWR reference)
+- Brand canon visual (BP Latest reference)
 - Layout editorial (premium feel)
 - Caption sourced + credited
 
@@ -252,7 +252,7 @@ Secondary:
 ### Press portfolio (Year 2+)
 - Curated case study top-tier
 - Architect/Designer collab case
-- Cultural press pitch (Kinfolk-style)
+- Cultural press pitch (Editorial Indonesian style)
 
 ## Brand Canon Compliance Checklist
 
@@ -269,7 +269,7 @@ Secondary:
 
 ### Cross-testimonial library
 - [ ] 6 persona representation balanced
-- [ ] 4-Dunia archetype coverage
+- [ ] 4-negara cultural reference coverage
 - [ ] Project scale variety
 - [ ] Geographic + demographic diversity
 - [ ] Aspirational + practical balance
@@ -302,7 +302,7 @@ Secondary:
 > — Bapak Anton, Project Cluster Borneo Balikpapan, 2026
 
 ### Sample 2: Quote (Arsitek persona)
-> "Filosofi 4-Dunia memberi saya framework untuk berbicara dengan klien. Bukan jualan 
+> "Filosofi Dunia Pintu (4-negara cultural context) memberi saya framework untuk berbicara dengan klien. Bukan jualan 
 > pintu, tapi membantu mereka memilih karakter tempat."
 > 
 > — Ibu Sari, Arsitek Senior Kaltim, 2026
@@ -313,7 +313,7 @@ Secondary:
 > supplier yang bukan hanya kasih harga," kata Hadi. "Saya butuh yang paham brand kami."
 > 
 > Setelah konsultasi mendalam dengan Door Expert, Hadi memilih kombinasi archetype 
-> Jepang untuk hunian compact dan Amerika untuk hunian statement. "Filosofi 4-Dunia 
+> Jepang untuk hunian compact dan Amerika untuk hunian statement. "Filosofi Dunia Pintu (4-negara cultural context) 
 > bukan gimmick. Ini benar-benar membantu kami curate untuk customer kami."
 
 ## Testimonial Inventory Tracking
@@ -411,13 +411,13 @@ Switch: NEED_CLARIFICATION jika consent ambigu
 
 **Output summary:**
 - Customer: Bapak Anton, Project Cluster Borneo Balikpapan 2026
-- Persona: Retail (rumah-pribadi premium curated)
+- Persona: Retail (rumah-pribadi premium tetapi inklusif)
 - Consent: Signed (name OK + hand-only photo)
 - Format A — Quote (30 word):
   "Saya tidak datang untuk membeli pintu. Saya datang untuk memahami. Di Gerai 1000 Pintu, Door Expert mendengarkan dulu sebelum bicara."
   — Bapak Anton, Project Cluster Borneo Balikpapan, 2026
 - Format B — Short story (500w):
-  Narrative dari konsultasi → 4-Dunia decision (Jepang + Eropa) → delivery moment → reflection
+  Narrative dari konsultasi → 4-negara cultural decision (Jepang + Eropa) → delivery moment → reflection
 - Tone: Authentic Bapak Anton voice preserved + premium hangat surrounding
 - Brand canon: ✅ No em-dash + Gerai 1000 Pintu lengkap + Door Expert preserved
 - Photography: Hand on brass handle close-up + foyer environmental

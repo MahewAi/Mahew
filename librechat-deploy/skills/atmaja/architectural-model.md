@@ -59,7 +59,7 @@ flowchart TB
         C1[Customer Profile]
         C2[Konsultasi Log]
         C3[Brand Canon LOCKED]
-        C4[Filosofi 4-Dunia]
+        C4[Filosofi Dunia Pintu (4-negara cultural context)]
     end
     
     subgraph Backend[Infrastructure]
@@ -94,7 +94,7 @@ flowchart TD
     C --> C2[Logistics<br/>Jakarta-Balikpapan]
     C --> C3[Aftersales<br/>Long-term relationship]
     
-    D --> D1[Filosofi 4-Dunia<br/>Framework IP]
+    D --> D1[Filosofi Dunia Pintu (4-negara cultural context)<br/>Framework IP]
     D --> D2[Brand Canon<br/>LOCKED discipline]
     D --> D3[AI Department<br/>Atmaja + C-Level]
     
@@ -227,7 +227,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    Matthew[Matthew Wijaya<br/>Founder + CEO + CTO]
+    Matthew[Matthew<br/>Founder + CEO + CTO]
     Atmaja[Atmaja<br/>AI CEO Orchestrator]
     
     Matthew --> Atmaja
@@ -253,7 +253,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    Master[Gerai 1000 Pintu<br/>Master Brand 🔒<br/>Aesop + DWR Anchor]
+    Master[Gerai 1000 Pintu<br/>Master Brand 🔒<br/>BP Latest reference Anchor]
     
     Master --> Product[Product Line]
     Master --> Service[Service Line]
@@ -308,7 +308,7 @@ journey
       Curiosity build: 6: Customer, Brand
     section Consideration
       Visit gerai.mahewwork.com: 7: Customer
-      Read content 4-Dunia: 8: Customer, CCO
+      Read content Dunia Pintu: 8: Customer, CCO
     section Booking
       WhatsApp inquiry: 8: Customer, MA
       Schedule konsultasi: 9: Customer, MA
@@ -356,7 +356,7 @@ mindmap
   root((Knowledge Architecture))
     Tier 1 LOCKED Founding
       Brand Canon
-      Filosofi 4-Dunia
+      Filosofi Dunia Pintu (4-negara cultural context)
       5 Nilai Gerai
       Lean Store concept
     Tier 2 Function Knowledge
@@ -471,7 +471,7 @@ flowchart TD
 
 ### For External (Press / Investor)
 - Polished brand canon strict
-- Aesop + DWR refined feel
+- BP Latest reference refined feel
 - Premium hangat tone in labels
 - Minimal noise
 
@@ -479,7 +479,7 @@ flowchart TD
 - Simplified
 - Story-driven
 - Visual metaphor
-- Filosofi 4-Dunia integration
+- Filosofi Dunia Pintu (4-negara cultural context) integration
 
 ## Architectural Model Quality Standards
 

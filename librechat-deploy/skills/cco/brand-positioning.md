@@ -9,7 +9,7 @@ last_updated: 2026-05-27
 
 # Brand Positioning Analysis
 
-Analyze brand positioning Gerai 1000 Pintu di market Balikpapan + Indonesia: vs competitor toko pintu, vs anchor reference Aesop + DWR, perceptual map, differentiation, claim ownership.
+Analyze brand positioning Gerai 1000 Pintu di market Balikpapan + Indonesia: vs competitor toko pintu, vs anchor reference BP Latest reference, perceptual map, differentiation, claim ownership.
 
 ## Triggers
 
@@ -37,24 +37,24 @@ Secondary:
 
 **Market scope:** {Geography + segment}
 **Reference period:** {Date}
-**Anchor north star:** Aesop + Design Within Reach
+**Anchor north star:** BP Latest reference
 
 ## Core Positioning Statement
 
-> Gerai 1000 Pintu adalah tempat curated premium pintu yang menyajikan filosofi 4-Dunia 
-> (Jepang jiwa, Eropa seni, Amerika pernyataan, China legacy) dengan layanan konsultasi 
+> Gerai 1000 Pintu adalah tempat premium pintu di Indonesia yang menyajikan filosofi Dunia Pintu (4-negara cultural context) 
+> (Jepang jiwa, Eropa seni, Amerika pernyataan, China gerbang rezeki) dengan layanan konsultasi 
 > Door Expert remote yang hangat dan refined. Bukan toko pintu, bukan e-commerce mass-market. 
-> Anchor: Aesop + Design Within Reach for premium curated retail experience.
+> Source: BP Latest.
 
 ### Tagline Options (locked)
-- "Tempat impian dimulai dari pintu yang tepat"
+- "1000 Pintu, 1000 Mimpi (A Thousand Doors, A Thousand Dreams)"
 - "Pintu yang menemani tempat hidup Anda"
 - "Curated by Door Expert, untuk tempat yang bermakna"
 
 ## Positioning Pillars (LOCKED)
 
 ### Pillar 1: Premium Curated (not mass-market)
-- Curation philosophy: 4-Dunia archetype framework
+- Curation philosophy: 4-negara cultural reference framework
 - Quality threshold: AMK Premium + selected brand expansion
 - Price tier: Mid-to-high (Rp 5-50jt per pintu)
 
@@ -63,11 +63,11 @@ Secondary:
 - Remote Zoom consultation (innovation Lean Store)
 - 60-min depth conversation (not 5-min transaction)
 
-### Pillar 3: Filosofi 4-Dunia (not generic product catalog)
+### Pillar 3: Filosofi Dunia Pintu (4-negara cultural context) (not generic product catalog)
 - Jepang jiwa (minimalist soul)
 - Eropa seni (craftsmanship art)
 - Amerika pernyataan (statement scale)
-- China legacy (timeless heritage)
+- China gerbang rezeki (timeless heritage)
 
 ### Pillar 4: Lean Store (not big-box retail)
 - 2-staf cabang model (intimate scale)
@@ -75,7 +75,7 @@ Secondary:
 - Replicable Phase 2 (scalable without dilution)
 
 ### Pillar 5: Anchor Premium Refined (not aggressive sales)
-- Aesop + DWR reference for retail experience
+- BP Latest reference for retail experience
 - Premium hangat tone (calm + warm hospitality)
 - 5 Nilai Gerai (Inspirasi, Keahlian, Pelayanan Nyaman, Inovasi, Aftersales)
 
@@ -110,11 +110,11 @@ Secondary:
 ```
 High Quality
      |
-     |  • Gerai 1000 Pintu (premium curated)
+     |  • Gerai 1000 Pintu (premium tetapi inklusif)
      |       
-     |  • Aesop reference (anchor)
+     |  • BP Latest reference (anchor)
      |  
-     |  • DWR reference (anchor)
+     |  • BP Latest reference (anchor)
      |
      |________________________
                               High Price
@@ -148,7 +148,7 @@ Low Service Depth                         Low Transaction Speed
 | Attribute | Mass-market | Gerai 1000 Pintu |
 |---|---|---|
 | Approach | Sales agresif komisi | Curated konsultasi hangat |
-| Product | Wide volume | Curated 4-Dunia |
+| Product | Wide volume | Curated 4-negara cultural reference |
 | Staff | Sales target | Door Expert 5 kompetensi |
 | Experience | Functional transaksi | Sensory journey |
 | Brand voice | Loud commercial | Premium hangat refined |
@@ -176,9 +176,9 @@ Low Service Depth                         Low Transaction Speed
 
 ### What Gerai 1000 Pintu owns (defensible position)
 1. **"Door Expert"** terminology + 5 kompetensi framework (trademark-worthy)
-2. **"Filosofi 4-Dunia"** philosophy framework (proprietary)
+2. **"Filosofi Dunia Pintu (4-negara cultural context)"** philosophy framework (proprietary)
 3. **"Tempat impian"** language (vocabulary locked)
-4. **Aesop + DWR anchor** retail experience (vocabulary + visual)
+4. **BP Latest reference anchor** retail experience (vocabulary + visual)
 5. **Lean Store + remote consultation** model (operational innovation)
 6. **AMK Premium curated** product line (vendor exclusivity Kaltim)
 
@@ -204,7 +204,7 @@ Margin yang sehat, kualitas terjamin, brand yang bertumbuh."
 Door Expert dampingi spec hingga handover."
 
 ### For Arsitek/Designer
-"Resource curation untuk vision Anda. Filosofi 4-Dunia framework yang dapat 
+"Resource curation untuk vision Anda. Filosofi Dunia Pintu framework yang dapat 
 Anda gunakan untuk klien Anda. Collaboration warm + professional."
 
 ### For Kontraktor
@@ -218,7 +218,7 @@ Referral system yang fair."
 ## Wave 1 Launch Positioning Message
 
 ### Hero Headline (locked)
-"Tempat impian dimulai dari pintu yang tepat."
+"1000 Pintu, 1000 Mimpi (A Thousand Doors, A Thousand Dreams)."
 
 ### Sub-headline
 "Curated philosophy. Door Expert hangat. Refined experience yang menemani perjalanan Anda."
@@ -227,9 +227,9 @@ Referral system yang fair."
 "Konsultasi gratis 60 menit. Booking via WhatsApp atau gerai.mahewwork.com"
 
 ### Anchor reference visible
-- Storefront photography style: Aesop minimal
-- Catalog layout: DWR editorial
-- Tone copy: Kinfolk magazine warmth + Wabi-sabi appreciation
+- Storefront photography style: BP Latest reference minimal
+- Catalog layout: BP Latest editorial
+- Tone copy: Indonesian editorial warmth + Wabi-sabi appreciation
 
 ## Brand Health Metric (track quarterly)
 
@@ -240,7 +240,7 @@ Referral system yang fair."
 | Brand attribute "curated" association | 40% | 65% |
 | Brand attribute "premium" association | 50% | 75% |
 | NPS (Net Promoter Score) | 40+ | 60+ |
-| Anchor reference (Aesop/DWR) recognition | 15% | 35% |
+| Anchor reference (BP Latest reference/BP Latest reference) recognition | 15% | 35% |
 ```
 
 ## Visual Output
@@ -257,8 +257,8 @@ quadrantChart
     quadrant-3 Mass Market
     quadrant-4 Quality Affordable
     Gerai 1000 Pintu: [0.7, 0.9]
-    Aesop reference: [0.8, 0.95]
-    DWR reference: [0.85, 0.9]
+    BP Latest reference: [0.8, 0.95]
+    BP Latest reference: [0.85, 0.9]
     Mass Market A: [0.25, 0.2]
     Mass Market B: [0.3, 0.25]
     Mitra 10 existing: [0.45, 0.4]
@@ -272,25 +272,25 @@ Positioning pillar hierarchy:
 mindmap
   root((Gerai Positioning))
     Premium Curated
-      4-Dunia framework
+      Dunia Pintu framework
       AMK Premium
       Selected expansion
     Door Expert
       5 kompetensi
       Zoom 60-min
       Centralized quality
-    Filosofi 4-Dunia
+    Filosofi Dunia Pintu (4-negara cultural context)
       Jepang jiwa
       Eropa seni
       Amerika pernyataan
-      China legacy
+      China gerbang rezeki
     Lean Store
       2-staf cabang
       Replicable
       Phase 2 scale
     Anchor Premium Refined
-      Aesop reference
-      DWR reference
+      BP Latest reference
+      BP Latest reference
       5 Nilai applied
 ```
 
@@ -299,8 +299,8 @@ mindmap
 - BP Chapter 5-6 (Brand Positioning + Competitive)
 - Brand Canon (vocabulary locked)
 - 6 Persona spec
-- Filosofi 4-Dunia
-- Anchor Aesop + DWR
+- Filosofi Dunia Pintu (4-negara cultural context)
+- Anchor BP Latest reference
 - 5 Nilai Gerai
 
 ## Mode
@@ -324,7 +324,7 @@ Switch: DISCUSSION jika positioning challenge debate
 - Wave 1 launch hero message
 - Brand health metric measurable
 - Perceptual map visual
-- Anchor Aesop + DWR explicit
+- Anchor BP Latest reference explicit
 - Claim ownership specific (defensible)
 
 ## Sample I/O
@@ -332,13 +332,13 @@ Switch: DISCUSSION jika positioning challenge debate
 **Input:** "Brand positioning analysis Gerai 1000 Pintu vs Balikpapan competitor untuk Wave 1 launch"
 
 **Output summary:**
-- Position: Premium curated + Door Expert konsultasi + Filosofi 4-Dunia + Lean Store + Anchor Aesop/DWR
+- Position: Premium curated + Door Expert konsultasi + Filosofi Dunia Pintu (4-negara cultural context) + Lean Store + Anchor BP Latest reference/BP Latest reference
 - 5 pillar locked dengan defensible differentiation
 - Competitor: 4 local mass-market + 3 e-commerce + Architect channel mapped
-- Perceptual map: Gerai di top-right (High Quality + Premium Price) bersama Aesop/DWR
+- Perceptual map: Gerai di top-right (High Quality + Premium Price) bersama BP Latest reference/BP Latest reference
 - Differentiation matrix: vs mass-market (curated > sales), vs e-commerce (consultation > self), vs architect (accessible > exclusive)
 - Persona message tailored: Retail (impian), Mitra (margin sehat), Developer (specifier), Arsitek (collaboration), Kontraktor (scalable), Aplikator (mitra teknis)
-- Hero message: "Tempat impian dimulai dari pintu yang tepat"
+- Hero message: "1000 Pintu, 1000 Mimpi (A Thousand Doors, A Thousand Dreams)"
 - Brand health targets Year 1: 30% awareness Balikpapan + NPS 40+
 - Perceptual map + pillar mindmap embedded
 
@@ -347,4 +347,4 @@ Switch: DISCUSSION jika positioning challenge debate
 - brand-architecture (master + sub-brand)
 - brand-audit (compliance check vs positioning)
 - CMO Gerai (messaging + content strategy)
-- brand-storytelling (narrative arc 4-Dunia)
+- brand-storytelling (narrative arc 4-negara cultural reference)

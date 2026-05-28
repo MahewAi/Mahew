@@ -57,7 +57,7 @@ Door Expert adalah generalist konsultan dengan 5 kompetensi yang menemani custom
 3. **Indonesia & Feng Shui Foundation**
    - Cultural context Indonesia (rumah adat, modern, hybrid)
    - Feng shui basic untuk pintu (arah hadap, ukuran auspicious, material harmoni)
-   - Filosofi 4-Dunia application per customer context
+   - Filosofi Dunia Pintu (4-negara cultural context) application per customer context
    - Regional preference (Kaltim, Jawa, Sumatera context)
 
 4. **Soft Skills + Communication**
@@ -106,7 +106,7 @@ Door Expert adalah generalist konsultan dengan 5 kompetensi yang menemani custom
 - Constraint (budget, timeline, site)
 
 #### Phase 3: Education (15 min)
-- Filosofi 4-Dunia introduction kalau relevant
+- Filosofi Dunia Pintu (4-negara cultural context) introduction kalau relevant
 - Product narrative (cocok untuk customer story)
 - Material understanding
 - Trade-off (price vs feature)
@@ -150,7 +150,7 @@ Door Expert adalah generalist konsultan dengan 5 kompetensi yang menemani custom
 ## Knowledge Ecosystem
 
 ### Door Expert Knowledge Base (Notion + Internal)
-- Filosofi 4-Dunia full content
+- Filosofi Dunia Pintu (4-negara cultural context) full content
 - Product spec AMK + competitor catalog
 - Industry trend update (monthly)
 - Customer case study (anonymized) — for learning
@@ -211,8 +211,8 @@ Setiap konsultasi WAJIB:
 - "tempat" not "rumah"
 - "Gerai 1000 Pintu" lengkap
 - No em-dash di documentation
-- Filosofi 4-Dunia integration kalau relevant
-- Aesop + DWR reference vocabulary
+- Filosofi Dunia Pintu (4-negara cultural context) integration kalau relevant
+- BP Latest reference vocabulary
 
 ## Risk + Mitigation
 
@@ -280,7 +280,7 @@ xychart-beta
 - BP Chapter 8 (Door Expert role LOCKED)
 - 5 Nilai Gerai
 - Brand Canon (premium hangat tone)
-- Filosofi 4-Dunia
+- Filosofi Dunia Pintu (4-negara cultural context)
 - training-curriculum skill (Door Expert curriculum)
 - lean-store-design skill
 

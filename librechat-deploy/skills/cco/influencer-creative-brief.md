@@ -28,7 +28,7 @@ Secondary:
 |---|---|---|---|
 | influencer_name | string | yes | - |
 | collab_type | enum | yes | (single-post / series / event / long-term) |
-| campaign | string | yes | (e.g., "Wave 1 Launch", "4-Dunia Series") |
+| campaign | string | yes | (e.g., "Wave 1 Launch", "4-negara cultural reference Series") |
 | budget | number | no | Rp |
 | timeline | string | yes | - |
 
@@ -47,7 +47,7 @@ Secondary:
 ## Why This Collab
 
 ### Brand fit alignment
-- Influencer aesthetic: {Description vs Aesop + DWR + Kinfolk reference}
+- Influencer aesthetic: {Description vs BP Latest reference}
 - Audience match: {Their followers vs our 6 Persona}
 - Value alignment: {Premium curated, refined, not aggressive sales}
 
@@ -60,10 +60,10 @@ Secondary:
 ## Campaign Context
 
 ### Brand Brief Quick Reference
-**Brand:** Gerai 1000 Pintu — Tempat curated premium pintu di Balikpapan
-**Position:** Premium curated retail with Door Expert konsultasi
-**Anchor reference:** Aesop + Design Within Reach + Kinfolk magazine
-**Philosophy:** Filosofi 4-Dunia (Jepang jiwa, Eropa seni, Amerika pernyataan, China legacy)
+**Brand:** Gerai 1000 Pintu — Tempat premium pintu di Indonesia di Balikpapan
+**Position:** Premium tetapi inklusif retail with Door Expert konsultasi
+**Anchor reference:** BP Latest reference magazine
+**Philosophy:** Filosofi Dunia Pintu (4-negara cultural context: Jepang jiwa, Eropa seni, Amerika pernyataan, China gerbang rezeki — BUKAN mandatory archetype)
 **Tone:** Premium hangat (calm + warm + refined) — NOT aggressive sales
 
 ### Current Campaign
@@ -79,14 +79,14 @@ Secondary:
 
 ### Sensory + Emotional Target
 - **Feel:** Calm + welcomed + curious + aspirational achievable
-- **Visual:** Aesop-refined + Kinfolk-warm + natural daylight
+- **Visual:** BP Latest reference-refined + Editorial warm + natural daylight
 - **Verbal:** Premium hangat + Indonesian poetic literacy
 
 ### Anchor Reference for Inspiration
-- Aesop store visit content style
-- Design Within Reach editorial
-- Kinfolk magazine atmosphere
-- Studio Nendo minimal craftsmanship
+- Premium retail destination style
+- BP Latest editorial
+- Editorial atmosphere
+- Indonesian design heritage
 
 ### Photography / Video Direction
 - Lighting: Natural daylight + golden hour preferred
@@ -104,7 +104,7 @@ Secondary:
 - 1 reel optional
 - 1 carousel optional
 
-#### Series Collab (4-Dunia per dunia)
+#### Series Collab (4-negara cultural reference per dunia)
 - 4 Instagram feed post (1 per dunia)
 - 4 Story series sync
 - 1 long reel summary
@@ -155,7 +155,7 @@ Secondary:
 Saya sempat bingung memilih pintu untuk tempat baru saya.
 
 Sampai berkunjung ke Gerai 1000 Pintu di Balikpapan. Door Expert mereka tidak 
-langsung jualan. Mereka tanya cerita tempat saya. Filosofi 4-Dunia menarik 
+langsung jualan. Mereka tanya cerita tempat saya. Filosofi Dunia Pintu (4-negara cultural context) menarik 
 untuk saya pertimbangkan.
 
 Saya pilih archetype Jepang untuk ruang utama. Brass yang hangat membuka 
@@ -175,7 +175,7 @@ ditempa tangan. Saya berdiri sejenak. Pintu ini akan menemani saya
 bertahun-tahun.
 
 Berkunjung ke Gerai 1000 Pintu di Balikpapan dan menemukan filosofi 
-4-Dunia membantu saya memahami karakter tempat saya.
+4-negara cultural reference membantu saya memahami karakter tempat saya.
 
 @gerai1000pintu
 
@@ -187,7 +187,7 @@ Berkunjung ke Gerai 1000 Pintu di Balikpapan dan menemukan filosofi
 ### Visual (mandatory)
 - Palette OK: warm neutral, brass focal, ivory background
 - Palette AVOID: rainbow saturated, gradient flashy, drop shadow heavy
-- Photography style: Aesop + DWR + Kinfolk reference
+- Photography style: BP Latest reference
 - Photography AVOID: stock photo cliche, overlit harsh
 
 ### Verbal (mandatory)
@@ -237,7 +237,7 @@ Berkunjung ke Gerai 1000 Pintu di Balikpapan dan menemukan filosofi
 
 ### Quality KPI
 - Brand canon compliance: 100%
-- Aesthetic alignment: Aesop/DWR/Kinfolk reference visible
+- Aesthetic alignment: BP Latest reference visible
 - Authentic voice maintained
 - Long-term reputation alignment
 
@@ -304,10 +304,10 @@ Berkunjung ke Gerai 1000 Pintu di Balikpapan dan menemukan filosofi
 - Budget: Rp 5jt
 - Timeline: 14-21 Nov 2026
 
-### Brief B: 4-Dunia Series Long-term
+### Brief B: 4-negara cultural reference Series Long-term
 - Influencer: Premium Indonesia design @{handle}
 - Format: 4 Feed posts (1 per dunia) + 4 Story sync + 1 long reel summary
-- Story angle: Filosofi 4-Dunia exploration + personal selection
+- Story angle: Filosofi Dunia Pintu (4-negara cultural context) exploration + personal selection
 - Photography: Per dunia archetype embodied
 - Caption: 200 word per post + summary 300 word
 - Hashtag: #Filosofi4Dunia + per dunia tag
@@ -317,7 +317,7 @@ Berkunjung ke Gerai 1000 Pintu di Balikpapan dan menemukan filosofi
 ### Brief C: Event Wave 1 Attend
 - Influencer: Multi (3-5 influencer attend)
 - Format: Pre-event tease + Live event Story + Post-event reflection
-- Story angle: Witness Aesop-level launch Indonesia
+- Story angle: Witness BP-aligned launch Indonesia
 - Photography: Event candid + venue refined
 - Caption: Real-time + summary post-event
 - Budget: Rp 15jt total (Rp 3-5jt per influencer)
@@ -370,7 +370,7 @@ quadrantChart
     Lifestyle Kaltim local: [0.7, 0.85]
     Mass beauty influencer: [0.2, 0.4]
     Discount focused: [0.15, 0.3]
-    Aesop reference creator: [0.95, 0.7]
+    BP Latest reference creator: [0.95, 0.7]
 ```
 
 ## Knowledge Dependency
@@ -382,7 +382,7 @@ quadrantChart
 - caption-generator
 - CMO influencer-vetting (paired)
 - CMO influencer-deal-structure (paired)
-- Filosofi 4-Dunia
+- Filosofi Dunia Pintu (4-negara cultural context)
 - 6 Persona spec
 
 ## Mode
@@ -413,19 +413,19 @@ Switch: DISCUSSION jika influencer fit ambigu (consult CMO vetting)
 
 ## Sample I/O
 
-**Input:** "Influencer brief untuk Premium Indonesia design influencer @{handle} 4-Dunia series long-term Q1 2027 budget Rp 25jt"
+**Input:** "Influencer brief untuk Premium Indonesia design influencer @{handle} Dunia Pintu series long-term Q1 2027 budget Rp 25jt"
 
 **Output summary:**
-- Influencer: Premium Indonesia design @{handle} (200K follower, aesthetic Aesop-aligned)
+- Influencer: Premium Indonesia design @{handle} (200K follower, aesthetic BP Latest reference-aligned)
 - Type: Long-term series (3 month, 1 per dunia)
-- Campaign: 4-Dunia Series Q1 2027
+- Campaign: 4-negara cultural reference Series Q1 2027
 - Budget: Rp 25jt total (Rp 5jt × 4 month + Rp 5jt bonus completion)
 - Format: 4 Feed posts (1 per dunia) + 4 Story sync + 1 long reel summary + optional blog feature
-- Story angle: Personal exploration filosofi 4-Dunia
+- Story angle: Personal exploration filosofi Dunia Pintu (4-negara cultural context)
 - Photography: Per archetype embodied (Jepang minimalist, Eropa craftsmanship, Amerika statement, China heritage)
 - Caption: 200 word personal voice per post + 300 word reflection summary
 - Hashtag: #Filosofi4Dunia + per dunia tag (#PintuJepang dst.) + #Gerai1000Pintu
-- Brand canon: STRICT (no em-dash + "tempat" + Gerai 1000 Pintu lengkap + Aesop reference + premium hangat)
+- Brand canon: STRICT (no em-dash + "tempat" + Gerai 1000 Pintu lengkap + BP Latest reference + premium hangat)
 - Approval: Each post review CCO before publish
 - Performance KPI: 4%+ engagement, 50+ konsultasi inquiry, brand sentiment positive
 - Contract: Non-exclusive 6 month, usage rights joint, disclosure mandatory

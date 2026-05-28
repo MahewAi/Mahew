@@ -46,7 +46,7 @@ Secondary:
 ### Morning (3 jam)
 - 09:00 Welcome + team introduction
 - 09:30 5 Nilai Gerai induction (Inspirasi, Keahlian, Pelayanan Nyaman, Inovasi, Aftersales)
-- 10:00 Brand Canon overview (filosofi 4-Dunia, tagline, palette, tone)
+- 10:00 Brand Canon overview (filosofi Dunia Pintu (4-negara cultural context), tagline, palette, tone)
 - 10:30 Tour showroom + Door Expert konsultasi observe
 - 11:30 Tools setup (CRM access, WA group, email, dll)
 
@@ -68,7 +68,7 @@ Secondary:
 ### Day 2-3: Product Knowledge
 - AMK Premium spec deep dive
 - Material guide (kayu solid vs engineered, brass finish)
-- Filosofi 4-Dunia narrative per archetype
+- Filosofi Dunia Pintu (4-negara cultural context) narrative per archetype
 - Product comparison vs kompetitor (Mitra10, Informa)
 
 ### Day 4-5: Customer Journey
@@ -177,8 +177,8 @@ Secondary:
 - Editorial Rules — Day 3
 
 ### Optional Enrichment
-- Filosofi 4-Dunia (extended reading)
-- Aesop + Design Within Reach brand reference
+- Filosofi Dunia Pintu (4-negara cultural context) (extended reading)
+- BP Latest reference brand reference
 - Customer service masterclass (online)
 - Sales psychology basic
 

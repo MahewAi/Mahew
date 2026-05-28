@@ -9,7 +9,7 @@ last_updated: 2026-05-27
 
 # Press Release Writer
 
-Write press release Gerai 1000 Pintu: launch announcement, milestone, project showcase, executive feature. Premium hangat tone, anchor Aesop + DWR vocabulary, ready untuk Indonesia + Kaltim press.
+Write press release Gerai 1000 Pintu: launch announcement, milestone, project showcase, executive feature. Premium hangat tone, anchor BP Latest reference vocabulary, ready untuk Indonesia + Kaltim press.
 
 ## Triggers
 
@@ -44,7 +44,7 @@ Secondary:
 **Balikpapan, {Date}** — Gerai 1000 Pintu, {1-sentence company description}, 
 {news angle in 1 sentence}.
 
-[Quote Matthew Wijaya, Founder Gerai 1000 Pintu, 2-3 sentence]
+[Quote Matthew, Founder Gerai 1000 Pintu, 2-3 sentence]
 
 {Context paragraph — background of news, why this matters}
 
@@ -58,11 +58,11 @@ Secondary:
 
 **About Gerai 1000 Pintu**
 
-Gerai 1000 Pintu adalah tempat curated premium pintu di Balikpapan yang menyajikan 
-filosofi 4-Dunia (Jepang jiwa, Eropa seni, Amerika pernyataan, China legacy). 
+Gerai 1000 Pintu adalah tempat premium pintu di Indonesia di Balikpapan yang menyajikan 
+filosofi Dunia Pintu (4-negara cultural context: Jepang jiwa, Eropa seni, Amerika pernyataan, China gerbang rezeki — BUKAN mandatory archetype). 
 Dengan model Lean Store dan layanan konsultasi Door Expert via Zoom, Gerai 1000 
-Pintu menghadirkan pengalaman premium curated retail anchored pada referensi Aesop 
-dan Design Within Reach.
+Pintu menghadirkan pengalaman premium tetapi inklusif anchored pada referensi BP Latest 
+dan BP Latest reference.
 
 Lokasi: Balikpapan, Kalimantan Timur, Indonesia
 Web: gerai.mahewwork.com
@@ -82,7 +82,7 @@ Kontak: {email + phone + WhatsApp}
 ### Type 1: Launch Announcement (Wave 1)
 
 **Sample headline:** 
-"Gerai 1000 Pintu Hadir di Balikpapan: Tempat Curated Premium Pintu dengan Filosofi 4-Dunia"
+"Gerai 1000 Pintu Hadir di Balikpapan: Tempat Curated Premium Pintu dengan Filosofi Dunia Pintu (4-negara cultural context)"
 
 **Sub-headline:** 
 "Launch resmi 14 November 2026 menyajikan model Lean Store + konsultasi Door Expert remote pertama di Indonesia"
@@ -90,9 +90,9 @@ Kontak: {email + phone + WhatsApp}
 **Structure:**
 1. Lead announcement (who, what, when, where)
 2. Founder quote (vision)
-3. Brand positioning context (filosofi 4-Dunia)
+3. Brand positioning context (filosofi Dunia Pintu (4-negara cultural context))
 4. Operational innovation (Lean Store + Door Expert)
-5. Anchor reference (Aesop + DWR)
+5. Anchor reference (BP Latest reference)
 6. Wave 1 detail (launch event, opening hours)
 7. Forward (Phase 2 hint)
 
@@ -121,7 +121,7 @@ Kontak: {email + phone + WhatsApp}
 1. Partnership announcement
 2. Partner background (mutual quality)
 3. Project detail (scope, vision)
-4. Filosofi 4-Dunia application
+4. Filosofi Dunia Pintu (4-negara cultural context) application
 5. Quote both parties
 6. Implication for industry
 
@@ -130,13 +130,13 @@ Kontak: {email + phone + WhatsApp}
 ### Type 4: Editorial Feature / Cultural
 
 **Sample headline:**
-"Aesop, Design Within Reach, dan Tempat Curated Premium di Indonesia: Cerita Gerai 1000 Pintu"
+"Premium Curated Retail di Indonesia: Cerita Gerai 1000 Pintu"
 
 **Structure:**
-1. Cultural angle (premium curated retail Indonesia context)
-2. Brand origin Matthew Wijaya
-3. Filosofi 4-Dunia explanation
-4. Anchor reference Aesop + DWR
+1. Cultural angle (premium tetapi inklusif Indonesia context)
+2. Brand origin Matthew
+3. Filosofi Dunia Pintu (4-negara cultural context) explanation
+4. Anchor reference BP Latest reference
 5. Why this matters for Indonesia design
 6. Vision
 
@@ -145,7 +145,7 @@ Kontak: {email + phone + WhatsApp}
 ### Type 5: Executive Feature
 
 **Sample headline:**
-"Matthew Wijaya: Founder Gerai 1000 Pintu Bicara tentang Premium Curated Retail Indonesia"
+"Matthew: Founder Gerai 1000 Pintu Bicara tentang Premium Curated Retail di Indonesia"
 
 **Structure:**
 1. Profile intro
@@ -162,7 +162,7 @@ Kontak: {email + phone + WhatsApp}
 ### Required attributes
 - **Premium hangat** maintained (calm + warm + refined)
 - **Confident factual** (data + claim grounded)
-- **Anchor reference visible** (Aesop + DWR + Kinfolk where appropriate)
+- **Anchor reference visible** (BP Latest reference where appropriate)
 - **Indonesian first** (English selective for industry terms)
 - **Indonesia premium** (no Western elitist tone)
 
@@ -176,20 +176,20 @@ Kontak: {email + phone + WhatsApp}
 - "tempat" not "rumah"
 - "Gerai 1000 Pintu" lengkap (always in press)
 - "Door Expert" preserved
-- "Filosofi 4-Dunia" introduced + brief explain
+- "Filosofi Dunia Pintu (4-negara cultural context)" introduced + brief explain
 - Anchor reference contextual
 
 ## Quote Bank
 
-### Matthew Wijaya (Founder) Quote Library
+### Matthew (Founder) Quote Library
 
 **On vision:**
 > "Saya tidak ingin membangun toko pintu. Saya ingin membangun tempat. Tempat 
 > dimana customer datang untuk memahami karakter pintu yang menemani tempat 
 > mereka."
 
-**On Aesop reference:**
-> "Aesop dan Design Within Reach mengajarkan kami bahwa retail premium adalah 
+**On BP Latest reference:**
+> "BP Latest brand guideline mengajarkan kami bahwa retail premium adalah 
 > soal ritual yang refined. Itu yang kami bawa ke Balikpapan, dengan adaptasi 
 > Indonesia yang authentic."
 
@@ -198,7 +198,7 @@ Kontak: {email + phone + WhatsApp}
 > customer dalam memilih karakter tempat mereka. Ini bukan transaksi. Ini 
 > kurasi."
 
-**On filosofi 4-Dunia:**
+**On filosofi Dunia Pintu (4-negara cultural context):**
 > "Empat dunia, empat karakter. Jepang membawa jiwa, Eropa membawa seni, 
 > Amerika membawa pernyataan, China membawa legacy. Customer kami memilih 
 > yang menemani perjalanan mereka."
@@ -233,7 +233,7 @@ Kontak: {email + phone + WhatsApp}
 
 ### Tier 2: National Lifestyle (Indonesia)
 - Outlet examples: Femina, Indonesia Tatler, Kompas Properti, Detik Lifestyle
-- Pitch angle: Cultural premium curated retail
+- Pitch angle: Cultural premium tetapi inklusif
 - Lead time: 3-week embargo
 - Pitch document: PR + Photography kit + Brand factsheet
 
@@ -245,7 +245,7 @@ Kontak: {email + phone + WhatsApp}
 
 ### Tier 4: International (Phase 2+)
 - Outlet examples: Kinfolk, Wallpaper, Dezeen, Surface
-- Pitch angle: Indonesia premium curated retail story
+- Pitch angle: Indonesia premium tetapi inklusif story
 - Lead time: 8-week embargo
 - Pitch: Long-form editorial feature
 
@@ -254,7 +254,7 @@ Kontak: {email + phone + WhatsApp}
 ### Mandatory components
 1. **Press Release** (single page, key info)
 2. **Brand Factsheet** (1-page: who, what, when, where, key data)
-3. **Founder Bio** (Matthew Wijaya, 200 word)
+3. **Founder Bio** (Matthew, 200 word)
 4. **Photography Kit** (8-12 high-res photo: storefront, product detail, founder, showroom, customer moment)
 5. **Logo Pack** (SVG + PNG + EPS)
 6. **Brand Canon Quick Sheet** (palette + typography reference)
@@ -347,7 +347,7 @@ Kontak: {email + phone + WhatsApp}
 - [ ] "tempat" not "rumah"
 - [ ] No em-dash
 - [ ] Quote authentic + 2-3 sentence
-- [ ] About section: filosofi 4-Dunia + anchor reference
+- [ ] About section: filosofi Dunia Pintu (4-negara cultural context) + anchor reference
 - [ ] Media contact clear
 - [ ] Photography kit attached
 - [ ] Word count appropriate
@@ -423,8 +423,8 @@ gantt
 - editorial-style-guide
 - Matthew bio + history
 - Door Expert operating model
-- Filosofi 4-Dunia content
-- Anchor Aesop + DWR + Kinfolk reference
+- Filosofi Dunia Pintu (4-negara cultural context) content
+- Anchor BP Latest reference
 
 ## Mode
 
@@ -455,14 +455,14 @@ Switch: NEED_CLARIFICATION jika announcement detail ambigu
 **Input:** "Press release Wave 1 launch Cabang Balikpapan 14 November 2026 grand opening"
 
 **Output summary:**
-- Headline: "Gerai 1000 Pintu Hadir di Balikpapan: Tempat Curated Premium Pintu dengan Filosofi 4-Dunia"
+- Headline: "Gerai 1000 Pintu Hadir di Balikpapan: Tempat Curated Premium Pintu dengan Filosofi Dunia Pintu (4-negara cultural context)"
 - Sub: "Launch resmi 14 November 2026 menyajikan model Lean Store + konsultasi Door Expert remote pertama di Indonesia"
 - Type: Launch announcement
 - Length: 600 word
-- Quote Matthew: vision + Aesop reference + Door Expert model + filosofi 4-Dunia (3 quote)
+- Quote Matthew: vision + BP Latest reference + Door Expert model + filosofi Dunia Pintu (4-negara cultural context) (3 quote)
 - Quote Door Expert: konsultasi philosophy
 - Quote Customer: Bapak Anton testimonial
-- About: filosofi 4-Dunia + Lean Store + anchor Aesop & DWR
+- About: filosofi Dunia Pintu (4-negara cultural context) + Lean Store + anchor BP Latest reference &BP Latest reference
 - Photography kit: 12 photo (storefront, product detail, Matthew, showroom, customer)
 - Distribution: Tier 1 Kaltim (Tribun, Kaltim Post) T-4w + Tier 2 National (Femina, Tatler, Kompas Properti) T-3w + Tier 3 Industry (IAI, HDII, ArchDaily Indo) T-4w
 - Embargo: 14 Nov 2026 09:00 WIB

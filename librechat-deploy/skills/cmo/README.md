@@ -90,7 +90,7 @@ Setiap skill output WAJIB compliance:
 - ❌ No em-dash (pakai koma atau titik)
 - ✅ "tempat" bukan "rumah"
 - ✅ "Gerai 1000 Pintu" lengkap (no "GSP" atau "1000 Pintu" saja)
-- ✅ Tone calm refined premium curated (anchor Aesop + Design Within Reach)
+- ✅ Tone calm refined premium tetapi inklusif (anchor BP Latest reference)
 - ✅ "reward" dalam tanda kutip
 - ✅ Audience-first framing
 - ✅ Konkret > abstrak

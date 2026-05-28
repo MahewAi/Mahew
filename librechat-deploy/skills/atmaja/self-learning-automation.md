@@ -44,7 +44,7 @@ Secondary:
 **Captured:**
 - Persona behavior pattern (per 6 persona)
 - Konsultasi conversion factor (what closes deal)
-- Filosofi 4-Dunia archetype distribution shift
+- Filosofi Dunia Pintu (4-negara cultural context) archetype distribution shift
 - Customer language pattern (vocabulary they use)
 - Vendor reliability pattern
 - Sprint velocity + blocker pattern
@@ -100,7 +100,7 @@ Secondary:
 - Brand canon violation pattern (per channel + writer)
 - Visual canon edge case
 - Story angle that resonates
-- Anchor reference (Aesop/DWR/Kinfolk) cited by customer
+- Anchor reference (BP Latest reference) cited by customer
 - Tone calibration per audience
 
 **Storage focus:** Brand canon pattern library, tone calibration history
@@ -190,7 +190,7 @@ Apply: Default brief for similar task forward
 ### Pattern Type 5: Opportunity Pattern
 - "Architect partnership compounds 5x per project"
 - "Customer testimonial viral correlates with delivery moment"
-- "4-Dunia content arc cited by Architect 30 day post"
+- "4-negara cultural reference content arc cited by Architect 30 day post"
 
 ## Self-Learning Output Format
 
@@ -252,7 +252,7 @@ Atmaja synthesizes patterns across agents:
 - ❌ **Brand canon erosion:** Never compromise canon for Matthew preference if conflict
 - ❌ **Hallucinate pattern:** Distinguish real pattern (3+ instance) vs one-off
 - ❌ **Overcorrect:** Don't pivot dramatically per single feedback
-- ❌ **Forget founding knowledge:** Tier 1 LOCKED (Brand Canon, 4-Dunia, 5 Nilai, Lean Store) NEVER overridden by learning
+- ❌ **Forget founding knowledge:** Tier 1 LOCKED (Brand Canon, 4-negara cultural reference, 5 Nilai, Lean Store) NEVER overridden by learning
 
 ### Embrace
 - ✅ Independent synthesis (Atmaja can disagree respectfully)
@@ -356,7 +356,7 @@ Self-learning informs:
 **Store:** CCO brand-canon-enforcer pattern + training-curriculum (COO)
 **Action:** Refresher training Writer X + Friday afternoon audit
 
-### Sample 4: 4-Dunia Customer Choice Shift
+### Sample 4: 4-negara cultural reference Customer Choice Shift
 **Observation:** Q4 customer choice Jepang 30%, Eropa 25%; Q1 Jepang 35%, Eropa 22%
 **Pattern:** Jepang archetype trending stronger early 2027
 **Store:** brand-storytelling + content-calendar-strategy
@@ -512,7 +512,7 @@ Switch: AUDIT (when Matthew requests learning review)
   - Atmaja: Matthew decision pattern + multi-agent synthesis dynamics
   - CMO: Channel performance + persona behavior
   - COO: Sprint velocity + vendor reliability + Door Expert capacity
-  - CCO: Canon violation pattern + tone calibration + 4-Dunia engagement
+  - CCO: Canon violation pattern + tone calibration + 4-negara cultural reference engagement
   - CFO: Forecast accuracy + ROI variance + cash pattern
 - 5 trigger types: Direct correction + Implicit signal + Canon auto + Customer outcome + Quarterly retro
 - Storage hierarchy: Working memory (session) → Short-term (Notion week) → Long-term (Obsidian permanent)

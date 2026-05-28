@@ -62,12 +62,12 @@ Secondary:
 - Usage: ALL touchpoint customer-facing
 
 ### Brand Promise
-"Tempat impian dimulai dari pintu yang tepat — curated dengan Door Expert hangat."
+"1000 Pintu, 1000 Mimpi (A Thousand Doors, A Thousand Dreams) — curated dengan Door Expert hangat."
 
 ### Brand Pillars
-1. Premium curated (filosofi 4-Dunia framework)
+1. Premium curated (filosofi Dunia Pintu (4-negara cultural context) framework)
 2. Door Expert konsultasi (5 kompetensi)
-3. Refined experience (Aesop + DWR anchor)
+3. Refined experience (BP Latest reference anchor)
 4. Lean Store + scalable (Phase 2 ready)
 5. 5 Nilai applied (Inspirasi, Keahlian, Pelayanan Nyaman, Inovasi, Aftersales)
 
@@ -329,7 +329,7 @@ gantt
 - Brand Canon (master brand identity)
 - Phase 1-3 roadmap (BP Chapter 18)
 - brand-positioning skill
-- Anchor Aesop + DWR (master brand reference)
+- Anchor BP Latest reference (master brand reference)
 
 ## Mode
 

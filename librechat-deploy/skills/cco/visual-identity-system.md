@@ -9,7 +9,7 @@ last_updated: 2026-05-27
 
 # Visual Identity System
 
-Locked visual identity Gerai 1000 Pintu: "The Timeless Foundation" palette, typography pairing, photography direction, iconography, layout principles. Reference Aesop + Design Within Reach.
+Locked visual identity Gerai 1000 Pintu: "The Timeless Foundation" palette, typography pairing, photography direction, iconography, layout principles. Reference BP Latest reference.
 
 ## Triggers
 
@@ -35,7 +35,7 @@ Secondary:
 # Visual Identity Spec: {APPLICATION}
 
 **System name:** The Timeless Foundation
-**Anchor:** Aesop + Design Within Reach
+**Anchor:** BP Latest reference
 **Status:** 🔒 LOCKED (no deviation)
 
 ## Color Palette (LOCKED)
@@ -106,8 +106,8 @@ Secondary:
 ## Photography Direction (LOCKED)
 
 ### Style Anchor
-- **Aesop reference:** Tight detail, natural daylight, minimal styling
-- **Design Within Reach reference:** Editorial composition, environmental context
+- **BP Latest reference:** Tight detail, natural daylight, minimal styling
+- **BP Latest reference:** Editorial composition, environmental context
 
 ### Composition
 | Aspect | Direction |
@@ -154,7 +154,7 @@ Secondary:
 
 ### Style
 - Line weight: 1.5-2px (medium)
-- Style: Linear minimal (Aesop-inspired)
+- Style: Linear minimal (Premium-inspired)
 - Corner: Slightly rounded 2-3px radius
 - Color: Charcoal #1F1A14 default, Brass #B8956B accent
 
@@ -266,9 +266,9 @@ gerai_icon_pintu_outline_charcoal.svg
 ## Brand Mood Board Reference
 
 ### Inspiration sources
-- Aesop store interior + product shot
-- Design Within Reach catalog
-- Kinfolk magazine editorial
+- Premium retail interior + product shot
+- BP Latest reference catalog
+- premium editorial publication editorial
 - Nendo design studio
 - Modern Japan minimalism (Tadao Ando, Kengo Kuma)
 - Mid-century craftsman (American)
@@ -328,9 +328,9 @@ quadrantChart
 ## Knowledge Dependency
 
 - Brand Canon document LOCKED
-- Anchor Aesop + DWR visual reference
+- Anchor BP Latest reference visual reference
 - BP Chapter 7 (Brand Identity Visual)
-- 4-Dunia palette extension (per archetype subtle variant)
+- 4-negara cultural palette extension (per archetype subtle variant)
 
 ## Mode
 
@@ -341,7 +341,7 @@ Switch: DISCUSSION jika new application novel
 
 - file-search (asset library)
 - artifacts (palette + typography demo)
-- web-search (Aesop/DWR reference update)
+- web-search (BP Latest reference/BP Latest reference update)
 
 ## Validation Criteria
 
@@ -371,7 +371,7 @@ Switch: DISCUSSION jika new application novel
 - Hashtag tidak ada di visual (caption only)
 - Logo subtle bottom 5% area Charcoal monogram
 - Composition asymmetric (hero kiri, caption kanan)
-- Brand mood: calm refined (Aesop reference)
+- Brand mood: calm refined (BP Latest reference)
 
 ## Handoff
 

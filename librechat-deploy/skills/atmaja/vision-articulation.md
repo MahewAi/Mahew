@@ -41,17 +41,17 @@ Secondary:
 
 ## Core Vision Statement (LOCKED — never changes)
 
-> Gerai 1000 Pintu menjadi referensi premium curated retail Indonesia yang refined, 
+> Gerai 1000 Pintu menjadi referensi premium tetapi inklusif Indonesia yang refined, 
 > hangat, dan timeless. Dari Balikpapan, kami menyebar ke kota-kota Indonesia yang 
 > menghargai detail. Setiap cabang adalah tempat yang membuat customer berkata, 
 > "Saya tidak menemukan pengalaman seperti ini di tempat lain."
 
 **Core elements:**
-- Premium curated retail (positioning)
+- Premium tetapi inklusif retail (positioning)
 - Indonesia first (cultural anchor)
 - Refined + hangat + timeless (tone)
 - Tempat yang berbeda (experience)
-- Anchor: Aesop + DWR + Kinfolk references
+- Anchor: BP Latest references
 
 ## Audience-Specific Variants
 
@@ -69,16 +69,16 @@ berkata "saya menemukan sesuatu yang berbeda."
 
 Apa yang berbeda?
 
-Anchor kami adalah Aesop. Bukan brand-nya, melainkan disiplin yang 
+Anchor kami adalah BP Latest reference. Bukan brand-nya, melainkan disiplin yang 
 mereka pegang. Setiap detail dipilih dengan kesadaran. Setiap touchpoint 
 hangat tanpa pretensi. Tempat yang menyajikan keheningan dalam pasar 
 yang ramai.
 
-Design Within Reach mengajarkan kami bahwa retail premium adalah soal 
-kurasi yang berani. Kinfolk mengajarkan kami bahwa storytelling hangat 
+BP Latest reference mengajarkan kami bahwa retail premium adalah soal 
+kurasi yang berani. Indonesian editorial mengajarkan kami bahwa storytelling hangat 
 adalah karya tersendiri.
 
-Filosofi 4-Dunia adalah framework kami. Jepang membawa jiwa. Eropa 
+Filosofi Dunia Pintu (4-negara cultural context) adalah framework kami. Jepang membawa jiwa. Eropa 
 membawa seni. Amerika membawa pernyataan. China membawa legacy. Customer 
 kami memilih yang menemani perjalanan mereka.
 
@@ -87,14 +87,14 @@ Door Expert remote. Tidak besar. Tapi setiap pintu didampingi dengan
 kompetensi yang tinggi.
 
 Brand canon kami strict. Tidak ada em-dash. "Tempat" bukan "rumah." 
-Premium hangat, bukan agresif sales. Aesop dan Design Within Reach 
+Premium hangat, bukan agresif sales. BP Latest brand guideline 
 visible dalam setiap detail.
 
 Kami mulai di Balikpapan. Kami akan menyebar ke Samarinda, Bontang, lalu 
 Jakarta, lalu Surabaya. Tidak terburu-buru. Setiap cabang harus aligned 
 dengan standar yang kami susun.
 
-Tahun-tahun ke depan, ketika seseorang berbicara tentang "premium curated 
+Tahun-tahun ke depan, ketika seseorang berbicara tentang "premium tetapi inklusif 
 retail Indonesia," nama kami sebaiknya disebut. Bukan karena kami yang 
 terbesar. Karena kami yang paling konsisten dengan standar yang refined.
 
@@ -102,7 +102,7 @@ Kami sedang membangun tempat. Tempat untuk customer. Tempat untuk tim.
 Tempat untuk Indonesia.
 
 Salam hangat,
-Matthew Wijaya
+Matthew
 Founder Gerai 1000 Pintu
 ```
 
@@ -112,17 +112,17 @@ Founder Gerai 1000 Pintu
 **Length:** Paragraph (100-150 word)
 
 ```
-Tempat impian dimulai dari pintu yang tepat.
+1000 Pintu, 1000 Mimpi (A Thousand Doors, A Thousand Dreams).
 
 Di Gerai 1000 Pintu, kami menyiapkan kurasi pintu premium yang dipilih 
-dengan filosofi 4-Dunia: Jepang jiwa, Eropa seni, Amerika pernyataan, 
-China legacy. Door Expert kami siap menemani Anda dengan konsultasi 60 
+dengan filosofi Dunia Pintu (4-negara cultural context): Jepang jiwa, Eropa seni, Amerika pernyataan, 
+China gerbang rezeki. Door Expert kami siap menemani Anda dengan konsultasi 60 
 menit yang hangat.
 
 Bukan transaksi. Sebuah pendampingan untuk menemukan karakter yang 
 merefleksikan tempat Anda.
 
-Anchor kami: Aesop dan Design Within Reach.
+Anchor kami: BP Latest brand guideline.
 
 Mari mulai berbicara tentang tempat Anda.
 
@@ -135,15 +135,15 @@ gerai.mahewwork.com
 **Length:** 200-300 word
 
 ```
-Di Balikpapan, sebuah konsep retail premium curated berbeda mengambil 
-ruang. Gerai 1000 Pintu, didirikan November 2026 oleh Matthew Wijaya, 
-adalah tempat yang menyajikan pintu kurasi dengan filosofi 4-Dunia 
+Di Balikpapan, sebuah konsep retail premium tetapi inklusif berbeda mengambil 
+ruang. Gerai 1000 Pintu, didirikan November 2026 oleh Matthew, 
+adalah tempat yang menyajikan pintu kurasi dengan filosofi Dunia Pintu (4-negara cultural context) 
 (Jepang, Eropa, Amerika, China) dan layanan konsultasi Door Expert via 
 Zoom — model Lean Store pertama di industri pintu Indonesia.
 
-Anchor brand-nya tidak biasa untuk konteks Indonesia: Aesop, brand body 
+Anchor brand-nya tidak biasa untuk konteks Indonesia: BP Latest reference, brand body 
 care Australia yang dikenal dengan retail experience minimalist refined, 
-dan Design Within Reach, retailer furniture premium Amerika yang dikenal 
+dan BP Latest reference, retailer furniture premium Amerika yang dikenal 
 dengan kurasi editorial.
 
 "Saya tidak ingin membangun toko pintu," ujar Matthew. "Saya ingin 
@@ -154,7 +154,7 @@ Konsep Lean Store dengan dua staf cabang plus Door Expert centralized
 dari pusat memungkinkan Gerai 1000 Pintu menjaga konsistensi quality 
 saat scale. Phase 2 ke Samarinda dan Bontang direncanakan akhir 2027.
 
-Filosofi 4-Dunia adalah framework yang bisa di-cite oleh arsitek dan 
+Filosofi Dunia Pintu (4-negara cultural context) adalah framework yang bisa di-cite oleh arsitek dan 
 designer ketika bekerja dengan klien tentang pilihan pintu.
 
 Gerai 1000 Pintu beralamat di Balikpapan, Kalimantan Timur.
@@ -169,11 +169,11 @@ gerai.mahewwork.com
 
 **30-sec:**
 ```
-Gerai 1000 Pintu adalah Aesop dan Design Within Reach untuk premium 
+Gerai 1000 Pintu adalah BP Latest brand guideline untuk premium 
 curated retail Indonesia. Kami mulai di Balikpapan 2026 dengan filosofi 
-4-Dunia dan Lean Store operating model. Year 1 NPS 48 + brand awareness 
+4-negara cultural reference dan Lean Store operating model. Year 1 NPS 48 + brand awareness 
 30% Balikpapan. Phase 2 ke Kaltim 2027 + Phase 3 Jawa 2028+.
-Indonesia premium curated retail market underserved Rp X triliun. Kami 
+Indonesia premium tetapi inklusif market underserved Rp X triliun. Kami 
 menyebar.
 ```
 
@@ -183,9 +183,9 @@ menyebar.
 
 **Length:** 30-sec
 ```
-Gerai 1000 Pintu di Balikpapan adalah tempat pintu premium curated 
-pertama di Indonesia dengan filosofi 4-Dunia dan konsultasi Door Expert 
-gratis 60 menit. Anchor kami Aesop + Design Within Reach. Kami sediakan 
+Gerai 1000 Pintu di Balikpapan adalah tempat pintu premium tetapi inklusif 
+pertama di Indonesia dengan filosofi Dunia Pintu (4-negara cultural context) dan konsultasi Door Expert 
+gratis 60 menit. Anchor kami BP Latest reference. Kami sediakan 
 waktu untuk customer yang sedang menyusun tempat impian.
 ```
 
@@ -197,10 +197,10 @@ Selamat datang di Gerai 1000 Pintu.
 
 Anda sekarang bagian dari tempat yang sedang membangun standar premium 
 curated retail Indonesia. Kami berbeda dari toko pintu biasa. Anchor 
-kami Aesop dan Design Within Reach: dua referensi global yang menjaga 
+kami BP Latest brand guideline: dua referensi global yang menjaga 
 disiplin yang sama di setiap detail.
 
-Filosofi 4-Dunia (Jepang jiwa, Eropa seni, Amerika pernyataan, China 
+Filosofi Dunia Pintu (4-negara cultural context) (Jepang jiwa, Eropa seni, Amerika pernyataan, China 
 legacy) adalah framework kami untuk membantu customer memahami karakter 
 pintu yang menemani tempat mereka.
 
@@ -214,7 +214,7 @@ Lean Store kami berarti dua staf di setiap cabang plus Door Expert
 remote. Itu memungkinkan kami menjaga konsistensi quality. Anda akan 
 berkolaborasi dengan Door Expert untuk customer terbaik.
 
-Tahun-tahun ke depan, ketika seseorang berbicara tentang premium curated 
+Tahun-tahun ke depan, ketika seseorang berbicara tentang premium tetapi inklusif 
 retail Indonesia, nama Gerai 1000 Pintu sebaiknya disebut. Anda bagian 
 dari membangun itu.
 
@@ -234,7 +234,7 @@ Selamat bergabung. Mari kita mulai.
 - Premium hangat consistent
 - "Kami" (we) dominant
 - Customer-first "Anda" focus
-- Aesop + Kinfolk warmth
+- BP Latest reference + Editorial Indonesian warmth
 - Refined vocabulary
 
 ### Cultural Voice (Industry)
@@ -248,10 +248,10 @@ Selamat bergabung. Mari kita mulai.
 
 ### What stays LOCKED
 - Premium curated positioning
-- Filosofi 4-Dunia framework
+- Filosofi Dunia Pintu framework
 - Lean Store concept
 - 5 Nilai
-- Anchor Aesop + DWR + Kinfolk references
+- Anchor BP Latest references
 - Indonesia first
 
 ### What can evolve
@@ -270,20 +270,20 @@ Selamat bergabung. Mari kita mulai.
 ## Memorable Anchor Phrases
 
 ### Public-facing
-- "Tempat impian dimulai dari pintu yang tepat."
+- "1000 Pintu, 1000 Mimpi (A Thousand Doors, A Thousand Dreams)."
 - "Empat dunia. Empat karakter."
 - "Bukan transaksi. Sebuah pendampingan."
 - "Refined + hangat + timeless."
 
 ### Internal
-- "Aesop standard for Indonesia."
+- "BP Latest standard for Indonesia."
 - "Lean Store, premium hangat."
 - "Brand canon LOCKED."
-- "Filosofi 4-Dunia framework."
+- "Filosofi Dunia Pintu framework."
 
 ### Founder pull-quote
 - "Saya tidak ingin membangun toko pintu. Saya ingin membangun tempat."
-- "Aesop mengajarkan kami disiplin. Kinfolk mengajarkan kami warmth."
+- "BP Latest reference mengajarkan kami disiplin. Indonesian editorial mengajarkan kami warmth."
 
 ## Anti-Pattern
 
@@ -292,7 +292,7 @@ Selamat bergabung. Mari kita mulai.
 - ❌ Empty superlative ("the best", "the only")
 - ❌ Trend-chasing language (passing year-specific)
 - ❌ Em-dash habit
-- ❌ Over-claiming Aesop+DWR (we aspire, not become)
+- ❌ Over-claiming BP Latest reference (we aspire, not become)
 - ❌ Lifestyle aspirational generic ("Make your dream home")
 
 ### Embrace
@@ -310,8 +310,8 @@ Every vision articulation MUST:
 - [ ] "tempat" not "rumah"
 - [ ] "Gerai 1000 Pintu" lengkap di formal context
 - [ ] Premium hangat tone
-- [ ] Anchor reference Aesop + DWR appropriate
-- [ ] Filosofi 4-Dunia framework woven natural
+- [ ] Anchor reference BP Latest reference appropriate
+- [ ] Filosofi Dunia Pintu framework woven natural
 - [ ] Lean Store concept honored
 - [ ] 5 Nilai applied implicitly
 - [ ] Indonesian first vocabulary
@@ -329,10 +329,10 @@ Every vision articulation MUST:
 "Empat dunia. Empat karakter."
 
 ### Device 4: Anchor invocation
-"Aesop mengajarkan kami disiplin yang sama untuk Indonesia."
+"BP Latest reference mengajarkan kami disiplin yang sama untuk Indonesia."
 
 ### Device 5: Vision projection
-"Tahun-tahun ke depan, ketika seseorang berbicara tentang premium curated retail Indonesia, nama kami sebaiknya disebut."
+"Tahun-tahun ke depan, ketika seseorang berbicara tentang premium tetapi inklusif Indonesia, nama kami sebaiknya disebut."
 ```
 
 ## Visual Output
@@ -365,9 +365,9 @@ mindmap
       Premium Curated Retail
       Indonesia First
       Refined Hangat Timeless
-      Aesop DWR Anchor
+      BP Latest reference BP Latest reference Anchor
     Framework Locked
-      Filosofi 4-Dunia
+      Filosofi Dunia Pintu (4-negara cultural context)
       Lean Store
       5 Nilai
       Door Expert
@@ -388,8 +388,8 @@ mindmap
 - Brand Canon LOCKED
 - vision-roadmap (Phase content)
 - BP Chapter 1-18 (full vision)
-- 5 Nilai + Filosofi 4-Dunia + Lean Store concept
-- Anchor Aesop + DWR + Kinfolk
+- 5 Nilai + Filosofi Dunia Pintu (4-negara cultural context) + Lean Store concept
+- Anchor BP Latest reference
 - Matthew personal voice
 - editorial-style-guide (CCO)
 - brand-storytelling (CCO)
@@ -424,8 +424,8 @@ Switch: DISCUSSION jika vision evolution debate
 - Variant 6: New hire onboarding 5-min speech
 - Voice: Founder Matthew + Brand premium hangat
 - Length: 5-min welcome (~600 word)
-- Anchor elements: Aesop + DWR reference + Filosofi 4-Dunia + Lean Store + 5 Nilai + Brand canon LOCKED
-- Key memorable phrases: "tempat yang sedang membangun standar premium curated retail Indonesia", "Anchor kami Aesop dan Design Within Reach"
+- Anchor elements: BP Latest reference + Filosofi Dunia Pintu (4-negara cultural context) + Lean Store + 5 Nilai + Brand canon LOCKED
+- Key memorable phrases: "tempat yang sedang membangun standar premium tetapi inklusif Indonesia", "Anchor kami BP Latest brand guideline"
 - Closing: "Selamat bergabung. Mari kita mulai."
 - Brand canon: ✅ 100% compliance
 - Audience matrix + elements mindmap embedded

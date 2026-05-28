@@ -98,7 +98,7 @@ Secondary:
 - **Common drift:** {trendy color, gradient flashy, etc.}
 - **Action:** {asset cleanup + designer briefing}
 
-### Rule 6: Anchor reference Aesop + DWR alignment
+### Rule 6: Anchor reference BP Latest reference alignment
 - **Generic feel detected:** {N instance}
 - **Pattern:** {commercial generic vs refined premium}
 - **Action:** {visual + copy direction refresh}
@@ -117,7 +117,7 @@ Secondary:
 | Gerai 1000 Pintu | {N} | 90% |
 | Door Expert | {N} | 100% |
 | Konsultasi | {N} | 100% |
-| Filosofi 4-Dunia | {N} | 95% |
+| Filosofi Dunia Pintu (4-negara cultural context) | {N} | 95% |
 | 5 Nilai | {N} | 90% |
 
 ### Anti-vocabulary (flagged)
@@ -144,7 +144,7 @@ Secondary:
 ### Examples of drift
 **Premium drift (slipping toward generic):**
 - ❌ "Pintu berkualitas dengan harga terjangkau" (commodity tone)
-- ✅ "Pintu yang dikurasi untuk tempat impian yang bermakna" (premium curated)
+- ✅ "Pintu yang dikurasi untuk tempat impian yang bermakna" (premium tetapi inklusif)
 
 **Hangat drift (slipping toward cold):**
 - ❌ "Hubungi customer service kami untuk informasi lebih lanjut" (transactional)
@@ -182,8 +182,8 @@ Secondary:
 
 ## Brand Storytelling Audit
 
-### Filosofi 4-Dunia integration
-- Touchpoint mention 4-Dunia: {N} of {N}
+### Filosofi Dunia Pintu (4-negara cultural context) integration
+- Touchpoint mention 4-negara cultural reference: {N} of {N}
 - Quality of mention: {Detailed / Mentioned / Missing}
 - Action: increase integration di {missing channel}
 
@@ -196,7 +196,7 @@ Secondary:
 - Aftersales: {N}
 - Action: balance gap
 
-### Anchor Aesop + DWR
+### Anchor BP Latest reference
 - Visual reference visible: {%}
 - Vocabulary reference visible: {%}
 - Customer feedback recognition: {N mention}
@@ -242,15 +242,15 @@ Secondary:
 
 ## Benchmark Comparison
 
-### Vs Anchor Aesop + DWR (qualitative)
-- Aesop: ~98% canon consistency (industry gold standard)
-- DWR: ~95% consistency
+### Vs Anchor BP Latest reference (qualitative)
+- Premium retail benchmark: 95%+ canon consistency (industry gold standard)
+- Premium retail reference: 90-95% consistency
 - Gerai 1000 Pintu: 93% (Year 1) — within striking distance
 
 ### Year-over-year trend
 - Year 1 baseline: 93%
 - Year 2 target: 96%
-- Year 3 target: 98% (Aesop-level)
+- Year 3 target: 98% (BP-aligned)
 
 ## Lessons Learned
 
@@ -341,11 +341,11 @@ Switch: NEED_CLARIFICATION jika sample size ambigu
 - Vocabulary compliance + anti-vocabulary
 - Tone spectrum measured 6-attribute
 - Visual + photography + palette + typography
-- Brand storytelling audit (4-Dunia + 5 Nilai + Anchor)
+- Brand storytelling audit (4-negara cultural reference + 5 Nilai + Anchor)
 - Quick-fix action plan priority-tiered
 - Training recommendation
 - Audit cadence
-- Benchmark vs Aesop + DWR
+- Benchmark vs BP Latest reference
 - Year-over-year trend
 
 ## Sample I/O
@@ -361,7 +361,7 @@ Switch: NEED_CLARIFICATION jika sample size ambigu
 - Quick fix Priority 1: em-dash habit writer X (training), trendy filter Instagram (replace 3 asset)
 - Refresher session: 2-hour brand canon untuk Marketing team + new MA batch
 - Cadence: weekly auto-scan + monthly tone + quarterly full
-- Benchmark: 93% vs Aesop 98% (within striking distance Year 2 target 96%)
+- Benchmark: 93% vs industry gold standard 95-98% (within striking distance Year 2 target 96%)
 - Heatmap + trend chart + pie violation embedded
 
 ## Handoff

@@ -9,7 +9,7 @@ last_updated: 2026-05-27
 
 # Margin Analysis
 
-Margin analysis Gerai 1000 Pintu: per product, per persona, per cabang, per channel. Identify margin pressure + opportunity, protect premium curated standard.
+Margin analysis Gerai 1000 Pintu: per product, per persona, per cabang, per channel. Identify margin pressure + opportunity, protect premium tetapi inklusif standard.
 
 ## Triggers
 
@@ -210,7 +210,7 @@ Tier 1 + Tier 2 + Tier 3 + Tier 4 = 7.75 + 19.8 + 3.6 + 1.05 = **~32% blended** 
 Margin discipline supports premium positioning. Don't compromise quality for margin.
 
 ### Principle 2: Value, Not Discount
-Communicate value (Door Expert + Filosofi 4-Dunia). Don't discount as default.
+Communicate value (Door Expert + Filosofi Dunia Pintu (4-negara cultural context)). Don't discount as default.
 
 ### Principle 3: Sustainable Vendor Relationship
 Negotiate fair, but maintain long-term partnership. AMK Premium especially.

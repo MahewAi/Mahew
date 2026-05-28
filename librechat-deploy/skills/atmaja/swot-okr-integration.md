@@ -43,9 +43,9 @@ Secondary:
 
 ### Strengths (Internal +)
 1. **Lean Store concept LOCKED** — efficient operating model 2-staf + Door Expert remote
-2. **Filosofi 4-Dunia framework** — proprietary brand differentiator
+2. **Filosofi Dunia Pintu framework** — proprietary brand differentiator
 3. **AMK Premium exclusive Kaltim** — supply moat regional
-4. **Brand canon discipline** — Aesop+DWR anchored consistency
+4. **Brand canon discipline** — BP Latest reference anchored consistency
 5. **Founder Matthew technical capability** — CTO + CEO combined
 6. **AI Department deployed** — operational intelligence layer
 7. **Manuscript "Pintu Berbicara"** — IP + content asset compounding
@@ -57,16 +57,16 @@ Secondary:
 4. **Brand awareness limited** — Year 1 30% aided target
 5. **Cash reserve tight** — burn rate vs runway
 6. **Limited operating history** — track record building
-7. **Indonesia retail premium curated market underdeveloped** — educate market needed
+7. **Indonesia retail premium tetapi inklusif market underdeveloped** — educate market needed
 
 ### Opportunities (External +)
-1. **Premium curated retail Indonesia underserved** — first-mover advantage
-2. **Aesop+DWR aspirational reference growing recognition** — riding wave
+1. **Premium tetapi inklusif retail Indonesia underserved** — first-mover advantage
+2. **BP Latest reference aspirational reference growing recognition** — riding wave
 3. **Indonesia design appreciation rising** — middle-upper class
 4. **Architect+Designer collaboration channel** — B2B2C
 5. **Phase 2 expansion Kaltim cabang Samarinda + Bontang** — geographic
 6. **AI-augmented operations efficiency** — competitive edge
-7. **Kinfolk-style editorial content gap Indonesia** — content moat
+7. **Editorial Indonesian style editorial content gap Indonesia** — content moat
 
 ### Threats (External -)
 1. **Mass-market competitor price war** — race to bottom risk
@@ -80,14 +80,14 @@ Secondary:
 ### SWOT Matrix Insight
 
 #### SO Strategies (use Strength + capture Opportunity)
-- Leverage Filosofi 4-Dunia framework + premium curated underserved → Position thought leadership Indonesia retail
+- Leverage Filosofi Dunia Pintu framework + premium tetapi inklusif underserved → Position thought leadership Indonesia retail
 - Lean Store + Phase 2 expansion opportunity → Replicate model Samarinda/Bontang
 - AI Department + Architect channel → B2B2C automation pipeline
 
 #### WO Strategies (mitigate Weakness + capture Opportunity)
 - Single Door Expert + Phase 2 expansion → Hire Door Expert #2 by Q1 2027
 - Single founder + AI augmentation opportunity → AI Department compensate for solo capacity
-- Brand awareness limited + Aesop/DWR rising recognition → Anchor reference content marketing
+- Brand awareness limited + BP Latest reference/BP Latest reference rising recognition → Anchor reference content marketing
 
 #### ST Strategies (use Strength + defend Threat)
 - Brand canon discipline + dilution threat → Strict enforcement + audit cadence
@@ -104,7 +104,7 @@ Secondary:
 ### Annual OKR (Year 1: Nov 2026 - Nov 2027)
 
 #### Objective 1: Wave 1 Launch Successfully + Establish Brand Foundation
-**Aspiration:** Gerai 1000 Pintu hadir di Balikpapan dengan reputation premium curated retail anchored Aesop+DWR yang dihormati customer + industry.
+**Aspiration:** Gerai 1000 Pintu hadir di Balikpapan dengan reputation premium tetapi inklusif anchored BP Latest reference yang dihormati customer + industry.
 
 **Key Results:**
 - KR 1.1: Aided brand awareness Balikpapan 30%+ by Q4 2027
@@ -122,12 +122,12 @@ Secondary:
 - KR 2.4: Staff retention 80%+ Year 1
 
 #### Objective 3: Build Brand IP + Content Compounding
-**Aspiration:** Editorial content + Filosofi 4-Dunia framework menjadi referensi Indonesia premium curated retail.
+**Aspiration:** Editorial content + Filosofi Dunia Pintu framework menjadi referensi Indonesia premium tetapi inklusif.
 
 **Key Results:**
 - KR 3.1: 50+ long-form article shipped Year 1
 - KR 3.2: Press mention Tier 2 (national lifestyle) 10+ pieces
-- KR 3.3: 4-Dunia framework cited external 5+ times
+- KR 3.3: Dunia Pintu framework cited external 5+ times
 - KR 3.4: Brand canon documentation v2.0 finalized
 
 #### Objective 4: Prepare Phase 2 Scale Foundation
@@ -146,8 +146,8 @@ Secondary:
 - KR: 8-12 walk-in/week + 5+ konsultasi/week + 95%+ brand canon + 4.7+ Google review
 
 #### Q1 2027 (Jan-Mar, Educate + Build)
-- O: Filosofi 4-Dunia educational arc + customer base growing
-- KR: 30+ konsultasi/quarter + 5 customer case study + 4-Dunia content viral piece + persona Aplikator engagement +20%
+- O: Filosofi Dunia Pintu (4-negara cultural context) educational arc + customer base growing
+- KR: 30+ konsultasi/quarter + 5 customer case study + 4-negara cultural reference content viral piece + persona Aplikator engagement +20%
 
 #### Q2 2027 (Apr-Jun, Optimize + Validate)
 - O: Lean Store model validated + Phase 2 preparation
@@ -177,7 +177,7 @@ Secondary:
 
 | SWOT Insight | OKR Influenced |
 |---|---|
-| Strength: Filosofi 4-Dunia | O3 KR3.3 — framework cited externally |
+| Strength: Filosofi Dunia Pintu (4-negara cultural context) | O3 KR3.3 — framework cited externally |
 | Strength: Lean Store concept | O2 — validate operating model |
 | Weakness: Door Expert single | O4 KR4.2 — hire Door Expert #2 |
 | Weakness: Brand awareness | O1 KR1.1 — 30% awareness |
@@ -190,7 +190,7 @@ Secondary:
 1. **Brand foundation discipline** (O1 + O3) — canon + IP + awareness
 2. **Operational excellence proof** (O2) — Lean Store viable
 3. **Phase 2 readiness** (O4) — geographic scale prep
-4. **Cultural anchor maintenance** (across all) — Aesop+DWR consistency
+4. **Cultural anchor maintenance** (across all) — BP Latest reference consistency
 
 ## Part 4: Risk + Course-Correct Plan
 
@@ -234,7 +234,7 @@ quadrantChart
     quadrant-2 Capture Opportunity + Fix Weakness
     quadrant-3 Mitigate Weakness + Defend Threat
     quadrant-4 Use Strength to Defend Threat
-    Filosofi 4-Dunia: [0.85, 0.85]
+    Filosofi Dunia Pintu (4-negara cultural context): [0.85, 0.85]
     Lean Store concept: [0.8, 0.8]
     Single Door Expert: [0.3, 0.7]
     Brand awareness limited: [0.35, 0.75]
@@ -262,7 +262,7 @@ mindmap
     O3 Brand IP + Content
       KR3.1 50+ article
       KR3.2 10+ press
-      KR3.3 5+ cite 4-Dunia
+      KR3.3 5+ cite 4-negara cultural reference
       KR3.4 Canon doc v2.0
     O4 Phase 2 Foundation
       KR4.1 Site secured
@@ -295,7 +295,7 @@ gantt
 ## Knowledge Dependency
 
 - BP Chapter 1-18 (business plan)
-- Filosofi 4-Dunia
+- Filosofi Dunia Pintu (4-negara cultural context)
 - 5 Nilai Gerai
 - All C-Level skill catalog
 - COO risk-register
@@ -329,7 +329,7 @@ Switch: DISCUSSION jika strategic angle debate
 
 **Output summary:**
 - SWOT 4-quadrant: 7 Strength + 7 Weakness + 7 Opportunity + 7 Threat
-- Top SO strategy: Filosofi 4-Dunia + premium underserved → thought leadership
+- Top SO strategy: Filosofi Dunia Pintu (4-negara cultural context) + premium underserved → thought leadership
 - Top WO strategy: Door Expert + expansion → hire #2 Q1
 - Top ST strategy: Brand canon + dilution → strict audit
 - Top WT strategy: Cash tight + slowdown → working capital

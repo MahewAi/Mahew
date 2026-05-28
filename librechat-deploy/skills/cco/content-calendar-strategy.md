@@ -43,7 +43,7 @@ Secondary:
 ## Content Pillar Framework
 
 ### Pillar 1: Filosofi & Philosophy (30% weight)
-- Topic: 4-Dunia archetype deep dive
+- Topic: 4-negara cultural reference deep dive
 - Topic: Material philosophy (kayu, brass, etc.)
 - Topic: Tempat sebagai refleksi
 - Goal: Position thought leadership + brand depth
@@ -71,7 +71,7 @@ Secondary:
 - Frequency: 1-2 post/week
 
 ### Pillar 5: Community & Culture (10% weight)
-- Topic: Aesop + DWR reference cultural piece
+- Topic: BP Latest reference cultural piece
 - Topic: Indonesia design heritage
 - Topic: Customer culture (Persona vignette)
 - Goal: Cultural anchor + belonging
@@ -100,7 +100,7 @@ Secondary:
 ### Instagram Reel (2-3 reel/week)
 | Day | Theme |
 |---|---|
-| Monday | 4-Dunia explainer (30-60 sec) |
+| Monday | 4-negara cultural reference explainer (30-60 sec) |
 | Wednesday | Door Expert konsultasi snippet |
 | Friday | Project transformation reveal |
 
@@ -168,7 +168,7 @@ Secondary:
 - Distribution: All channel
 - Budget: Marketing allocated
 
-#### 4-Dunia Series (Q1 2027)
+#### 4-negara cultural reference Series (Q1 2027)
 - Frequency: 3-4 dedicated post/week
 - Hashtag: #Filosofi4Dunia + per dunia
 - Format: Reel + Feed + Story arc
@@ -277,7 +277,7 @@ Secondary:
 ```
 | Day | Time | Channel | Pillar | Topic | Status |
 |---|---|---|---|---|---|
-| Mon 10:00 | IG Feed | Philosophy | 4-Dunia Jepang | ✅ Scheduled |
+| Mon 10:00 | IG Feed | Philosophy | 4-negara cultural reference Jepang | ✅ Scheduled |
 | Mon 12:00 | IG Story | Engagement | Q&A | ✅ Live |
 | Mon 19:00 | TikTok | Showroom | Walk-thru 30sec | Draft |
 | Tue 09:00 | IG Reel | Door Expert | Konsultasi snippet | Pending |
@@ -298,7 +298,7 @@ Kalau crisis emerge (refer COO contingency-plan):
 Every content piece WAJIB:
 - [ ] Brand canon validate (em-dash, vocabulary, brand name)
 - [ ] Tone premium hangat
-- [ ] Anchor Aesop + DWR reflected
+- [ ] Anchor BP Latest reference reflected
 - [ ] Persona resonance
 - [ ] Visual identity compliant
 - [ ] Hashtag canon
@@ -360,7 +360,7 @@ xychart-beta
 - editorial-style-guide
 - brand-canon-enforcer
 - 4 Marketing Plan (CMO)
-- Filosofi 4-Dunia
+- Filosofi Dunia Pintu (4-negara cultural context)
 - 6 Persona spec
 - 12 Sprint reverse calendar (S1-S12)
 
@@ -394,7 +394,7 @@ Switch: DISCUSSION jika pillar weighting debate
 
 **Output summary:**
 - Period: 1 Oct - 31 Dec 2026
-- Campaign active: Wave 1 Launch (dominant), 4-Dunia primer
+- Campaign active: Wave 1 Launch (dominant), 4-negara cultural reference primer
 - Pillar weight: 30% Philosophy + 25% Product + 20% Door Expert + 15% Showroom + 10% Community
 - Channel total: ~42 piece/week → ~550 piece quarter
 - Theme month: Oct Pre-launch tease, Nov Launch day + opening, Dec First case study reflection

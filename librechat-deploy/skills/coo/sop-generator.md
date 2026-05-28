@@ -116,7 +116,7 @@ Secondary:
 - Customer-facing language: premium hangat tone
 - No em-dash, "tempat" not "rumah"
 - "Gerai 1000 Pintu" lengkap di semua komunikasi external
-- Anchor service standard Aesop + Design Within Reach
+- Anchor service standard BP Latest reference
 ```
 
 ## Visual Output

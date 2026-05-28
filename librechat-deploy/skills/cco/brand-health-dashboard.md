@@ -83,9 +83,9 @@ Secondary:
 ### Dimension 4: Anchor Reference Recognition
 | Metric | Target Y1 | Actual | Status |
 |---|---|---|---|
-| Aesop reference mentioned customer | 15% | {%} | - |
-| DWR reference mentioned customer | 10% | {%} | - |
-| Kinfolk-style content engagement | 6%+ | {%} | - |
+| BP Latest reference mentioned customer | 15% | {%} | - |
+| BP Latest reference mentioned customer | 10% | {%} | - |
+| Editorial Indonesian style content engagement | 6%+ | {%} | - |
 | "Premium curated" association | 40% | {%} | - |
 | "Refined hangat" feedback | 60% | {%} | - |
 
@@ -102,7 +102,7 @@ Secondary:
 ### Dimension 6: Brand Storytelling
 | Metric | Target | Actual |
 |---|---|---|
-| 4-Dunia mention frequency | 60+ /month | {N} |
+| 4-negara cultural reference mention frequency | 60+ /month | {N} |
 | Story content engagement | 6%+ | {%} |
 | Testimonial published | 1+/month | {N} |
 | Long-form article shipped | 1-2/week | {N} |
@@ -163,7 +163,7 @@ Secondary:
 |---|---|---|---|
 | {Title} | {channel} | {metric} | {insight} |
 
-### 4-Dunia archetype balance
+### 4-negara cultural reference balance
 | Dunia | Mention | Engagement | Customer choice |
 |---|---|---|---|
 | Jepang | {N} | {%} | {%} |
@@ -173,16 +173,16 @@ Secondary:
 
 ## Anchor Reference Visibility
 
-### Aesop alignment
-- Customer mention "seperti Aesop": {N}
+### BP Latest reference alignment
+- Customer mention "seperti BP Latest reference": {N}
 - Press mention reference: {N}
 - Internal team awareness: {%}
 
-### DWR alignment
-- Customer mention "DWR-style": {N}
+### premium reference alignment
+- Customer mention "premium reference style": {N}
 - Visual reference compliance: {%}
 
-### Kinfolk alignment
+### editorial reference alignment
 - Editorial content engagement: {%}
 - Visual style recognition: {%}
 
@@ -218,7 +218,7 @@ Secondary:
 
 ## Vs Anchor Benchmark
 
-| Metric | Aesop Benchmark | DWR Benchmark | Gerai 1000 Pintu |
+| Metric | BP Latest reference Benchmark | BP Latest reference Benchmark | Gerai 1000 Pintu |
 |---|---|---|---|
 | Brand canon compliance | 98% | 95% | {%} |
 | Sentiment positive | 90%+ | 87% | {%} |
@@ -274,8 +274,8 @@ quadrantChart
     Current state: [0.85, 0.6]
     Year 1 target: [0.9, 0.7]
     Year 2 target: [0.95, 0.85]
-    Aesop benchmark: [0.98, 0.95]
-    DWR benchmark: [0.95, 0.9]
+    Premium retail benchmark: [0.98, 0.95]
+    premium retail benchmark: [0.95, 0.9]
     Year 3 aspiration: [0.97, 0.85]
 ```
 
@@ -300,10 +300,10 @@ xychart-beta
     bar [85, 65, 70, 80, 60, 55]
 ```
 
-4-Dunia balance:
+4-negara cultural reference balance:
 
 ```mermaid
-pie title 4-Dunia Customer Choice Distribution
+pie title 4-negara cultural reference Customer Choice Distribution
     "Jepang" : 30
     "Eropa" : 25
     "Amerika" : 25
@@ -350,14 +350,14 @@ Switch: NEED_CLARIFICATION jika data source incomplete
 - Compliance: 95% 🟢 (high), em-dash 2 violation, "rumah" 1, "Gerai" shortened 3
 - Awareness: 35% aided Balikpapan 🟢 (above target 30%), 5K IG follower growth
 - Sentiment: NPS 48 🟢, Google review 4.8/5 🟢, social positive 88%
-- Anchor recognition: Aesop mention 18% 🟢, DWR mention 12%, refined hangat feedback 65%
+- Anchor recognition: Anchor reference mention 18% 🟢, premium reference mention 12%, refined hangat feedback 65%
 - Persona: Retail 85% engagement (highest), Aplikator 55% (lowest, expected)
-- Storytelling: 4-Dunia mention 75/month, 2 long-form article shipped
+- Storytelling: 4-negara cultural reference mention 75/month, 2 long-form article shipped
 - Top win: Bapak Anton testimonial viral (organic 50K reach)
 - Top concern: Aplikator persona engagement low (action: dedicated content Q1)
-- 4-Dunia balance: Jepang 30% + Eropa 25% + Amerika 25% + China 20% (healthy spread)
-- Vs anchor: 87/100 vs Aesop 98 (gap closing, on track Year 2 target 95)
-- Forward: Q1 2027 prioritize Aplikator + 4-Dunia deep dive + Phase 2 prep
+- 4-negara cultural reference balance: Jepang 30% + Eropa 25% + Amerika 25% + China 20% (healthy spread)
+- Vs anchor: 87/100 vs BP Latest reference 98 (gap closing, on track Year 2 target 95)
+- Forward: Q1 2027 prioritize Aplikator + 4-negara cultural reference deep dive + Phase 2 prep
 - 4 visual embedded (quadrant + trend + persona + pie)
 
 ## Handoff

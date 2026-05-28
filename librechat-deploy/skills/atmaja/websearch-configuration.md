@@ -9,7 +9,7 @@ last_updated: 2026-05-28
 
 # Websearch Configuration (Brand-Aware Research Policy)
 
-Web search policy + configuration untuk seluruh AI Department Gerai 1000 Pintu. Source tier LOCKED, brand-aware filtering, citation discipline, privacy protection. Anchor reference monitoring (Aesop + DWR + Kinfolk) prioritized.
+Web search policy + configuration untuk seluruh AI Department Gerai 1000 Pintu. Source tier LOCKED, brand-aware filtering, citation discipline, privacy protection. Anchor reference monitoring (BP Latest reference) prioritized.
 
 ## Triggers
 
@@ -27,7 +27,7 @@ Secondary:
 ### Tier 1: Anchor Reference (Highest Trust + Priority)
 **Sources:**
 - aesop.com (official)
-- dwr.com (Design Within Reach)
+- dwr.com (BP Latest reference)
 - kinfolk.com
 - Architectural Digest editorial
 - Wallpaper magazine
@@ -37,7 +37,7 @@ Secondary:
 
 **Use case:**
 - Brand canon evolution reference
-- Premium curated retail benchmark
+- Premium tetapi inklusif retail benchmark
 - Editorial style inspiration
 - Anchor language + vocabulary
 - Visual identity refinement reference
@@ -111,9 +111,9 @@ Secondary:
 
 #### Pattern 1: Anchor Monitoring Query
 ```
-"Aesop store [location/year] retail experience"
-"Design Within Reach [collection] curation"
-"Kinfolk magazine [theme] editorial"
+"Premium retail destination experience"
+"BP Latest reference [collection] curation"
+"premium editorial publication [theme] editorial"
 ```
 Purpose: Track anchor reference evolution
 
@@ -128,7 +128,7 @@ Purpose: Industry context
 #### Pattern 3: Competitor Intelligence (careful)
 ```
 "Toko pintu premium [city]"
-"Premium curated retail Indonesia [year]"
+"Premium tetapi inklusif retail Indonesia [year]"
 ```
 Caution: Treat as data point, not benchmark we copy
 Avoid: Direct competitor name unless strategic need
@@ -147,7 +147,7 @@ Privacy: Public info only
 "Wabi-sabi philosophy application"
 "Feng shui pintu [context]"
 ```
-Purpose: Filosofi 4-Dunia + cultural depth
+Purpose: Filosofi Dunia Pintu (4-negara cultural context) + cultural depth
 
 ### Query Quality Standards
 
@@ -198,7 +198,7 @@ References:
 - Sharing statistic / data
 - Sharing factual claim from external
 - Industry trend reference
-- Anchor brand reference (Aesop, DWR, Kinfolk)
+- Anchor brand reference (BP Latest reference)
 
 #### Tone in citation
 - Premium hangat preserved
@@ -267,7 +267,7 @@ Use generic terms instead:
 - Independent verification (cross-reference)
 
 ### Step 3: Brand Canon Filter
-- Extract aligned with anchor (Aesop+DWR+Kinfolk style)
+- Extract aligned with anchor (BP Latest style)
 - Premium curated lens
 - Indonesian cultural sensitivity
 - Discard off-canon content
@@ -287,7 +287,7 @@ Use generic terms instead:
 
 ### Atmaja
 - Strategic context (industry, macro trend)
-- Anchor reference monitoring (Aesop, DWR evolution)
+- Anchor reference monitoring (BP Latest reference evolution)
 - Cross-functional research synthesis
 - Competitor intelligence (strategic level)
 
@@ -305,7 +305,7 @@ Use generic terms instead:
 - Logistics + supply chain context
 
 ### CCO
-- Anchor reference deep dive (Aesop store + DWR catalog + Kinfolk article)
+- Anchor reference deep dive (BP Latest reference catalog + article)
 - Visual identity trend (Indonesia design)
 - Editorial style reference
 - Cultural reference Indonesia
@@ -320,9 +320,9 @@ Use generic terms instead:
 ## Anchor Reference Monitoring Pattern
 
 ### Weekly Monitor (Atmaja-led)
-- Aesop press + new store + product launch
-- DWR catalog + collection + editorial
-- Kinfolk magazine new issue + feature
+- BP Latest reference press + launch
+- BP Latest catalog + collection + editorial
+- premium editorial publication new issue + feature
 - Architect digest + Wallpaper + Dezeen mention
 
 ### Pattern Recognition
@@ -338,7 +338,7 @@ Use generic terms instead:
 - Visual reference (CCO)
 
 ### Anti-pattern
-- ❌ Copy Aesop verbatim (we adapt, not clone)
+- ❌ Copy reference verbatim (we adapt, not clone)
 - ❌ Chase trend (anchor is stable timeless)
 - ❌ Over-monitor (don't obsess)
 
@@ -392,15 +392,15 @@ Search results feed:
 ## Sample Search Sessions
 
 ### Sample 1: Anchor Monitoring Weekly
-**Query:** "Aesop store [city] 2026 retail experience review"
+**Query:** "Premium retail experience review"
 **Tier:** 1 anchor
 **Process:** 3 sources cross-reference
-**Output:** Insight on Aesop retail evolution stored at Tier 3 Obsidian
+**Output:** Insight on Premium retail evolution stored at Tier 3 Obsidian
 **Citation:** Architect Digest 2026, Wallpaper 2026
 **Application:** CCO + Atmaja review for anchor refinement
 
 ### Sample 2: Industry Intelligence Quarterly
-**Query:** "Indonesia premium curated retail trend 2026"
+**Query:** "Indonesia premium tetapi inklusif trend 2026"
 **Tier:** 2 industry
 **Process:** HDII + Casa Indonesia + Statista
 **Output:** Trend report synthesized
@@ -429,7 +429,7 @@ Search results feed:
 - Synthesis tone: premium hangat preserved
 - "Gerai 1000 Pintu" lengkap kalau quote
 - No em-dash di synthesis
-- Anchor reference Aesop+DWR+Kinfolk visible
+- Anchor reference BP Latest reference visible
 ```
 
 ## Visual Output
@@ -440,7 +440,7 @@ Source tier hierarchy:
 flowchart TD
     A[Web Search Request] --> B{Source Tier Check}
     
-    B -->|Tier 1 Anchor| C[Aesop DWR Kinfolk<br/>ArchDaily Wallpaper Dezeen<br/>HIGHEST TRUST]
+    B -->|Tier 1 Anchor| C[BP Latest Reference<br/>ArchDaily Wallpaper Dezeen<br/>HIGHEST TRUST]
     B -->|Tier 2 Industry| D[HDII IAI BPS<br/>Trade magazine<br/>HIGH TRUST]
     B -->|Tier 3 General| E[Wikipedia Government<br/>Cultural Academic<br/>MEDIUM TRUST]
     B -->|Tier 4 Customer-Specific| F[Public info per query<br/>VERIFIED]
@@ -500,7 +500,7 @@ sequenceDiagram
 - self-learning-automation (paired)
 - memory-architecture (paired)
 - CCO brand-canon-enforcer
-- Anchor reference list (Aesop+DWR+Kinfolk)
+- Anchor reference list (BP Latest reference)
 - All agents (search invocation)
 
 ## Mode
@@ -533,14 +533,14 @@ Switch: AUDIT (monthly source diversity review)
 **Input:** "Websearch configuration setup for AI Department Year 1"
 
 **Output summary:**
-- Source tier LOCKED: Tier 1 Anchor (Aesop+DWR+Kinfolk+Architectural Digest+Wallpaper+Dezeen+ArchDaily Indonesia) + Tier 2 Industry (HDII+IAI+BPS+trade magazine) + Tier 3 General (Wikipedia+gov+academic) + Tier 4 Customer-specific
+- Source tier LOCKED: Tier 1 Anchor (BP Latest reference+Architectural Digest+Wallpaper+Dezeen+ArchDaily Indonesia) + Tier 2 Industry (HDII+IAI+BPS+trade magazine) + Tier 3 General (Wikipedia+gov+academic) + Tier 4 Customer-specific
 - Forbidden: Clickbait + AI content farm + mass-market e-commerce generic + untrusted forum + pirated content
 - Daily query budget per agent: CMO 30 + Atmaja 20 + CCO 20 + COO 15 + CFO 10 = ~95/day total ~3000/month
 - Citation standard: Always attribute (inline / quote / paraphrase / list)
 - Privacy: NO PII in query + redact sensitive + generic alternative
-- Anchor monitoring weekly (Atmaja-led): Aesop+DWR+Kinfolk press + new launch + editorial
+- Anchor monitoring weekly (Atmaja-led): BP Latest reference press + new launch + editorial
 - Cache 24-48h to avoid redundancy
-- Brand canon filter applied to result (Aesop+DWR+Kinfolk lens)
+- Brand canon filter applied to result (BP Latest reference lens)
 - Anti-pattern: NO copy verbatim + NO trend chase + NO over-monitor
 - Source tier flow + budget pie + workflow sequence embedded
 

@@ -9,7 +9,7 @@ last_updated: 2026-05-27
 
 # Long-form Writer (Article, Manuscript, Editorial)
 
-Write long-form content Gerai 1000 Pintu: blog article, manuscript chapter, editorial feature, white paper, project case study. 1500-3000 word, premium hangat, anchor Aesop + DWR + Kinfolk editorial.
+Write long-form content Gerai 1000 Pintu: blog article, manuscript chapter, editorial feature, white paper, project case study. 1500-3000 word, premium hangat, anchor BP Latest reference editorial.
 
 ## Triggers
 
@@ -91,12 +91,12 @@ Alt text: {descriptive Indonesia}
 **Structure:**
 1. Standfirst (problem / question)
 2. Context (industry / cultural / philosophical)
-3. Education (4-Dunia, material, craftsmanship)
+3. Education (4-negara cultural reference, material, craftsmanship)
 4. Application (apa artinya untuk tempat customer)
 5. Invitation soft
 
 **Example topics:**
-- "Filosofi 4-Dunia: Memahami Karakter Pintu Anda"
+- "Filosofi Dunia Pintu (4-negara cultural context): Memahami Karakter Pintu Anda"
 - "Brass: Lebih dari Sekedar Material"
 - "Memilih Pintu untuk Tempat yang Anda Bangun"
 - "Kayu Solid vs Engineered: Pilihan yang Bijak"
@@ -132,7 +132,7 @@ Alt text: {descriptive Indonesia}
 **Example topics:**
 - "Project Cluster Borneo: Cerita 5 Pintu untuk 5 Tempat Berbeda"
 - "Bapak Anton: Dari Pengusaha ke Curator Tempat"
-- "Studio Arsitek Y: Filosofi 4-Dunia dalam Project Mereka"
+- "Studio Arsitek Y: Filosofi Dunia Pintu (4-negara cultural context) dalam Project Mereka"
 
 ### Type 4: Interview / Conversation
 
@@ -169,7 +169,7 @@ Alt text: {descriptive Indonesia}
 ## Editorial Voice
 
 ### Tone consistency throughout
-- Premium hangat (Aesop + DWR + Kinfolk reference)
+- Premium hangat (BP Latest reference)
 - Calm refined (no rush, no urgency)
 - Audience-first (Anda focus)
 - Story-driven (not data-driven)
@@ -217,7 +217,7 @@ Alt text: {descriptive Indonesia}
 - Prefer narrative flow over list
 
 ### Footnote / Citation
-- Anchor reference (Aesop, DWR, Kinfolk): mention contextually
+- Anchor reference (BP Latest reference): mention contextually
 - Industry source: cite end-note format
 - Customer quote: with consent + attribution (Bapak/Ibu Initial)
 
@@ -234,7 +234,7 @@ Alt text: {descriptive Indonesia}
 
 ### Step 3: Research
 - Reference material (BP, brand canon, customer story)
-- Anchor benchmark (Aesop / DWR / Kinfolk article equivalent)
+- Anchor benchmark (BP Latest reference article equivalent)
 - Industry data (kalau educational)
 
 ### Step 4: Draft
@@ -306,11 +306,11 @@ Setiap artikel naturally weave 1-3 dari 5 Nilai:
 - Inovasi: Lean Store / Door Expert mention
 - Aftersales: long-term relationship reference
 
-### Filosofi 4-Dunia mention
+### Filosofi Dunia Pintu (4-negara cultural context) mention
 - Educational: full explanation
 - Other type: weave naturally (1-2 reference)
 
-### Anchor Aesop + DWR
+### Anchor BP Latest reference
 - Visible in vocabulary, photography direction, tone
 - Optional explicit mention kalau context fit
 
@@ -409,8 +409,8 @@ gantt
 - brand-canon-enforcer
 - copywriting-framework
 - BP manuscript chapter format reference
-- Filosofi 4-Dunia full content
-- Anchor Aesop + DWR + Kinfolk editorial style
+- Filosofi Dunia Pintu (4-negara cultural context) full content
+- Anchor BP Latest reference editorial style
 - 6 Persona spec
 
 ## Mode
@@ -432,25 +432,25 @@ Switch: DISCUSSION jika topic angle debate
 - Workflow 8-step
 - Quality standards (readability, originality, SEO)
 - Anti-pattern explicit
-- Brand canon integration (5 Nilai, 4-Dunia, Anchor)
+- Brand canon integration (5 Nilai, 4-negara cultural reference, Anchor)
 - Channel adaptation (web, manuscript, press, social)
 - Sample topic per type
 
 ## Sample I/O
 
-**Input:** "Long form article educational 'Filosofi 4-Dunia: Memahami Karakter Pintu Anda' 2000 word untuk website blog Wave 1 launch"
+**Input:** "Long form article educational 'Filosofi Dunia Pintu (4-negara cultural context): Memahami Karakter Pintu Anda' 2000 word untuk website blog Wave 1 launch"
 
 **Output summary:**
 - Type: Educational
 - Word count: 2000 word
 - Structure: Standfirst → Context cultural → 4 section per dunia (Jepang/Eropa/Amerika/China) → Application untuk reader tempat → Closing invitation
-- Tone: Premium hangat (Aesop + Kinfolk reference)
+- Tone: Premium hangat (BP Latest reference + Indonesian editorial reference)
 - Lead image: Hero composite 4 archetype display
 - Section image: Per dunia detail photograph
 - Pull-quote: "Setiap dunia membawa kisah. Setiap pintu membawa karakter."
 - CTA: "Mari mulai konsultasi dengan Door Expert untuk menemukan karakter yang menemani tempat Anda"
-- SEO: H1 "Filosofi 4-Dunia: Memahami Karakter Pintu untuk Tempat Anda", meta description premium hangat
-- Brand canon: 100% compliance (no em-dash, tempat, Gerai 1000 Pintu lengkap, anchor Aesop + Kinfolk visible)
+- SEO: H1 "Filosofi Dunia Pintu (4-negara cultural context): Memahami Karakter Pintu untuk Tempat Anda", meta description premium hangat
+- Brand canon: 100% compliance (no em-dash, tempat, Gerai 1000 Pintu lengkap, anchor BP Latest reference + Indonesian editorial visible)
 - Workflow Gantt + structure tree embedded
 
 ## Handoff

@@ -27,10 +27,10 @@ Secondary:
 ### Tier 0: LOCKED Founding Knowledge (Permanent + Immutable)
 **Content:**
 - Brand Canon LOCKED (7 editorial rules)
-- Filosofi 4-Dunia
+- Filosofi Dunia Pintu (4-negara cultural context)
 - 5 Nilai Gerai
 - Lean Store concept
-- Anchor Aesop + DWR + Kinfolk
+- Anchor BP Latest reference
 - BP Chapter 1-18
 
 **Storage:** Repository + Obsidian vault `/00-founding/`
@@ -102,7 +102,7 @@ gerai-memory/
 │
 ├── 02-customers/         # Customer profile + history
 │   ├── [customer-id]-{name}.md
-│   ├── persona-retail/
+│   ├── persona-end-user/
 │   ├── persona-mitra/
 │   ├── persona-developer/
 │   ├── persona-arsitek/
@@ -199,7 +199,7 @@ status: active / archive / deprecated
 
 ### Tag System
 Standardized tags:
-- `#persona-retail`, `#persona-mitra`, etc.
+- `#persona-end-user`, `#persona-mitra`, etc.
 - `#dunia-jepang`, `#dunia-eropa`, etc.
 - `#phase-1`, `#phase-2`, `#phase-3`
 - `#cabang-bpn`, `#cabang-smr`, `#cabang-bnt`
@@ -405,9 +405,9 @@ End of session:
 
 End of week (Friday):
   → Promote to Obsidian (Tier 3): /04-konsultasi/2026-11-20-anton.md
-  → Update customer profile: /02-customers/persona-retail/anton-wijaya.md
+  → Update customer profile: /02-customers/persona-end-user/anton-wijaya.md
   → Link bi-directional: [[customer-anton]] ↔ [[konsultasi-2026-11-20-anton]]
-  → Tag: #persona-retail #dunia-jepang #cabang-bpn #phase-1
+  → Tag: #persona-end-user #dunia-jepang #cabang-bpn #phase-1
 
 Quarterly: Pattern check (Retail customer Jepang preference cluster?)
 ```
@@ -436,7 +436,7 @@ Quarterly: Review ADR-003 status (proceed per plan?)
 
 ### Sample 3: Pattern Recognition
 ```
-Action: Atmaja observes 4-Dunia Jepang choice trending (3 quarter sustained 30%+ vs Eropa decline 25→20%)
+Action: Atmaja observes 4-negara cultural reference Jepang choice trending (3 quarter sustained 30%+ vs Eropa decline 25→20%)
 
 Working memory: Quarterly synthesis
 End of week:
@@ -444,9 +444,9 @@ End of week:
 
 End of month:
   → Promote to long-term: /06-patterns/customer-behavior.md
-  → Update: persona-retail.md (preference shift documented)
+  → Update: persona-end-user.md (preference shift documented)
   → Link to: brand-storytelling [[filosofi-4-dunia]]
-  → Tag: #pattern #persona-retail #dunia-jepang
+  → Tag: #pattern #persona-end-user #dunia-jepang
 
 Quarterly QBR:
   → Action recommended Matthew: Content arc Jepang Q2 emphasis
@@ -483,7 +483,7 @@ Memory hierarchy:
 
 ```mermaid
 flowchart TD
-    A[Tier 0 LOCKED Founding<br/>Brand Canon 4-Dunia 5 Nilai<br/>Repository + Obsidian /00-founding/]
+    A[Tier 0 LOCKED Founding<br/>Brand Canon 4-negara cultural reference 5 Nilai<br/>Repository + Obsidian /00-founding/]
     
     B[Tier 1 Working Memory<br/>Session in-memory<br/>Per agent runtime]
     
@@ -509,7 +509,7 @@ mindmap
   root((Obsidian Vault))
     00 Founding LOCKED
       Brand Canon
-      Filosofi 4-Dunia
+      Filosofi Dunia Pintu (4-negara cultural context)
       5 Nilai
       Lean Store
       BP Chapter

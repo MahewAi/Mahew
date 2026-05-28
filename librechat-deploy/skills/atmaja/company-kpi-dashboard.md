@@ -109,7 +109,7 @@ Secondary:
 | Content shipped weekly | 42 piece | {N} | - |
 | Press mention quarter | 10+ pieces | {N} | - |
 | Brand sentiment positive | 85%+ | {%} | - |
-| Anchor reference (Aesop+DWR) recognition | 15%+ Y1 | {%} | - |
+| Anchor reference (BP Latest reference) recognition | 15%+ Y1 | {%} | - |
 | Asset library health | Updated | {status} | - |
 
 ### CFO Dashboard (Financial)
@@ -157,7 +157,7 @@ Secondary:
 | Kontraktor | {N} | {%} | {N} | - |
 | Aplikator | {N} | {%} | {N} | - |
 
-## 4-Dunia Archetype Distribution
+## 4-negara cultural reference Archetype Distribution
 
 | Dunia | Customer Choice | Engagement | Inventory Mix |
 |---|---|---|---|
@@ -204,8 +204,8 @@ Secondary:
 | Conversion rate | {%} | 30% | - |
 | Customer satisfaction | {N} | 8.0 | - |
 
-### Anchor benchmark (Aesop reference)
-| KPI | Gerai | Aesop reference |
+### Anchor benchmark (BP Latest reference)
+| KPI | Gerai | BP Latest reference |
 |---|---|---|
 | Brand canon compliance | {%} | 98% |
 | NPS | {N} | 70+ |
@@ -363,10 +363,10 @@ Switch: NEED_CLARIFICATION jika data source incomplete
 - Function-specific KPI aggregation (4 dashboard)
 - Strategic theme tracking (4 OKR Objective)
 - Persona engagement 6 persona
-- 4-Dunia archetype distribution
+- 4-negara cultural reference distribution
 - Leading + lagging indicator
 - Trend analysis quarterly + YoY
-- Vs benchmark (industry + Aesop)
+- Vs benchmark (industry + BP Latest reference)
 - Concern + win + forward look
 - Brand canon continuous
 - Risk surveillance
@@ -386,7 +386,7 @@ Switch: NEED_CLARIFICATION jika data source incomplete
 - CFO: Margin 32%, runway 8 month, CAC Rp 350k (well below Rp 500k)
 - Strategic theme: O1 Wave 1 launch 80% KR achieved 🟢, O2 Lean Store validating 60% 🟡
 - Persona: Retail 85% engagement (top), Aplikator 55% (focus next Q)
-- 4-Dunia: Jepang 30% + Eropa 25% + Amerika 25% + China 20%
+- 4-negara cultural reference: Jepang 30% + Eropa 25% + Amerika 25% + China 20%
 - Leading signal: Walk-in 12/week (target), search 80/week (above), no canon violation critical
 - Top win: Wave 1 launch ahead of schedule + 5 organic press pickup
 - Top concern: Aplikator persona engagement low (action Q1: dedicated content)

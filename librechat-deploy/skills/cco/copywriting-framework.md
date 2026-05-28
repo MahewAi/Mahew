@@ -9,7 +9,7 @@ last_updated: 2026-05-27
 
 # Copywriting Framework (Premium Hangat)
 
-Framework copywriting Gerai 1000 Pintu: hook, structure, CTA, persona-specific. Reference Aesop + DWR + Kinfolk. All output premium hangat tone, brand canon strict.
+Framework copywriting Gerai 1000 Pintu: hook, structure, CTA, persona-specific. Reference BP Latest reference. All output premium hangat tone, brand canon strict.
 
 ## Triggers
 
@@ -48,7 +48,7 @@ Secondary:
 
 **Rationale:**
 - Hook: {how opens attention}
-- Anchor reference: {Aesop/DWR/Kinfolk element}
+- Anchor reference: {BP Latest reference element}
 - Persona resonance: {why this persona connect}
 - Brand canon: {compliance check passed}
 
@@ -69,8 +69,8 @@ Secondary:
 **Structure:** {Promise} → {Anchor} → {Experience} → {Invitation}
 
 **Example (Hero Headline):**
-- Promise: "Tempat impian dimulai dari pintu yang tepat."
-- Anchor: "Curated dengan filosofi 4-Dunia."
+- Promise: "1000 Pintu, 1000 Mimpi (A Thousand Doors, A Thousand Dreams)."
+- Anchor: "Curated dengan filosofi Dunia Pintu (4-negara cultural context)."
 - Experience: "Door Expert siap menemani perjalanan Anda."
 - Invitation: "Konsultasi gratis 60 menit, booking via gerai.mahewwork.com"
 
@@ -101,7 +101,7 @@ Secondary:
 - Reframe: "Detail. Refleksi. Pintu yang tepat di setiap langkah masuk."
 - Path: "Mari mulai dengan konsultasi yang hangat."
 
-### Framework 5: Philosophy First (4-Dunia)
+### Framework 5: Philosophy First (4-negara cultural reference)
 
 **Structure:** {Philosophy intro} → {Translation} → {Apply}
 
@@ -294,7 +294,7 @@ Every copy generated MUST pass:
 - [ ] "tempat" not "rumah" customer-facing
 - [ ] "Gerai 1000 Pintu" lengkap first mention
 - [ ] Premium hangat tone
-- [ ] Anchor Aesop + DWR vocabulary present
+- [ ] Anchor BP Latest reference vocabulary present
 - [ ] CTA non-aggressive
 - [ ] Length appropriate per channel
 - [ ] Persona resonance (kalau persona specified)
@@ -332,7 +332,7 @@ flowchart TD
     B -->|Body story| D[Framework 2<br/>Journey Arc]
     B -->|Detail focus| E[Framework 3<br/>Sensory Detail]
     B -->|Engagement| F[Framework 4<br/>Question Open]
-    B -->|Philosophy| G[Framework 5<br/>4-Dunia First]
+    B -->|Philosophy| G[Framework 5<br/>4-negara cultural reference First]
     
     C --> H[Hook library select]
     D --> H
@@ -366,9 +366,9 @@ quadrantChart
     quadrant-3 Avoid
     quadrant-4 Aggressive Specific
     Premium hangat target: [0.85, 0.85]
-    Aesop tone: [0.9, 0.95]
-    Kinfolk tone: [0.85, 0.9]
-    DWR tone: [0.85, 0.85]
+    BP Latest reference tone: [0.9, 0.95]
+    Indonesian editorial tone: [0.85, 0.9]
+    BP Latest reference tone: [0.85, 0.85]
     Generic corporate: [0.15, 0.6]
     Aggressive sales: [0.6, 0.15]
     E-commerce generic: [0.25, 0.3]
@@ -379,8 +379,8 @@ quadrantChart
 - editorial-style-guide (foundation rules)
 - brand-canon-enforcer (validation)
 - 6 Persona spec (adaptation)
-- Filosofi 4-Dunia (vocabulary)
-- Anchor Aesop + DWR + Kinfolk reference
+- Filosofi Dunia Pintu (4-negara cultural context) (vocabulary)
+- Anchor BP Latest reference
 
 ## Mode
 

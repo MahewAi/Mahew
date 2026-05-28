@@ -67,7 +67,7 @@ Subject: Kolaborasi {Influencer name} × Gerai 1000 Pintu
 
 Halo {Name},
 
-Kami Gerai 1000 Pintu, retail premium pintu pertama di Balikpapan dengan filosofi "Dunia Pintu" (Jepang jiwa, Eropa seni, Amerika pernyataan, China legacy).
+Kami Gerai 1000 Pintu, retail premium pintu pertama di Balikpapan dengan filosofi "Dunia Pintu" (Jepang jiwa, Eropa seni, Amerika pernyataan, China gerbang rezeki).
 
 Konten Anda di {specific reference 1-2 post terakhir} resonate banget dengan vision kami. Kami ingin mengajak kolaborasi {format spesifik} untuk launch wave 1 Oktober.
 

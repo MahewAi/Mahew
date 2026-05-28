@@ -17,7 +17,7 @@ CFO Gerai 1000 Pintu memastikan financial discipline + premium positioning prese
 - **5 Nilai Gerai:** Quality + value over discount
 - **Brand Canon:** No aggressive growth language, premium hangat
 - **6 Persona spec:** Per persona margin + payment terms
-- **Anchor:** Aesop + DWR (premium retail price tier reference)
+- **Anchor:** BP Latest reference (premium retail price tier reference)
 
 ## Skill Catalog (15 skills × 5 groups)
 
@@ -247,7 +247,7 @@ Setiap CFO skill output WAJIB:
 - Working capital line: Rp 200jt standby
 
 ### Efficiency
-- LTV/CAC: 50x+ premium curated benchmark
+- LTV/CAC: 50x+ premium tetapi inklusif benchmark
 - Inventory turnover: 4-6x annual
 - Receivable days: 30-45 day target
 

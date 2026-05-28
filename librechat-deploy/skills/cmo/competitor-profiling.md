@@ -125,7 +125,7 @@ Switch: NEED_CLARIFICATION jika competitor name ambigu (e.g., "Mitra" - Mitra10 
 - Business model: omnichannel home improvement big-box (online + 400+ store)
 - Strength: scale, brand recognition, supplier consolidation
 - Weakness: low curation, generic positioning, no narrative
-- Opportunity gap: premium curated segment yang Mitra10 abaikan
+- Opportunity gap: premium tetapi inklusif segment yang Mitra10 abaikan
 - Strategic: Gerai jangan compete on price/scale, double down on curation+narrative+Door Expert
 - SWOT quadrant + comparison table
 

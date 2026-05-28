@@ -168,7 +168,7 @@ LTV = (AOV × Repeat factor) + (Referral factor × AOV referred) + (Aftersales a
 ### Industry benchmark
 - Healthy: 3x+
 - Excellent: 10x+
-- Premium curated retail: 50-100x typical
+- Premium tetapi inklusif retail: 50-100x typical
 
 ### Gerai 1000 Pintu: Significantly above benchmark all persona ✓
 
@@ -202,7 +202,7 @@ LTV = (AOV × Repeat factor) + (Referral factor × AOV referred) + (Aftersales a
 
 ### Anti-pattern (jangan)
 - ❌ Cut Door Expert quality to reduce CAC (compromises LTV)
-- ❌ Mass-market discount (dilutes premium curated positioning)
+- ❌ Mass-market discount (dilutes premium tetapi inklusif positioning)
 - ❌ Aggressive remarketing ads (brand canon violation)
 
 ## LTV CAC Tracking Cadence
@@ -336,7 +336,7 @@ Switch: DISCUSSION jika investment priority debate
 - CAC: Walk-in Rp 100k + Referral Rp 75k + IG paid Rp 500k + Architect Rp 1.5jt
 - Ratio: Kontraktor 800x + Aplikator 480x + Arsitek 333x + Mitra 275x + Retail 102x + Developer 50x
 - Payback: All persona < first transaction (extremely healthy)
-- Industry benchmark exceeded: 50-100x+ premium curated retail standard
+- Industry benchmark exceeded: 50-100x+ premium tetapi inklusif standard
 - Optimization: Aftersales subscription (+LTV) + Referral program (+conversion) + Architect MoU (+channel)
 - Strategic priority: Architect channel (compounds) + Kontraktor (scale) + Retail (volume foundation)
 - Phase 2 confidence: HIGH (LTV CAC model validates expansion)

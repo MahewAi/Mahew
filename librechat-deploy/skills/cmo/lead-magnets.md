@@ -124,7 +124,7 @@ Secondary:
 - Premium hangat tone
 - "tempat" not "rumah"
 - "Gerai 1000 Pintu" lengkap
-- Filosofi 4-Dunia integration kalau relevant
+- Filosofi Dunia Pintu (4-negara cultural context) integration kalau relevant
 - Door Expert authority signal
 ```
 
@@ -181,8 +181,8 @@ Switch: NEED_CLARIFICATION jika persona/pain ambigu
 **Input:** "Lead magnet untuk Arsitek di Kaltim, pain point 'kesulitan rekomendasi pintu yang aligned dengan filosofi rumah klien'"
 
 **Output summary:**
-- Magnet: "Pintu Klien Anda — Panduan Filosofi 4-Dunia untuk Arsitek" (Guide PDF 15-page)
-- Sections: 4-Dunia framework (Jepang/Eropa/Amerika/China) + how to match per project + 10 case study + checklist client interview
+- Magnet: "Pintu Klien Anda — Panduan Filosofi Dunia Pintu (4-negara cultural context) untuk Arsitek" (Guide PDF 15-page)
+- Sections: Dunia Pintu framework (Jepang/Eropa/Amerika/China) + how to match per project + 10 case study + checklist client interview
 - Landing: hero brass detail + "Disusun oleh Door Expert" trust signal + 3-field form
 - Nurture: 5 email over 14 days, soft CTA Day 8 konsultasi Door Expert
 - KPI: 200 download/month, CPL Rp 75K, 25% download-to-consult conversion

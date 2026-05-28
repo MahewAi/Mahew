@@ -48,7 +48,7 @@ Forecast based on:
 - Aftersales revenue per customer
 
 ### Top-Down (Market Size)
-- TAM Indonesia premium curated retail
+- TAM Indonesia premium tetapi inklusif
 - SAM Kaltim premium pintu
 - SOM Year 1-3 capture estimate
 

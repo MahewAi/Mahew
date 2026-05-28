@@ -43,7 +43,7 @@ Secondary:
 
 ## Tentang Gerai 1000 Pintu
 
-Gerai 1000 Pintu adalah retail premium pintu pertama di Indonesia dengan filosofi 4-Dunia (Jepang jiwa, Eropa seni, Amerika pernyataan, China legacy). Hadir di Balikpapan sebagai tempat curated dengan Door Expert konsultasi yang menemani Anda menemukan pintu yang berkarakter untuk tempat impian.
+Gerai 1000 Pintu adalah retail premium pintu pertama di Indonesia dengan filosofi Dunia Pintu (4-negara cultural context: Jepang jiwa, Eropa seni, Amerika pernyataan, China gerbang rezeki — BUKAN mandatory archetype). Hadir di Balikpapan sebagai tempat curated dengan Door Expert konsultasi yang menemani Anda menemukan pintu yang berkarakter untuk tempat impian.
 
 Kami sedang membangun tim awal untuk Grand Opening November 2026. Kalau Anda passionate dengan retail premium yang punya cerita, dan ingin tumbuh bersama brand yang baru lahir, kami ingin kenal Anda.
 
@@ -80,7 +80,7 @@ Kami sedang membangun tim awal untuk Grand Opening November 2026. Kalau Anda pas
 
 ### Soft Skills Penting
 - **Pelayanan Nyaman:** Anda mendengarkan dulu sebelum merespons, dan tone Anda tetap hangat bahkan saat pressure
-- **Keahlian:** Anda detail dan akurat, paham bahwa premium curated berarti tidak ada kompromi quality
+- **Keahlian:** Anda detail dan akurat, paham bahwa premium tetapi inklusif berarti tidak ada kompromi quality
 - **Inspirasi:** Anda bisa storytelling, bukan hanya transactional
 - **Inovasi:** Anda nyaman dengan tools baru dan adaptive ke proses yang berevolusi
 - **Aftersales:** Anda follow-through, customer success Anda anggap personal mission
@@ -222,7 +222,7 @@ Switch: NEED_CLARIFICATION jika role ambigu (level mid vs senior)
 **Output summary:**
 - Title: Marketing Advisor (MA)
 - Location: Showroom Balikpapan, Full-time
-- 4-paragraf about Gerai dengan filosofi 4-Dunia integration
+- 4-paragraf about Gerai dengan filosofi Dunia Pintu (4-negara cultural context) integration
 - Peran: welcome customer + tour + Door Expert intro + documentation
 - Tanggung jawab 4 kategori: Customer-facing, Operations, Reporting, Continuous improvement
 - Soft skill 5 Nilai explicit (Pelayanan Nyaman = tone hangat under pressure, dll)

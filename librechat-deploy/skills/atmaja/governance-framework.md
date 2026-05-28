@@ -114,7 +114,7 @@ P0 critical → Matthew direct immediate
 
 ### Brand Ethics
 - **Brand canon LOCKED:** No compromise even under pressure
-- **Anchor reference Aesop+DWR:** Authentic + earned (not over-claimed)
+- **Anchor reference BP Latest reference:** Authentic + earned (not over-claimed)
 - **Content authenticity:** No fake testimonial / fabrication
 - **Crisis transparency:** Truth-first communication
 
@@ -201,7 +201,7 @@ P0 critical → Matthew direct immediate
 ### Tier 1: LOCKED Founding Documents
 - Brand Canon
 - Lean Store Concept
-- Filosofi 4-Dunia
+- Filosofi Dunia Pintu (4-negara cultural context)
 - 5 Nilai Gerai
 
 **Change authority:** Matthew only + significant deliberation
@@ -293,7 +293,7 @@ P0 critical → Matthew direct immediate
 - 5 Nilai applied (Inspirasi, Keahlian, Pelayanan Nyaman, Inovasi, Aftersales)
 - Indonesian context honored
 - Premium hangat throughout
-- Aesop + DWR + Kinfolk anchor maintained
+- BP Latest reference anchor maintained
 
 ## Governance Review Cadence
 
@@ -321,7 +321,7 @@ flowchart TD
     B --> C[C-Level Functional<br/>CMO COO CCO CFO]
     C --> D[Door Expert + MA<br/>Customer Operational]
     
-    A -.LOCKED docs.-> E[Brand Canon<br/>Lean Store<br/>4-Dunia<br/>5 Nilai]
+    A -.LOCKED docs.-> E[Brand Canon<br/>Lean Store<br/>4-negara cultural reference<br/>5 Nilai]
     B -.Strategic docs.-> F[Vision Roadmap<br/>Annual OKR<br/>Investment Plan]
     C -.Operational docs.-> G[SOP<br/>Budget<br/>Campaign]
     D -.Tactical docs.-> H[Project Plan<br/>Customer Doc<br/>Daily Log]

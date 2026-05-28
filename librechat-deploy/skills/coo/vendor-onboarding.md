@@ -66,7 +66,7 @@ Secondary:
 - Capacity ramp commitment Q1-Q4
 
 ### Quality baseline
-- Sample produk: review terhadap brand canon (premium curated)
+- Sample produk: review terhadap brand canon (premium tetapi inklusif)
 - QC checklist: material spec, finishing, dimension tolerance
 - Defect rate baseline: max 2% acceptable
 - Return policy alignment

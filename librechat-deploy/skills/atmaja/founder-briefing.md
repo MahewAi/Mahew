@@ -461,7 +461,7 @@ Switch: NEED_CLARIFICATION jika period/urgency ambigu
 - Risk: AMK supply scale Q1 prep (mitigation active)
 - Strategic reflection: Customer-led organic momentum suggests double-down storytelling
 - Next week priority: Storytelling burst + Aplikator outreach + brass vendor sync
-- Atmaja insight: Pattern 4-Dunia archetype Jepang choice trending (60% week 1) — recommend dedicated content arc
+- Atmaja insight: Pattern 4-negara cultural reference Jepang choice trending (60% week 1) — recommend dedicated content arc
 - Brand canon: ✅ Strict compliance
 - Structure flow + cadence matrix embedded
 

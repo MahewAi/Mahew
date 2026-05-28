@@ -119,7 +119,7 @@ Switch: DISCUSSION jika user mau debate 1 ide
 
 **Output summary:**
 - 10 ide ranked
-- Top 3: (1) AI search content series "Filosofi 4-Dunia per Gaya Rumah" (high-low quadrant), (2) Arsitek roundtable monthly Door Expert (high-medium), (3) Co-branded showcase project + photo content (high-high)
+- Top 3: (1) AI search content series "Filosofi Dunia Pintu (4-negara cultural context) per Gaya Rumah" (high-low quadrant), (2) Arsitek roundtable monthly Door Expert (high-medium), (3) Co-branded showcase project + photo content (high-high)
 - Wildcard: AR "try door at your home" app
 - Impact-Effort quadrant chart embedded
 - Filtered out: paid Google Ads (low-medium), generic IG posting (low-low)

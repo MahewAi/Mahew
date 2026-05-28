@@ -322,7 +322,7 @@ quadrantChart
 - "tempat" not "rumah"
 - "Gerai 1000 Pintu" lengkap kalau external reference
 - No em-dash di body
-- Anchor reference Aesop + DWR di insight section
+- Anchor reference BP Latest reference di insight section
 
 ## Knowledge Dependency
 

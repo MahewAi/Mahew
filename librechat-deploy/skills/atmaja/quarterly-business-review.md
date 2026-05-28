@@ -395,7 +395,7 @@ Switch: DISCUSSION jika OKR score debate
 - O4 Phase 2 Prep 0.78 (site shortlist done, Door Expert #2 candidate pipeline)
 - Top win: Wave 1 launch + 5 organic press + Bapak Anton testimonial viral
 - Top concern: Aplikator persona engagement low (55%)
-- Surprise positive: 4-Dunia framework cited by Architect publication
+- Surprise positive: Dunia Pintu framework cited by Architect publication
 - Surprise negative: Brand canon em-dash 8 violation (writer X habit)
 - Q1 2027 OKR set: Filosofi educate + Aplikator focus + Phase 2 site secure
 - Priority: Content acceleration + Aplikator outreach + canon training refresh

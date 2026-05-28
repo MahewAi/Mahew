@@ -79,7 +79,7 @@ Secondary:
 
 | Criterion | Weight | Description |
 |---|---|---|
-| Brand alignment | 20% | Aesop+DWR anchor + canon strict |
+| Brand alignment | 20% | BP Latest reference anchor + canon strict |
 | Strategic fit | 25% | Phase 1-3 roadmap alignment |
 | Financial impact | 20% | Revenue, cost, margin, cash |
 | Operational feasibility | 15% | Capacity + capability + timeline |

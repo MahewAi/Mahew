@@ -9,7 +9,7 @@ last_updated: 2026-05-27
 
 # Photography Direction
 
-Direct photography production Gerai 1000 Pintu: subject, mood, composition, lighting, post-processing. Anchor Aesop + DWR + Kinfolk editorial style. Locked brand canon visual.
+Direct photography production Gerai 1000 Pintu: subject, mood, composition, lighting, post-processing. Anchor BP Latest reference editorial style. Locked brand canon visual.
 
 ## Triggers
 
@@ -46,9 +46,9 @@ Secondary:
 ## Style Anchor (LOCKED)
 
 ### Reference North Star
-- **Aesop:** Tight detail, natural daylight, minimal styling, editorial precision
-- **Design Within Reach:** Environmental context, intentional composition, modern timeless
-- **Kinfolk magazine:** Editorial warmth, sensory richness, slow living
+- **BP Latest reference:** Tight detail, natural daylight, minimal styling, editorial precision
+- **BP Latest reference:** Environmental context, intentional composition, modern timeless
+- **premium editorial publication:** Editorial warmth, sensory richness, slow living
 - **Nendo studio:** Minimal craftsmanship attention
 - **Wabi-sabi photography:** Imperfect beauty, natural patina
 
@@ -94,7 +94,7 @@ Secondary:
 
 ### Category D: Showroom Atmosphere (10% of shoot)
 **Subject focus:** Cabang Balikpapan environment
-- Storefront subtle (Aesop reference)
+- Storefront subtle (BP Latest reference)
 - Material wall touch
 - Curated display vignette
 - Konsultasi pod setup
@@ -178,7 +178,7 @@ Secondary:
 - Minimal furniture (modern Indonesian premium)
 - Material harmony: wood + brass + linen + plant
 - Plant subtle (no overdone botanical)
-- Books, magazines: Kinfolk-style intentional
+- Books, magazines: Editorial Indonesian style intentional
 - NO clutter, no commercial branded product visible
 
 ## Technical Specifications
@@ -249,7 +249,7 @@ gerai_photo_d_showroom_storefront_4k.jpg
 ## Photographer Vetting Criteria
 
 ### Portfolio fit assessment
-- Aesop / DWR / Kinfolk style demonstrated?
+- BP Latest style demonstrated?
 - Editorial sensitivity (not commercial sales)?
 - Detail attention (macro craftsmanship)?
 - Lighting natural mastery?
@@ -294,7 +294,7 @@ gerai_photo_d_showroom_storefront_4k.jpg
 - [ ] Subject category appropriate (A/B/C/D)
 - [ ] Mood premium hangat
 - [ ] Anti-pattern avoided (no stock cliche, no trendy filter)
-- [ ] Aesop / DWR / Kinfolk reference visible
+- [ ] BP Latest reference / BP Latest reference / Indonesian editorial reference visible
 
 ## Sample Brief per Category
 
@@ -397,7 +397,7 @@ gantt
 - visual-identity-system (palette + style)
 - brand-canon-enforcer (validation)
 - editorial-style-guide
-- Anchor Aesop + DWR + Kinfolk reference
+- Anchor BP Latest reference
 - design-brief-generator (paired skill)
 
 ## Mode
@@ -409,11 +409,11 @@ Switch: NEED_CLARIFICATION jika subject ambigu
 
 - file-search (reference library)
 - artifacts (mood board + workflow)
-- web-search (Aesop/DWR reference update)
+- web-search (BP Latest reference/BP Latest reference update)
 
 ## Validation Criteria
 
-- Style anchor (Aesop + DWR + Kinfolk) explicit
+- Style anchor (BP Latest reference) explicit
 - 4 subject categories (A product / B tempat / C human / D showroom)
 - Lighting direction (natural + warm tungsten)
 - Composition principles
@@ -431,7 +431,7 @@ Switch: NEED_CLARIFICATION jika subject ambigu
 **Input:** "Photography direction untuk Catalog Wave 1 launch, 50 asset across 4 category"
 
 **Output summary:**
-- Anchor: Aesop + DWR + Kinfolk editorial style
+- Anchor: BP Latest reference editorial style
 - Asset mix: 30 Category A (product detail), 10 B (tempat environment), 5 C (human craft), 5 D (showroom)
 - Lighting: Natural daylight golden hour + warm 3000K accent
 - Composition: 30-50% negative space, 3/4 angle preferred editorial

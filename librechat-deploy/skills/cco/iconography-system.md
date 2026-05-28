@@ -9,7 +9,7 @@ last_updated: 2026-05-27
 
 # Iconography System
 
-Design + maintain icon library Gerai 1000 Pintu: minimal linear style, Aesop-inspired refinement, brand canon palette. Library curated untuk UI, web, signage, print.
+Design + maintain icon library Gerai 1000 Pintu: minimal linear style, Premium-inspired refinement, brand canon palette. Library curated untuk UI, web, signage, print.
 
 ## Triggers
 
@@ -35,7 +35,7 @@ Secondary:
 ```markdown
 # Iconography System: {PROJECT/CONTEXT}
 
-**Style:** Minimal linear, Aesop-inspired
+**Style:** Minimal linear, Premium-inspired
 **Palette:** Charcoal #1F1A14 default, Brass #B8956B accent
 **Status:** 🔒 LOCKED style guide
 
@@ -97,7 +97,7 @@ Secondary:
 | Lock cylinder | Hardware |
 | Door swing | Functional spec |
 
-### Category 4: Filosofi 4-Dunia
+### Category 4: Filosofi Dunia Pintu (4-negara cultural context)
 | Icon | Dunia | Symbol |
 |---|---|---|
 | Tatami pattern | Jepang | Simplified mat grid |
@@ -232,7 +232,7 @@ icon_dunia_jepang_pattern_48.svg
 
 ### Step 1: Concept
 - Define purpose + context
-- Reference Aesop / DWR / Kinfolk icon style
+- Reference BP Latest reference icon style
 - Sketch 3-5 variation
 
 ### Step 2: Design Draft
@@ -293,21 +293,21 @@ icon_dunia_jepang_pattern_48.svg
 - Identify gap (missing concept)
 - Style drift detection
 
-## Aesop + DWR Icon Reference
+## BP Latest reference Icon Reference
 
-### Aesop style traits
+### BP Latest style traits
 - Linear minimal
 - Refined corner
 - Generous padding inside canvas
 - Sparing brass accent
 
-### Design Within Reach style traits
+### BP Latest style traits
 - Mid-century geometric inspiration
 - Clean line craftsmanship
 - Functional clarity
 
 ### Adaptation Gerai
-- Combine Aesop refinement + DWR clarity
+- Combine BP Latest refinement + clarity
 - Indonesia cultural element (subtle: tatami, art nouveau, etc.)
 - Avoid Western-only cultural bias
 ```
@@ -332,7 +332,7 @@ mindmap
       Wood grain
       Brass swatch
       Hinge
-    Filosofi 4-Dunia
+    Filosofi Dunia Pintu (4-negara cultural context)
       Tatami Jepang
       Art Nouveau Eropa
       Bold Amerika
@@ -373,7 +373,7 @@ flowchart LR
 
 - visual-identity-system (palette + style)
 - brand-canon-enforcer
-- Anchor Aesop + DWR icon reference
+- Anchor BP Latest reference icon reference
 
 ## Mode
 
@@ -395,7 +395,7 @@ Switch: DISCUSSION jika new icon concept debate
 - Implementation guidelines (web, print, signage)
 - Production workflow 5-step
 - Quality standards per icon + library
-- Aesop + DWR adaptation reference
+- BP Latest reference adaptation reference
 
 ## Sample I/O
 

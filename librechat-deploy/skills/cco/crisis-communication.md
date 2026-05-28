@@ -421,7 +421,7 @@ quadrantChart
     quadrant-3 Defensive Cold
     quadrant-4 Defensive Warm
     Target premium hangat: [0.85, 0.85]
-    Aesop crisis response: [0.85, 0.9]
+    BP Latest reference crisis response: [0.85, 0.9]
     Risk drift cold: [0.55, 0.4]
     Risk drift defensive: [0.3, 0.6]
     Anti aggressive: [0.2, 0.15]

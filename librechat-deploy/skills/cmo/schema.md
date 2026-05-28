@@ -93,9 +93,9 @@ Secondary:
       "closes": "18:00"
     }
   ],
-  "description": "Retail premium pintu pertama di Indonesia dengan filosofi 4-Dunia: Jepang jiwa, Eropa seni, Amerika pernyataan, China legacy. Tempat curated dengan Door Expert konsultasi gratis.",
+  "description": "Retail premium pintu pertama di Indonesia dengan filosofi Dunia Pintu (4-negara cultural context): Jepang jiwa, Eropa seni, Amerika pernyataan, China gerbang rezeki. Tempat curated dengan Door Expert konsultasi gratis.",
   "slogan": "A Thousand Doors, A Thousand Dreams",
-  "knowsAbout": ["Pintu Premium", "Filosofi 4-Dunia", "Door Expert", "Curated Retail"]
+  "knowsAbout": ["Pintu Premium", "Filosofi Dunia Pintu (4-negara cultural context)", "Door Expert", "Curated Retail"]
 }
 ```
 
@@ -140,7 +140,7 @@ Secondary:
       "name": "Apa itu Gerai 1000 Pintu?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Gerai 1000 Pintu adalah retail premium pintu pertama di Indonesia dengan filosofi 4-Dunia (Jepang jiwa, Eropa seni, Amerika pernyataan, China legacy). Hadir di Balikpapan dengan Door Expert konsultasi gratis."
+        "text": "Gerai 1000 Pintu adalah retail premium pintu pertama di Indonesia dengan filosofi Dunia Pintu (4-negara cultural context: Jepang jiwa, Eropa seni, Amerika pernyataan, China gerbang rezeki — BUKAN mandatory archetype). Hadir di Balikpapan dengan Door Expert konsultasi gratis."
       }
     },
     {
@@ -259,7 +259,7 @@ Switch: NEED_CLARIFICATION jika page type tidak match standard
 
 **Output summary:**
 - 2 schema JSON-LD: LocalBusiness (Store) + Product
-- LocalBusiness: nama lengkap + slogan tagline locked + filosofi 4-Dunia di description + 5 knowsAbout + geo Balikpapan
+- LocalBusiness: nama lengkap + slogan tagline locked + filosofi Dunia Pintu (4-negara cultural context) di description + 5 knowsAbout + geo Balikpapan
 - Product: brand AMK + manufacturer Selaras Lawang Sewu + price IDR + InStock + seller Gerai 1000 Pintu
 - Validation: pass rich results test
 - Flow diagram embedded

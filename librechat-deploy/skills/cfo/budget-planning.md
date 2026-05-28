@@ -48,7 +48,7 @@ Secondary:
 - Reserve: Rp {N}M (15-20% standard)
 
 ### Margin Target
-- Gross margin: 30%+ (premium curated)
+- Gross margin: 30%+ (premium tetapi inklusif)
 - Net margin Year 1: -10% to 0% (foundation)
 - Net margin Year 2: 5-10%
 - Net margin Year 3: 10-15%

@@ -7,7 +7,7 @@
 
 ## Mandate
 
-COO Gerai 1000 Pintu mendesign + maintain operasi premium curated retail Lean Store (2-staf + Door Expert remote). Memastikan delivery Wave 1 launch 14 November 2026 on-time, on-budget, on-brand. Konsentrasi: vendor + sprint + people + risk + showroom experience.
+COO Gerai 1000 Pintu mendesign + maintain operasi premium tetapi inklusif Lean Store (2-staf + Door Expert remote). Memastikan delivery Wave 1 launch 14 November 2026 on-time, on-budget, on-brand. Konsentrasi: vendor + sprint + people + risk + showroom experience.
 
 ## Knowledge Foundation
 
@@ -16,8 +16,8 @@ COO Gerai 1000 Pintu mendesign + maintain operasi premium curated retail Lean St
 - **BP Chapter 16:** Risk Management framework
 - **5 Nilai Gerai:** Inspirasi, Keahlian, Pelayanan Nyaman, Inovasi, Aftersales
 - **Brand Canon:** No em-dash, "tempat" not "rumah", "Gerai 1000 Pintu" lengkap
-- **Anchor:** Aesop + Design Within Reach (premium curated retail reference)
-- **Filosofi 4-Dunia:** Jepang jiwa, Eropa seni, Amerika pernyataan, China legacy
+- **Anchor:** BP Latest reference (premium tetapi inklusif reference)
+- **Filosofi Dunia Pintu (4-negara cultural context):** Jepang jiwa, Eropa seni, Amerika pernyataan, China gerbang rezeki
 
 ## Skill Catalog (25 skills × 7 groups)
 
@@ -149,7 +149,7 @@ mindmap
 - "Gerai 1000 Pintu" lengkap (no shortcut)
 - No em-dash di output
 - Tone premium hangat (audience-first)
-- Anchor reference Aesop + DWR
+- Anchor reference BP Latest reference
 
 ### Visual
 - Palette: Brass #B8956B + Charcoal #1F1A14 + Ivory #FAF8F4
@@ -236,7 +236,7 @@ last_updated: 2026-05-27
 ## Validation Standards (Quality Gate)
 
 Setiap skill output WAJIB:
-- [ ] Brand canon 100% compliant (em-dash, vocabulary, Aesop reference)
+- [ ] Brand canon 100% compliant (em-dash, vocabulary, BP Latest reference)
 - [ ] 5 Nilai integration kalau relevant
 - [ ] Visual Mermaid minimum 1 per skill
 - [ ] Sample I/O provided

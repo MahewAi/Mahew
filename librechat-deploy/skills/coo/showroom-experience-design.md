@@ -37,12 +37,12 @@ Secondary:
 
 **Area:** {N} m²
 **Budget buildout:** Rp {amount}
-**Design anchor:** Aesop + Design Within Reach (premium curated retail)
+**Design anchor:** BP Latest reference (premium tetapi inklusif)
 
 ## Customer Journey Physical (5-stage)
 
 ### Stage 1: Approach (Sidewalk → Entrance)
-**Goal:** Pre-frame premium curated impression
+**Goal:** Pre-frame premium tetapi inklusif impression
 **Element:**
 - Storefront signage subtle (brass nameplate + serif typography)
 - Window display 1-2 hero pintu archetype (rotated weekly)
@@ -59,7 +59,7 @@ Secondary:
 - Floor: warm wood atau natural stone (no glossy commercial tile)
 
 ### Stage 3: Curated Journey (Foyer → Display)
-**Goal:** Walk-through experience 4-Dunia archetype
+**Goal:** Walk-through experience 4-negara cultural reference
 **Element:**
 - Path linear OR free-flow (depend layout) but curated
 - Section per archetype:
@@ -105,7 +105,7 @@ Secondary:
 │         │                                  │
 │         │  Curated Journey (40 m²)        │
 │         │  ┌────┬────┬────┬────┐          │
-│         │  │JPN │EUR │AME │CHN │ 4-Dunia  │
+│         │  │JPN │EUR │AME │CHN │ 4-negara cultural reference  │
 │         │  └────┴────┴────┴────┘          │
 │         │  [Material wall + Photo wall]   │
 │         │                                  │
@@ -126,7 +126,7 @@ Secondary:
 - Photography style: tight detail + natural daylight
 
 ### Auditory
-- Background ambient: minimal instrumental (Aesop reference: calm, sparse)
+- Background ambient: minimal instrumental (BP Latest reference: calm, sparse)
 - Volume: max 35-40 dB ambient (conversation comfortable)
 - NO commercial radio, NO loud music
 
@@ -157,7 +157,7 @@ Secondary:
 - Signage: "tempat" not "rumah", "Gerai 1000 Pintu" lengkap
 - Caption / placard: serif italic for accent, no em-dash
 - Marketing material: premium hangat
-- Anchor reference: Aesop + Design Within Reach
+- Anchor reference: BP Latest reference
 
 ### Behavioral
 - Staff behavior: calm refined, listen first
@@ -254,9 +254,9 @@ Sensory matrix:
 ## Knowledge Dependency
 
 - Brand Canon (visual identity locked)
-- Anchor reference Aesop + Design Within Reach
+- Anchor reference BP Latest reference
 - 6 Persona spec (untuk experience customization)
-- Filosofi 4-Dunia archetype
+- Filosofi Dunia Pintu (4-negara cultural context) archetype
 - lean-store-design skill
 - door-expert-operating-model skill
 
@@ -268,32 +268,32 @@ Switch: DISCUSSION jika sensory choice debate (e.g., scent yes/no)
 ## Tools Required
 
 - file-search
-- web-search (Aesop/DWR reference inspiration)
+- web-search (BP Latest reference/BP Latest reference inspiration)
 - artifacts (layout + flowchart + sensory matrix)
 
 ## Validation Criteria
 
 - 5-stage journey explicit (Approach → Entry → Curated → Konsultasi → Exit)
-- 4-Dunia archetype section design
+- 4-negara cultural reference section design
 - Sensory dimension 5-sense covered
 - Brand canon strict (palette ratio, typography, vocabulary)
 - Buildout budget realistic Indonesia 2026 Balikpapan
 - Maintenance + refresh + renovation cadence defined
 - KPI showroom experience measurable
 - Risk + mitigation min 3
-- Anchor Aesop + DWR explicit
+- Anchor BP Latest reference explicit
 
 ## Sample I/O
 
 **Input:** "Showroom experience design Cabang Balikpapan 120 m² launch wave 1"
 
 **Output summary:**
-- 5-stage journey: Approach → Entry hero pintu brass → Curated 4-Dunia archetype (Japan/Europe/America/China) → Konsultasi pod Zoom Door Expert → Exit take-away
+- 5-stage journey: Approach → Entry hero pintu brass → Curated 4-negara cultural reference (Japan/Europe/America/China) → Konsultasi pod Zoom Door Expert → Exit take-away
 - Layout: 10% foyer, 40% curated journey, 15% konsultasi pod, 25% backend, 10% circulation
 - Sensory: warm 3000K + ambient instrumental + subtle wood scent + material touch encouraged + premium kopi offer
 - Buildout Rp 250-300jt (interior + lighting + fixture + pod + material wall)
 - KPI: 45+ min dwell, 70%+ 4-archetype tour completion, 40%+ konsultasi conversion
-- Anchor: Aesop + Design Within Reach reference
+- Anchor: BP Latest reference
 - Layout diagram + sensory matrix embedded
 
 ## Handoff

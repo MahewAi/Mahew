@@ -154,7 +154,7 @@ Secondary:
 - [ ] Premium curated standard preserved
 - [ ] Lean Store concept LOCKED honored
 - [ ] 5 Nilai applied
-- [ ] Aesop + DWR anchor consistent
+- [ ] BP Latest reference anchor consistent
 
 ### If decision affects brand
 - CCO review required
@@ -192,17 +192,17 @@ Industry standard 5-10 staff per premium retail location. Indonesian market
 expectation similar. Question: how to scale quality while managing cost?
 
 Forces:
-- Quality consistency critical (premium curated positioning)
+- Quality consistency critical (premium tetapi inklusif positioning)
 - Cost efficiency necessary (sustainable margin)
 - Scalability requirement (Phase 2 cabang #2-3)
-- Aesop + DWR anchor (smaller intimate retail experience)
+- BP Latest reference anchor (smaller intimate retail experience)
 
 Decision:
 Lock concept: 2-staf cabang (MA × 2 or MA + Gudang) + Door Expert remote 
 centralized dari pusat. No deviation di Phase 1-3.
 
 Rationale:
-1. Premium curated experience compatible with intimate scale (Aesop reference)
+1. Premium curated experience compatible with intimate scale (BP Latest reference)
 2. Centralized Door Expert ensures konsultasi quality consistent
 3. Cost-efficient enabling Phase 2 expansion
 4. Replicable model untuk cabang #2-3 dengan standard same
@@ -239,7 +239,7 @@ commission + base. Question: how to incentivize quality + customer outcome?
 
 Forces:
 - Premium curated standard quality (NOT volume push)
-- Aesop + DWR retail experience (calm refined, not aggressive sales)
+- BP Latest reference retail experience (calm refined, not aggressive sales)
 - Customer trust + long-term relationship
 - 5 Nilai applied (especially Pelayanan Nyaman)
 - Industry benchmark (commission common but aggressive)
@@ -257,8 +257,8 @@ NOT tied to:
 - Conversion rate (alone)
 
 Rationale:
-1. Premium curated retail = quality > volume (compromise rejected)
-2. Aesop retail standard = calm refined, not aggressive
+1. Premium tetapi inklusif retail = quality > volume (compromise rejected)
+2. BP Latest reference retail standard = calm refined, not aggressive
 3. Long-term customer relationship > short-term transaction
 4. Door Expert position = konsultan, not sales
 5. Brand canon preserved (no aggressive language)
@@ -458,7 +458,7 @@ Decision crosses threshold:
 - "Gerai 1000 Pintu" lengkap di formal context
 - Premium hangat tone (even technical decision)
 - Direct + factual + warm
-- Anchor reference Aesop + DWR + Kinfolk where applicable
+- Anchor reference BP Latest reference where applicable
 ```
 
 ## Visual Output
@@ -555,24 +555,24 @@ Switch: DISCUSSION jika decision context evolving
 
 ## Sample I/O
 
-**Input:** "ADR for: Lock Filosofi 4-Dunia as proprietary brand framework Phase 1+"
+**Input:** "ADR for: Lock Filosofi Dunia Pintu (4-negara cultural context) as proprietary brand framework Phase 1+"
 
 **Output:**
 
-ADR-{NNN}: Filosofi 4-Dunia LOCKED as Proprietary Brand Framework
+ADR-{NNN}: Filosofi Dunia Pintu (4-negara cultural context, BUKAN mandatory archetype) as Proprietary Brand Framework
 
 Status: Accepted
 Date: 2026-05-27
 Decider: Matthew
 Reversibility: Type C Low (fundamental brand DNA)
 
-Context: Building brand positioning. Need differentiated framework that customers, architects, and content can use to understand pintu character selection. Aesop has "ingredients story", DWR has "designer reference"; Gerai needs equivalent IP framework.
+Context: Building brand positioning. Need differentiated framework that customers, architects, and content can use to understand pintu character selection. Premium retail uses signature framework; Gerai needs equivalent IP framework.
 
 Forces: Brand differentiation + customer education + content depth + Indonesia cultural relevance + scalability across cabang.
 
-Decision: LOCK "Filosofi 4-Dunia" (Jepang jiwa, Eropa seni, Amerika pernyataan, China legacy) as proprietary framework. Brand asset + customer education + content pillar + Door Expert script.
+Decision: LOCK "Filosofi Dunia Pintu (4-negara cultural context)" (Jepang jiwa, Eropa seni, Amerika pernyataan, China gerbang rezeki) as proprietary framework. Brand asset + customer education + content pillar + Door Expert script.
 
-Rationale: Cultural sensitivity Indonesia + Aesop-style storytelling depth + replicable framework + IP compounding + manuscript "Pintu Berbicara" alignment.
+Rationale: Cultural sensitivity Indonesia + BP-aligned style storytelling depth + replicable framework + IP compounding + manuscript "Pintu Berbicara" alignment.
 
 Options rejected: Generic curation "style 1-4" (no story), Western-only reference (cultural mismatch), Per-archetype branding separately (dilutes master brand).
 

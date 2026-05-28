@@ -86,7 +86,7 @@ Secondary:
 **Responsibilities:**
 - Deep konsultasi customer (per booking)
 - Product recommendation specialized
-- Filosofi 4-Dunia application per project
+- Filosofi Dunia Pintu (4-negara cultural context) application per project
 - Mentor MA
 - Aftersales escalation
 
@@ -104,7 +104,7 @@ Secondary:
 
 ### Layout Principles
 1. **Hero entrance:** Brass detail focal point pintu, customer first impression
-2. **Curated journey:** Walk-through path mengikuti 4-Dunia archetype
+2. **Curated journey:** Walk-through path mengikuti 4-negara cultural reference
 3. **Konsultasi pod:** Private space untuk Door Expert remote session (Zoom setup)
 4. **Material wall:** Touch + see (kayu sample, brass swatch, finish texture)
 5. **Project showcase:** Photo wall completed project Arsitek collaboration
@@ -206,7 +206,7 @@ Setiap aspek Lean Store WAJIB compliance:
 - Customer-facing tone: premium hangat (audience-first)
 - Physical environment: palette Timeless Foundation
 - Communication: no em-dash, "tempat", "Gerai 1000 Pintu" lengkap
-- Service standard: Aesop + Design Within Reach reference
+- Service standard: BP Latest reference
 
 ## Scaling Phase 2
 
@@ -238,7 +238,7 @@ Lean Store layout + operating rhythm:
 ```mermaid
 flowchart TD
     subgraph Showroom Cabang
-    A[Hero Entrance<br/>Brass focal] --> B[Curated Journey<br/>4-Dunia archetype]
+    A[Hero Entrance<br/>Brass focal] --> B[Curated Journey<br/>4-negara cultural reference]
     B --> C[Material Wall<br/>Touch + See]
     C --> D[Project Showcase]
     D --> E[Konsultasi Pod<br/>Zoom setup]

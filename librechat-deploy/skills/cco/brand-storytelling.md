@@ -7,16 +7,16 @@ priority: high
 last_updated: 2026-05-27
 ---
 
-# Brand Storytelling (Filosofi 4-Dunia Narrative Arc)
+# Brand Storytelling (Filosofi Dunia Pintu (4-negara cultural context) Narrative Arc)
 
-Build + maintain brand storytelling Gerai 1000 Pintu: filosofi 4-Dunia (Jepang jiwa, Eropa seni, Amerika pernyataan, China legacy) sebagai narrative spine. Story templates, character arc, atmospheric writing.
+Build + maintain brand storytelling Gerai 1000 Pintu: filosofi Dunia Pintu (4-negara cultural context: Jepang jiwa, Eropa seni, Amerika pernyataan, China gerbang rezeki — BUKAN mandatory archetype) sebagai narrative spine. Story templates, character arc, atmospheric writing.
 
 ## Triggers
 
 Primary:
 - "brand storytelling"
 - "narrative arc"
-- "story 4-Dunia"
+- "story 4-negara cultural reference"
 
 Secondary:
 - "brand narrative"
@@ -37,9 +37,9 @@ Secondary:
 
 **Type:** {Philosophy / Customer journey / Heritage / Vision / Case}
 **Length:** {N word}
-**Anchor reference:** Aesop story + Kinfolk editorial + Indonesia poetic
+**Anchor reference:** BP Latest reference + Indonesian editorial poetic
 
-## Filosofi 4-Dunia Story Spine
+## Filosofi Dunia Pintu (4-negara cultural context) Story Spine
 
 ### The Premise
 Pintu adalah ambang. Ambang adalah refleksi tempat yang dibangun bersama yang kita cintai. 
@@ -107,7 +107,7 @@ Detail yang menemani lintas generasi. Warna yang menyimpan harapan.
 3. **The Four Worlds (800 word):** 200 word per dunia, vivid sensory + character
 4. **Application (200 word):** Untuk Anda — mana yang menemani perjalanan?
 
-**Tone:** Editorial premium hangat, Kinfolk-inspired warmth, anchor reference visible
+**Tone:** Editorial premium hangat, Indonesian editorial warmth, anchor reference visible
 
 **Sample opening:**
 > Pagi itu, seseorang menggenggam brass yang dingin sejenak. Pintu terbuka. Sinar 
@@ -122,7 +122,7 @@ Detail yang menemani lintas generasi. Warna yang menyimpan harapan.
 1. **Profile sensitive (150w):** Anonymized OR consented, brief context
 2. **Starting point (200w):** Tempat sebelum, vision yang dibangun
 3. **The encounter (200w):** First meeting dengan Gerai, what stood out
-4. **The exploration (300w):** Konsultasi journey, 4-Dunia consideration, decision
+4. **The exploration (300w):** Konsultasi journey, 4-negara cultural reference consideration, decision
 5. **The realization (150w):** Pintu di tempat, first morning
 
 **Tone:** Narrative warm + visual + respectful customer voice
@@ -139,7 +139,7 @@ Detail yang menemani lintas generasi. Warna yang menyimpan harapan.
 **Structure:**
 1. **Origin question:** Kenapa Gerai 1000 Pintu hadir?
 2. **The observation:** Apa yang Matthew (founder) lihat di pasar Balikpapan
-3. **The aspiration:** Aesop + DWR sebagai reference apa retail bisa rasakan
+3. **The aspiration:** BP Latest reference sebagai reference apa retail bisa rasakan
 4. **The commitment:** Apa yang Gerai berjanji untuk customer
 5. **Forward:** Ajakan mulai perjalanan
 
@@ -153,7 +153,7 @@ Detail yang menemani lintas generasi. Warna yang menyimpan harapan.
 1. Wave 1 sebagai start
 2. Phase 2 vision (Samarinda + Bontang)
 3. Phase 3 vision (Jawa expansion)
-4. Long-term cultural ambition (Indonesia premium curated retail)
+4. Long-term cultural ambition (Indonesia premium tetapi inklusif)
 
 **Tone:** Aspirational + grounded + warm
 
@@ -165,7 +165,7 @@ Detail yang menemani lintas generasi. Warna yang menyimpan harapan.
 1. Project context (architect/customer/site)
 2. Vision starting point
 3. Konsultasi journey (Door Expert collaboration)
-4. Filosofi 4-Dunia application
+4. Filosofi Dunia Pintu (4-negara cultural context) application
 5. Decision narrative
 6. Outcome + reflection
 7. Insight untuk reader serupa
@@ -177,7 +177,7 @@ Detail yang menemani lintas generasi. Warna yang menyimpan harapan.
 - **Warm intimate** — like sitting across table with old friend
 - **Sensory rich** — visual, tactile, auditory, olfactory detail woven
 - **Respect of audience** — they are smart, they appreciate subtlety
-- **Anchored** — Aesop + Kinfolk + Indonesia poetic literacy
+- **Anchored** — BP Latest reference + Indonesian editorial + Indonesia poetic literacy
 
 ### Sentence rhythm
 - Mix short + medium + longer for natural flow
@@ -220,7 +220,7 @@ Detail yang menemani lintas generasi. Warna yang menyimpan harapan.
 ### Matthew (Founder)
 - Visionary + grounded
 - Sees what others miss
-- Quietly building Aesop + DWR for Indonesia
+- Quietly building BP Latest reference for Indonesia
 - Long-term player
 
 ### The Craftsman (background)
@@ -263,7 +263,7 @@ Detail yang menemani lintas generasi. Warna yang menyimpan harapan.
 - Channel + length
 
 ### Step 2: Story spine
-- Filosofi 4-Dunia angle
+- Filosofi Dunia Pintu (4-negara cultural context) angle
 - Character + setting
 - Conflict / discovery moment
 - Resolution / invitation
@@ -305,9 +305,9 @@ Detail yang menemani lintas generasi. Warna yang menyimpan harapan.
 - ✅ Subtle confident (let work speak)
 - ✅ Customer-first narrative (their story we serve)
 - ✅ Grounded aspirational (achievable beauty)
-- ✅ Specific philosophy (4-Dunia framework yours)
+- ✅ Specific philosophy (Dunia Pintu framework yours)
 - ✅ Honest emotion (real moments matter)
-- ✅ Timeless reference (Aesop reverence, Kinfolk warmth)
+- ✅ Timeless reference (BP Latest reference reverence, Editorial Indonesian warmth)
 
 ## Sample Story Snippet Library
 
@@ -338,11 +338,11 @@ Detail yang menemani lintas generasi. Warna yang menyimpan harapan.
 
 ## Visual Output
 
-4-Dunia archetype radial:
+4-negara cultural reference radial:
 
 ```mermaid
 mindmap
-  root((Filosofi 4-Dunia))
+  root((Filosofi Dunia Pintu (4-negara cultural context)))
     Jepang Jiwa
       Wabi-sabi
       Ritus pagi
@@ -388,13 +388,13 @@ quadrantChart
 
 ## Knowledge Dependency
 
-- Filosofi 4-Dunia LOCKED full content
+- Filosofi Dunia Pintu (4-negara cultural context, BUKAN mandatory archetype) full content
 - Brand Canon
 - editorial-style-guide
 - copywriting-framework
 - long-form-writer
 - audience-emotional-mapping (paired)
-- Anchor Aesop + Kinfolk + DWR
+- Anchor BP Latest reference
 
 ## Mode
 
@@ -409,7 +409,7 @@ Switch: DISCUSSION jika archetype angle debate
 
 ## Validation Criteria
 
-- 4-Dunia narrative spine locked
+- 4-negara cultural narrative spine locked
 - Per dunia: essence + character + audience + visual + vocabulary
 - 5 story templates (philosophy, journey, heritage, vision, case)
 - Narrative voice principles
@@ -422,19 +422,19 @@ Switch: DISCUSSION jika archetype angle debate
 
 ## Sample I/O
 
-**Input:** "Brand storytelling philosophy introduction 4-Dunia 1500w untuk website blog Wave 1 launch"
+**Input:** "Brand storytelling philosophy introduction 4-negara cultural reference 1500w untuk website blog Wave 1 launch"
 
 **Output summary:**
 - Title: "Empat Dunia dalam Satu Tempat"
 - Length: 1500w editorial
 - Structure: Sensory opening (Balikpapan morning) → Premise (pintu = ambang refleksi) → 4 worlds (200w per dunia) → Application invitation
-- Voice: Calm refined, Kinfolk-warmth, anchor Aesop visible
+- Voice: Calm refined, Editorial warmth, anchor BP Latest reference visible
 - Sensory rich: sight (cahaya morning), touch (brass cold), sound (engsel embun), smell (kayu lembut)
 - Vocabulary palette: ambang, ritus, refleksi, menemani, karya, warisan
 - Character involvement: Customer (Anda), Tempat (setting), Door Expert (background)
 - Anti-pattern avoided: no corporate jargon, no marketing cliche, no em-dash
 - CTA soft closing: "Mana yang menemani perjalanan Anda? Door Expert kami menanti."
-- 4-Dunia mindmap + format matrix embedded
+- 4-negara cultural reference mindmap + format matrix embedded
 
 ## Handoff
 

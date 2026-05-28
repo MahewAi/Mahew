@@ -133,7 +133,7 @@ Secondary:
 **Context payload:**
 - Customer scenario archetype
 - Konsultasi phase (Discovery / Education / Recommendation)
-- 4-Dunia angle relevant
+- 4-negara cultural angle relevant
 **Expected back:** Script template + canon-compliant
 
 ### Pattern 5: CCO → CMO (Content ready for distribution)
@@ -258,7 +258,7 @@ Context:
 - Persona: Retail
 - Caption draft:
   "14 November 2026 — cerita pertama dimulai di Balikpapan. 
-  Gerai 1000 Pintu menyambut Anda dengan filosofi 4-Dunia 
+  Gerai 1000 Pintu menyambut Anda dengan filosofi Dunia Pintu (4-negara cultural context) 
   yang menemani perjalanan Anda menyusun tempat impian.
   
   Konsultasi gratis dengan Door Expert kami. Link di bio.

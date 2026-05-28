@@ -117,7 +117,7 @@ Observe → Hypothesize → Test → Validate → Apply
 ### Source 6: External Signal (Industry + Anchor)
 **Format:**
 - Industry trend shift
-- Anchor reference evolution (Aesop+DWR+Kinfolk)
+- Anchor reference evolution (BP Latest reference)
 - Competitive intelligence
 - Cultural shift
 
@@ -135,10 +135,10 @@ Observe → Hypothesize → Test → Validate → Apply
 **Validate:** Pattern emerge clear
 
 ### Pattern Type 2: Customer Conversion Test
-**Example:** "4-Dunia framework intro early in konsultasi → higher conversion"
+**Example:** "Dunia Pintu framework intro early in konsultasi → higher conversion"
 **Test:**
 - Group A (control): Standard konsultasi
-- Group B (test): 4-Dunia framework intro at minute 5
+- Group B (test): Dunia Pintu framework intro at minute 5
 - Compare conversion rate over 10+ konsultasi
 **Validate:** Statistically significant difference
 
@@ -203,7 +203,7 @@ Observe → Hypothesize → Test → Validate → Apply
 #### Pattern Type: Customer Behavior
 **Origin:** CMO observes lead pattern
 **Propagate to:** COO (Door Expert script update) + CCO (content angle adapt)
-**Sample:** "Retail customer prefers 4-Dunia framework intro at first walk-in" → MA script update + CCO content emphasize
+**Sample:** "Retail customer prefers Dunia Pintu framework intro at first walk-in" → MA script update + CCO content emphasize
 
 #### Pattern Type: Brand Canon Edge Case
 **Origin:** CCO canon-enforcer detects edge
@@ -247,10 +247,10 @@ Even if Matthew preference clear, Atmaja must:
 
 ### Rule 3: Founding Knowledge LOCKED Protected
 - Brand canon LOCKED cannot be relaxed by Matthew daily preference
-- Filosofi 4-Dunia cannot be reframed by trend
+- Filosofi Dunia Pintu (4-negara cultural context) cannot be reframed by trend
 - 5 Nilai cannot be compromised
 - Lean Store concept LOCKED preserved
-- Aesop+DWR anchor preserved
+- BP Latest reference anchor preserved
 
 **Exception:** Matthew explicit ADR with full deliberation can update LOCKED (very rare)
 
@@ -406,10 +406,10 @@ Even if Matthew preference clear, Atmaja must:
 
 **Result:** Pattern applied. matthew-profile.md updated.
 
-### Sample 2: 4-Dunia Framework Intro Early (Hypothesis Mixed)
+### Sample 2: 4-negara cultural reference Framework Intro Early (Hypothesis Mixed)
 
-**Stage 1 Observe:** Door Expert sometimes intro 4-Dunia early, sometimes late
-**Stage 2 Hypothesize:** "Early intro 4-Dunia (minute 5) → higher conversion"
+**Stage 1 Observe:** Door Expert sometimes intro 4-negara cultural reference early, sometimes late
+**Stage 2 Hypothesize:** "Early intro 4-negara cultural reference (minute 5) → higher conversion"
 **Stage 3 Test:** Door Expert randomize 10 konsultasi each
 **Stage 4 Validate:** Early intro: 55% conversion; Late: 50% conversion. Sample small. Not statistically significant.
 **Stage 5 Apply:** Continue both, capture longer sample
@@ -567,7 +567,7 @@ Switch: AUDIT (monthly + quarterly review)
 - Anti-sycophancy LOCKED: Atmaja independent synthesis + 3+ confirmation + Founding knowledge LOCKED + Customer truth + Cross-agent honest
 - Cross-agent propagation when pattern relevant
 - Documentation: Hypothesis template + Quarterly synthesis
-- Sample cycle: Matthew brief preference (validated), 4-Dunia early intro (testing), Architect compound (validated), Atmaja disagreement (preserved)
+- Sample cycle: Matthew brief preference (validated), 4-negara cultural reference early intro (testing), Architect compound (validated), Atmaja disagreement (preserved)
 - Cycle flowchart + source quadrant + test pattern mindmap embedded
 
 ## Handoff

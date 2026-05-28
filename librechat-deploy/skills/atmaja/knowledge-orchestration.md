@@ -41,10 +41,10 @@ Secondary:
 
 ### Tier 1: LOCKED Founding Knowledge
 - Brand Canon (CCO)
-- Filosofi 4-Dunia
+- Filosofi Dunia Pintu (4-negara cultural context)
 - 5 Nilai Gerai
 - Lean Store concept
-- Anchor Aesop + DWR + Kinfolk reference
+- Anchor BP Latest reference
 - BP Chapter 1-18
 
 **Access:** All team read + reference
@@ -91,7 +91,7 @@ Secondary:
 
 ### External Sources
 - **BP manuscript "Pintu Berbicara"** — content reference
-- **Aesop, DWR, Kinfolk reference** — anchor materials
+- **BP Latest reference** — anchor materials
 - **Industry publication** (HDII, IAI, Kinfolk, Wallpaper)
 - **Vendor catalog + spec** (AMK Premium dst)
 - **Academic + research** (Indonesia design heritage, feng shui)
@@ -221,9 +221,9 @@ Secondary:
 - External speaker (quarterly)
 
 ### Anchor reference deepening
-- Aesop reference study (quarterly)
-- DWR catalog review (quarterly)
-- Kinfolk magazine subscription + discussion
+- BP Latest reference study (quarterly)
+- BP Latest catalog review (quarterly)
+- premium editorial publication subscription + discussion
 - Indonesia design heritage research (annual deep-dive)
 
 ## Knowledge Asset Examples
@@ -327,12 +327,12 @@ Customer Retail persona consistently mention "tidak menemukan tempat seperti ini
 - Door Expert konsultasi note: 75% Retail customer compare with mass-market negatively
 
 **Implication:**
-- Positioning premium curated resonate strongly
-- Aesop+DWR anchor differentiation works
+- Positioning premium tetapi inklusif resonate strongly
+- BP Latest reference anchor differentiation works
 - Customer educate themselves before walk-in (Instagram + word-of-mouth)
 
 **Recommendation:**
-- Double-down on premium curated content (CCO content-calendar)
+- Double-down on premium tetapi inklusif content (CCO content-calendar)
 - Capture "before & after" first-impression story (CCO testimonial-curation)
 - Architect+Designer channel can amplify this (CMO + CCO partnership)
 
@@ -349,7 +349,7 @@ Knowledge architecture pyramid:
 
 ```mermaid
 flowchart TD
-    A[Tier 1 LOCKED Founding<br/>Brand Canon + 4-Dunia + 5 Nilai] 
+    A[Tier 1 LOCKED Founding<br/>Brand Canon + 4-negara cultural reference + 5 Nilai] 
     B[Tier 2 Function Knowledge<br/>C-Level catalog]
     C[Tier 3 Operational Knowledge<br/>SOP + Vendor + Customer]
     D[Tier 4 Tactical Knowledge<br/>Daily ops + interactions]
@@ -399,9 +399,9 @@ mindmap
       Customer story share
       External speaker
     Anchor deepening
-      Aesop study quarterly
-      DWR catalog review
-      Kinfolk discussion
+      BP Latest reference study quarterly
+      BP Latest catalog review
+      Indonesian editorial discussion
       Indonesia heritage
 ```
 
@@ -410,8 +410,8 @@ mindmap
 - All C-Level skill catalog (function knowledge)
 - BP Chapter 1-18 (founding knowledge)
 - Brand Canon LOCKED
-- Filosofi 4-Dunia
-- Anchor Aesop + DWR + Kinfolk
+- Filosofi Dunia Pintu (4-negara cultural context)
+- Anchor BP Latest reference
 - Notion + Google Drive + CRM + Figma + GitHub platforms
 
 ## Mode
@@ -448,7 +448,7 @@ Switch: REFERENCE kalau provide knowledge spec
 - Lifecycle 6-stage: Gen → Capture → Curate → Distribute → Apply → Evolve
 - Synthesis pattern: Cross-function aggregation + Trend detection + Customer compounding + Crisis loop
 - Quarterly audit completed: 50+ new entry tagged + 10 gap identified + 5 obsolete archived
-- Top insight Q1 2027: Customer Retail persona "premium curated resonates strongly" pattern (60% conversion, 75% mass-market comparison)
+- Top insight Q1 2027: Customer Retail persona "premium tetapi inklusif resonates strongly" pattern (60% conversion, 75% mass-market comparison)
 - Cross-function relevance: CMO message refine + CCO story angle + COO Door Expert script + CFO premium positioning supports margin
 - Learning culture active: Weekly retro + monthly deep-dive + quarterly synthesis + anchor reference study
 - Architecture pyramid + lifecycle flow + learning mindmap embedded

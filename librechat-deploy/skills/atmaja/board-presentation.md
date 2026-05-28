@@ -46,7 +46,7 @@ Secondary:
 ### Slide 1: Cover
 **Content:**
 - Logo Gerai 1000 Pintu primary
-- "Tempat impian dimulai dari pintu yang tepat."
+- "1000 Pintu, 1000 Mimpi (A Thousand Doors, A Thousand Dreams)."
 - Audience-specific subtitle
 - Date + presenter
 
@@ -55,14 +55,14 @@ Secondary:
 ### Slide 2: Vision
 **Content:**
 - Vision statement
-- Anchor reference Aesop + DWR + Kinfolk
+- Anchor reference BP Latest reference
 - Why now (timing context)
 
 **Tone:** Aspirational + grounded
 
 ### Slide 3: Problem / Opportunity
 **Content:**
-- Premium curated retail underserved Indonesia
+- Premium tetapi inklusif retail underserved Indonesia
 - Mass-market vs aspirational gap
 - Architect+Designer client pain point
 - Customer journey friction premium pintu
@@ -73,17 +73,17 @@ Secondary:
 **Content:**
 - Gerai 1000 Pintu positioning
 - Lean Store + Door Expert remote model
-- Filosofi 4-Dunia framework
+- Filosofi Dunia Pintu framework
 - AMK Premium anchor
 
 **Format:** Visual concept diagram
 
-### Slide 5: Filosofi 4-Dunia
+### Slide 5: Filosofi Dunia Pintu (4-negara cultural context)
 **Content:**
 - Jepang jiwa
 - Eropa seni
 - Amerika pernyataan
-- China legacy
+- China gerbang rezeki
 
 **Format:** 4-quadrant grid visual
 
@@ -100,13 +100,13 @@ Secondary:
 - 6 Persona representation
 - Customer journey stages
 - Premium hangat touchpoint
-- Aesop+DWR reference visible
+- BP Latest reference visible
 
 **Format:** Journey diagram + sensory detail
 
 ### Slide 8: Market Opportunity
 **Content:**
-- TAM (Indonesia premium curated retail)
+- TAM (Indonesia premium tetapi inklusif)
 - SAM (Kaltim + Jawa expansion)
 - SOM (Year 1-3 capture)
 - Growth trajectory
@@ -134,11 +134,11 @@ Secondary:
 
 ### Slide 11: Team
 **Content:**
-- Matthew Wijaya (Founder + CEO + CTO)
+- Matthew (Founder + CEO + CTO)
 - Atmaja AI Department orchestrator
 - C-Level AI agents (CMO + COO + CCO + CFO)
 - Door Expert + MA structure
-- Anchor reference Aesop+DWR org culture
+- Anchor reference BP Latest reference org culture
 
 **Format:** Team chart + key bio
 
@@ -206,7 +206,7 @@ Secondary:
 ### Brand Canon Strict
 - Palette: Brass + Charcoal + Ivory (60/30/10 ratio)
 - Typography: Playfair Display title + Inter body
-- Photography: Aesop+DWR style refined
+- Photography: BP Latest reference+BP Latest style refined
 - Layout: Generous white space 50%+
 - No drop shadow / 3D / gradient flashy
 
@@ -237,7 +237,7 @@ Each slide:
 - [ ] No em-dash di copy
 - [ ] "tempat" not "rumah" customer-facing
 - [ ] "Gerai 1000 Pintu" lengkap (especially cover + close)
-- [ ] Anchor Aesop+DWR reference (visual + verbal)
+- [ ] Anchor BP Latest reference (visual + verbal)
 - [ ] Premium hangat tone
 
 ## Production Workflow
@@ -299,7 +299,7 @@ Each slide:
 - Brand canon compliance?
 
 **Early Investor:**
-- Why Indonesia premium curated retail now?
+- Why Indonesia premium tetapi inklusif now?
 - Why team can execute?
 - Path to outcome?
 
@@ -310,7 +310,7 @@ Each slide:
 
 **Press:**
 - Cultural angle?
-- Anchor reference Aesop+DWR significance?
+- Anchor reference BP Latest reference significance?
 - Future vision?
 
 ### Response framework
@@ -383,7 +383,7 @@ flowchart LR
     A[1 Cover] --> B[2 Vision]
     B --> C[3 Problem]
     C --> D[4 Solution]
-    D --> E[5 4-Dunia]
+    D --> E[5 Sistem Tech Stack]
     E --> F[6 Lean Store]
     F --> G[7 Customer Journey]
     G --> H[8 Market]

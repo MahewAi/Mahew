@@ -74,7 +74,7 @@ Secondary:
 | **Blended margin** | - | - | **31-32%** |
 
 ### Target Margin
-- Gross margin: 30%+ (premium curated standard)
+- Gross margin: 30%+ (premium tetapi inklusif standard)
 - Net margin Year 1: -10% to 0% (foundation investment)
 - Net margin Year 2: 5-10%
 - Net margin Year 3: 10-15%
@@ -105,7 +105,7 @@ Secondary:
 ### Customer Lifetime Value (LTV)
 - Average order value: Rp 30jt
 - Repeat / referral within 2 year: 20% → LTV Rp 36jt
-- **LTV/CAC ratio: ~70-90x** (very healthy premium curated)
+- **LTV/CAC ratio: ~70-90x** (very healthy premium tetapi inklusif)
 
 ## Cost Optimization Opportunity
 
@@ -253,7 +253,7 @@ Switch: DISCUSSION jika cost cut debate
 **Output summary:**
 - Total Cost Year 1: Rp 2.84M OpEx + Rp 330jt Capex
 - Fixed 65% + Variable 25% + Semi 10%
-- COGS: 30-32% per category (premium curated standard)
+- COGS: 30-32% per category (premium tetapi inklusif standard)
 - OpEx top 3: People 30% (Rp 850jt) + Marketing 20% (Rp 570jt) + Inventory 15% (Rp 425jt)
 - CAC: Rp 400-500k per customer + Konsultasi cost Rp 150k
 - LTV: Rp 36jt + LTV/CAC ratio ~70-90x (very healthy)

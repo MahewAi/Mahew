@@ -215,7 +215,7 @@ For: External stakeholder
 - Brand canon STRICT
 - Premium hangat tone
 - Approved fact + quote only
-- Anchor reference Aesop+DWR visible
+- Anchor reference BP Latest reference visible
 
 ## Brand Canon Compliance
 

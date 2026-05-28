@@ -56,7 +56,7 @@ Secondary:
 - Year 1: 150+ konsultasi/quarter (vs 80 baseline)
 - Year 2: 5 cabang Kaltim+ (vs 3 baseline)
 - Year 3: 8-10 cabang including Jawa (vs 4-5 baseline)
-- Brand mention as Aesop Indonesia equivalent
+- Brand mention as BP Latest reference Indonesia equivalent
 - Press: Wallpaper, Kinfolk, international coverage
 
 **Key indicators (early signal):**
@@ -96,7 +96,7 @@ Secondary:
 **Strategic implication:**
 - Execute per roadmap
 - Quarterly OKR adjustment
-- Maintain Aesop + DWR anchor discipline
+- Maintain BP Latest reference anchor discipline
 
 ### Scenario 3: Worst Case (Bearish)
 **Probability:** ~25% (significant downside)

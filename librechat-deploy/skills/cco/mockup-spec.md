@@ -118,7 +118,7 @@ Secondary:
 #### Brochure Konsultasi
 - **Format:** Tri-fold OR Z-fold A4
 - **Material:** Matte 200gsm
-- **Content:** Filosofi 4-Dunia intro + service + booking instruction
+- **Content:** Filosofi Dunia Pintu (4-negara cultural context) intro + service + booking instruction
 - **Color:** Charcoal + Ivory + Brass accent
 - **Quantity:** 1000 (showroom take-away)
 
@@ -133,7 +133,7 @@ Secondary:
 
 #### Web Homepage
 - **Layout:** Full-bleed hero photo + Playfair H1 + Inter sub + Brass CTA
-- **Sections:** Hero, 4-Dunia intro, Service explanation, Featured project, Testimony, Booking CTA, Footer
+- **Sections:** Hero, 4-negara cultural reference intro, Service explanation, Featured project, Testimony, Booking CTA, Footer
 - **Responsive:** Desktop 1440px + Tablet 768px + Mobile 375px
 - **Brand canon:** 60/30/10 palette ratio strict
 - **Photography:** Category A + B dominant
@@ -176,7 +176,7 @@ Secondary:
 - **Material:** Brass + wood combination
 - **Size:** Custom per product
 - **Lighting:** Spot LED 3000K
-- **Style:** Refined minimal (Aesop-inspired)
+- **Style:** Refined minimal (Premium-inspired)
 
 ## Production Specification Detail
 
@@ -233,7 +233,7 @@ Secondary:
 - [ ] Layout generous white space
 - [ ] Hierarchy clear focal
 - [ ] No drop shadow / 3D / gradient flashy
-- [ ] Anchor Aesop + DWR style visible
+- [ ] Anchor BP Latest style visible
 
 ### Material canon
 - [ ] Premium natural material preferred (cloth, wood, brass)
@@ -410,7 +410,7 @@ Switch: NEED_CLARIFICATION jika quantity/material ambigu
 - Social template library: Figma master 25 template × 5 pillar + 2-week designer Rp 10jt
 - Total budget: Rp 30jt mockup spec Wave 1
 - Lead time: 6 week parallel production
-- Brand canon: 60/30/10 palette + Playfair+Inter + Aesop reference + no em-dash + premium hangat
+- Brand canon: 60/30/10 palette + Playfair+Inter + BP Latest reference + no em-dash + premium hangat
 - Workflow Gantt + category mindmap embedded
 
 ## Handoff

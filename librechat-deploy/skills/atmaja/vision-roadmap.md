@@ -36,11 +36,11 @@ Secondary:
 
 **Horizon:** {3-year / 5-year / 10-year}
 **Owner:** Matthew + Atmaja stewardship
-**Anchor:** Aesop + Design Within Reach + Kinfolk Editorial
+**Anchor:** BP Latest reference Editorial
 
 ## Long-term Vision Statement
 
-> Gerai 1000 Pintu menjadi referensi premium curated retail Indonesia yang refined, 
+> Gerai 1000 Pintu menjadi referensi premium tetapi inklusif Indonesia yang refined, 
 > hangat, dan timeless. Dari Balikpapan, kami menyebar ke kota-kota Indonesia yang 
 > menghargai detail. Setiap cabang adalah tempat yang membuat customer berkata, 
 > "Saya tidak menemukan pengalaman seperti ini di tempat lain."
@@ -54,7 +54,7 @@ Secondary:
 
 **Key Milestones:**
 - Q4 2026: Wave 1 launch 14 November
-- Q1 2027: Filosofi 4-Dunia educational arc
+- Q1 2027: Filosofi Dunia Pintu (4-negara cultural context) educational arc
 - Q2 2027: Lean Store model validated + break-even path
 - Q3 2027: Phase 2 readiness check + Cabang #2 prep
 
@@ -99,7 +99,7 @@ Secondary:
 - Phase 4 international option open
 
 ### Phase 4: International Option (2031+) — Optional
-**Theme:** Premium curated retail Indonesia → International
+**Theme:** Premium tetapi inklusif retail Indonesia → International
 **Location:** Jakarta hub + International market entry consideration
 **Focus:** Sustainable scale + cultural ambassador
 
@@ -145,9 +145,9 @@ Secondary:
 ## Long-term Strategic Themes
 
 ### Theme 1: Brand Discipline Maintained
-- Aesop + DWR anchor consistency
+- BP Latest reference anchor consistency
 - Brand canon enforcement non-negotiable
-- Filosofi 4-Dunia framework evolving
+- Filosofi Dunia Pintu framework evolving
 - Editorial content compounding
 
 ### Theme 2: Lean Operating Excellence
@@ -160,7 +160,7 @@ Secondary:
 - Indonesian poetic literacy
 - Cultural context (rumah adat, modern, hybrid)
 - Feng shui foundation
-- Aesop+DWR adapted Indonesian style
+- BP Latest reference adapted Indonesian style
 
 ### Theme 4: People + Culture
 - Door Expert 5 kompetensi gold standard
@@ -191,7 +191,7 @@ Secondary:
 ### Brand Equity Architecture (refer CCO)
 - Brand canon LOCKED
 - Editorial content compounding
-- Anchor reference Aesop + DWR + Kinfolk visible
+- Anchor reference BP Latest reference visible
 - Customer IP (testimonial + case study)
 
 ## Roadmap Visualization
@@ -421,7 +421,7 @@ Switch: DISCUSSION jika strategic timing debate
 **Input:** "Vision roadmap 5-year Gerai 1000 Pintu 2026-2031"
 
 **Output summary:**
-- Long-term vision: Premium curated retail Indonesia referensi, Aesop+DWR anchored
+- Long-term vision: Premium tetapi inklusif retail Indonesia referensi, BP Latest reference anchored
 - Phase 1 Foundation 2026-2027: Cabang Balikpapan Wave 1, validate Lean Store
 - Phase 2 Kaltim Scale 2027-2028: + Samarinda + Bontang, Mitra Dagang
 - Phase 3 Jawa Expansion 2028-2030: Cabang Jakarta/Surabaya, National

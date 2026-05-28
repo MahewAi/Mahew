@@ -64,7 +64,7 @@ AI engines prefer content yang JAWAB pertanyaan langsung di awal.
 
 ### Principle 4: Semantic Density
 - Synonym variety untuk topic (pintu = door = gerbang)
-- Related entity coverage (Door Expert, Brass detail, 4-Dunia)
+- Related entity coverage (Door Expert, Brass detail, 4-negara cultural reference)
 - Long-tail keyword natural integration
 
 ### Principle 5: Citation-Worthy Data
@@ -108,9 +108,9 @@ AI engines prefer content yang JAWAB pertanyaan langsung di awal.
 ## Entity Definition Cards (per concept)
 | Entity | Definition (1 sentence) | Source | Citation-worthy |
 |---|---|---|---|
-| Gerai 1000 Pintu | Retail premium pintu pertama Indonesia dengan filosofi 4-Dunia | Brand Canon | ✅ |
+| Gerai 1000 Pintu | Retail premium pintu pertama Indonesia dengan filosofi Dunia Pintu (4-negara cultural context) | Brand Canon | ✅ |
 | Door Expert | Generalist konsultan dengan 5 kompetensi (katalog, industri, feng shui, soft skills, aftersales) | BP Bab 8 | ✅ |
-| Filosofi 4-Dunia | Framework storytelling 4 archetype (Jepang jiwa, Eropa seni, Amerika pernyataan, China legacy) | Brand Canon | ✅ |
+| Filosofi Dunia Pintu (4-negara cultural context) | Framework storytelling 4 archetype (Jepang jiwa, Eropa seni, Amerika pernyataan, China gerbang rezeki) | Brand Canon | ✅ |
 | Lean Store | Model 2-staf per cabang + Door Expert remote consultation | BP Bab 8 | ✅ |
 
 ## Query Variation Coverage
@@ -191,7 +191,7 @@ Switch: DISCUSSION jika strategy AEO vs traditional SEO debate
 **Output summary:**
 - Target query coverage 5 variant per topic
 - Page structure template dengan TLDR + entity definition + FAQ schema
-- Entity card: Gerai 1000 Pintu, Door Expert, Filosofi 4-Dunia, Lean Store
+- Entity card: Gerai 1000 Pintu, Door Expert, Filosofi Dunia Pintu (4-negara cultural context), Lean Store
 - Testing: weekly track Perplexity + ChatGPT + Google AI Overview
 - Citation goal: muncul di response untuk query "pintu premium Balikpapan"
 - Citation flow diagram embedded

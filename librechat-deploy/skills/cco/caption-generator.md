@@ -29,7 +29,7 @@ Secondary:
 | platform | enum | yes | (Instagram/TikTok/Facebook) |
 | post_type | enum | yes | (feed/story/reel/carousel/live) |
 | visual_subject | string | yes | (apa yang ada di image/video) |
-| campaign | string | no | (Wave 1 launch / 4-Dunia series / dll) |
+| campaign | string | no | (Wave 1 launch / Dunia Pintu series / dll) |
 | persona | enum | no | (default Retail) |
 
 ## Output Template
@@ -133,7 +133,7 @@ Slide 4: "Konsultasi dengan Door Expert kami. Link di bio."
 Sentuhan pertama. Reaksi yang jujur.
 
 Lihat momen Bapak Anton membuka pintu Jepang yang dia pilih untuk tempat 
-barunya. Filosofi 4-Dunia bukan sekedar kata. Ini soal karakter yang 
+barunya. Filosofi Dunia Pintu (4-negara cultural context) bukan sekedar kata. Ini soal karakter yang 
 menemani Anda.
 
 Konsultasi gratis dengan Door Expert kami. Link di bio.
@@ -241,7 +241,7 @@ Konsultasi gratis link bio. #Gerai1000Pintu #TempatImpian #PintuPremium
 - Vocabulary: "menyambut", "dimulai", "cerita pertama"
 - Hashtag: #GrandOpeningGerai #Gerai1000Pintu #14NovBPN
 
-### 4-Dunia Series
+### 4-negara cultural reference Series
 - Tone: Educational + philosophical
 - Vocabulary: "filosofi", "karakter", "refleksi"
 - Hashtag: #Filosofi4Dunia + per dunia (#PintuJepang etc.)
@@ -302,7 +302,7 @@ Every caption MUST:
 - [ ] "tempat" not "rumah" customer-facing
 - [ ] "Gerai 1000 Pintu" lengkap (first mention)
 - [ ] Premium hangat tone
-- [ ] Anchor Aesop + DWR vocabulary
+- [ ] Anchor BP Latest reference vocabulary
 - [ ] CTA non-aggressive
 - [ ] Hashtag brand canon
 - [ ] Persona resonance (kalau target specified)
@@ -339,7 +339,7 @@ Every caption MUST:
 
 Setelah bulan-bulan kurasi, hari ini Gerai 1000 Pintu hadir di Balikpapan. 
 Tempat untuk Anda yang sedang menyusun rangkaian impian dengan refleksi 
-yang dalam. Filosofi 4-Dunia menemani perjalanan Anda. Door Expert kami 
+yang dalam. Filosofi Dunia Pintu (4-negara cultural context) menemani perjalanan Anda. Door Expert kami 
 siap berkonsultasi.
 
 Datang berkunjung ke showroom kami atau booking konsultasi via 
@@ -349,7 +349,7 @@ gerai.mahewwork.com.
 #DoorExpert #TempatImpian
 ```
 
-### 4-Dunia Series — Jepang
+### 4-negara cultural reference Series — Jepang
 ```
 Jepang membawa jiwa.
 
@@ -426,7 +426,7 @@ xychart-beta
 - editorial-style-guide
 - brand-canon-enforcer
 - 6 Persona spec
-- Filosofi 4-Dunia
+- Filosofi Dunia Pintu (4-negara cultural context)
 - 4 Marketing Plan (A/B/C/D)
 - visual-identity-system (photography pairing)
 

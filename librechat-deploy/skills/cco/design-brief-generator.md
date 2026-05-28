@@ -9,7 +9,7 @@ last_updated: 2026-05-27
 
 # Design Brief Generator
 
-Generate design brief untuk vendor designer / agency / freelancer / internal designer: project context, objective, brand canon, deliverable, timeline, success criteria. Premium hangat tone, Aesop + DWR anchor.
+Generate design brief untuk vendor designer / agency / freelancer / internal designer: project context, objective, brand canon, deliverable, timeline, success criteria. Premium hangat tone, BP Latest reference anchor.
 
 ## Triggers
 
@@ -67,11 +67,11 @@ Secondary:
 - **Typography:**
   - Display: Playfair Display (serif)
   - Body: Inter (sans-serif)
-- **Photography:** Aesop + DWR + Kinfolk reference
+- **Photography:** BP Latest reference
 
 ### Brand Tone
 - Premium hangat (calm + warm + refined)
-- Aesop + Design Within Reach anchor
+- BP Latest reference anchor
 - NOT commercial loud
 - NOT trendy seasonal
 
@@ -81,7 +81,7 @@ Secondary:
 3. "Gerai 1000 Pintu" lengkap first mention
 4. Premium hangat tone
 5. No drop shadow / 3D / gradient flashy
-6. Anchor Aesop + DWR vocabulary
+6. Anchor BP Latest reference vocabulary
 7. Playfair serif + Inter sans typography
 
 ### Anti-pattern (jangan)
@@ -115,9 +115,9 @@ Secondary:
 ## Mood Board Reference
 
 ### Inspiration sources (study + adapt, do NOT copy)
-1. **Aesop** — store interior + brand identity + product shot
-2. **Design Within Reach** — catalog editorial + photography
-3. **Kinfolk magazine** — typography + composition + tone
+1. **BP Latest reference** — store interior + brand identity + product shot
+2. **BP Latest reference** — catalog editorial + photography
+3. **premium editorial publication** — typography + composition + tone
 4. **Nendo studio** — minimal craftsmanship
 5. **Tadao Ando / Kengo Kuma** — Japanese material reverence
 6. **{Project-specific reference}**
@@ -184,7 +184,7 @@ Secondary:
 
 ### Creative quality (qualitative)
 - Refined premium hangat feel achieved
-- Aesop + DWR anchor visible
+- BP Latest reference anchor visible
 - Photography compelling editorial
 - Typography hierarchy elegant
 - Layout breathing space generous
@@ -242,7 +242,7 @@ Secondary:
 - 30% Ivory #FAF8F4 (background)
 - 10% Brass #B8956B (focal)
 - Playfair serif + Inter sans
-- Aesop + DWR + Kinfolk reference
+- BP Latest reference
 - Premium hangat tone
 - NO em-dash, drop shadow, 3D, gradient flashy
 
@@ -354,7 +354,7 @@ quadrantChart
 - brand-canon-enforcer
 - editorial-style-guide
 - Brand Canon LOCKED full document
-- Anchor Aesop + DWR + Kinfolk reference
+- Anchor BP Latest reference
 - 6 Persona spec
 
 ## Mode
@@ -371,7 +371,7 @@ Switch: NEED_CLARIFICATION jika project scope ambigu
 
 - Brand canon reference mandatory section
 - Deliverable spec detailed
-- Mood board reference Aesop + DWR + Kinfolk
+- Mood board reference BP Latest reference
 - Audience context + persona
 - Creative direction (layout + photography + typography)
 - Constraint hard + soft
@@ -393,11 +393,11 @@ Switch: NEED_CLARIFICATION jika project scope ambigu
 - Budget: Rp 60jt (design Rp 35jt + photography Rp 15jt + print first batch Rp 10jt)
 - Timeline: Brief Mar 2027 → Concept Apr → Draft Jun → Final Aug → Print Sep
 - Deliverable: 32-page catalog Figma source + PDF print-ready + asset library
-- Brand canon: 60/30/10 ratio, Playfair + Inter, Aesop+DWR+Kinfolk reference, no em-dash, "tempat"
+- Brand canon: 60/30/10 ratio, Playfair + Inter, BP Latest reference+Indonesian editorial reference, no em-dash, "tempat"
 - Photography: Category A (product detail) dominant + Category B (tempat environment) accent
-- Editorial: Long-form caption per page, sectioned per 4-Dunia archetype + Persona spotlight
+- Editorial: Long-form caption per page, sectioned per 4-negara cultural reference + Persona spotlight
 - Print spec: matte uncoated paper, brass-foil stamped cover, debossed brand mark
-- Success: Brand canon 100% + Aesop-level editorial premium + 6 persona resonance
+- Success: Brand canon 100% + BP-aligned editorial premium + 6 persona resonance
 - Sign-off: Designer + Project owner + CCO + Matthew final
 - Brief flow + brief matrix embedded
 

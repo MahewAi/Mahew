@@ -9,7 +9,7 @@ last_updated: 2026-05-27
 
 # Audience Emotional Mapping
 
-Map emotional journey 6 Persona Gerai 1000 Pintu lintas customer touchpoint: feeling, motivation, fear, aspiration, brand connection moment. Reference Aesop hospitality + Kinfolk emotional literacy.
+Map emotional journey 6 Persona Gerai 1000 Pintu lintas customer touchpoint: feeling, motivation, fear, aspiration, brand connection moment. Reference BP Latest reference (hospitality + emotional literacy).
 
 ## Triggers
 
@@ -36,7 +36,7 @@ Secondary:
 
 **Persona:** {Name + brief profile}
 **Journey scope:** {Awareness → Aftersales OR specific stage}
-**Reference:** Aesop hospitality + Kinfolk emotional literacy
+**Reference:** BP Latest reference (hospitality + emotional literacy)
 
 ## Persona Emotional Baseline
 
@@ -68,13 +68,13 @@ Secondary:
 
 **Brand opportunity:**
 - Position Gerai 1000 Pintu sebagai trusted curator
-- Reduce overwhelm dengan filosofi 4-Dunia framework
+- Reduce overwhelm dengan filosofi Dunia Pintu (4-negara cultural context) framework
 - Build credibility via Door Expert competence + project showcase
 
 **Touchpoint design:**
 - Instagram: editorial calm, premium hangat tone
 - Web hero: clear value proposition + trust signal (project showcase)
-- First impression: Aesop-level refined (signal we are different)
+- First impression: BP-aligned refined (signal we are different)
 
 **Target emotion:** Curious + intrigued + welcomed (not pressured)
 
@@ -92,13 +92,13 @@ Secondary:
 - "Harga ini reasonable atau overpriced?"
 
 **Brand opportunity:**
-- Educational content (4-Dunia philosophy, material understanding)
+- Educational content (4-negara cultural reference philosophy, material understanding)
 - Transparent pricing tier
 - Project case study (customer like them)
-- Differentiation clear (curated + Door Expert + Aesop reference)
+- Differentiation clear (curated + Door Expert + BP Latest reference)
 
 **Touchpoint design:**
-- Catalog: editorial premium (Aesop reference)
+- Catalog: editorial premium (BP Latest reference)
 - Blog article: depth + accessibility balance
 - Photography: aspirational achievable
 - Pricing transparency (tier visible)
@@ -142,12 +142,12 @@ Secondary:
 
 **Internal narrative:**
 - "Door Expert ini benar-benar listening. Saya merasa dihargai."
-- "Filosofi 4-Dunia menarik. Saya kepikiran tentang tempat saya."
+- "Filosofi Dunia Pintu (4-negara cultural context) menarik. Saya kepikiran tentang tempat saya."
 - "Saya merasa terbantu, bukan dijual."
 
 **Brand opportunity:**
 - Deep listening (Phase 2 Discovery 15 min)
-- Education calm (Phase 3 Education 15 min) — 4-Dunia + material
+- Education calm (Phase 3 Education 15 min) — 4-negara cultural reference + material
 - Curated recommendation (Phase 4 — 3-5 option max, transparent reasoning)
 - Co-decision (bukan top-down sell)
 
@@ -246,7 +246,7 @@ Secondary:
 | Stage | Trigger Emotion | Brand Action |
 |---|---|---|
 | Awareness | Overwhelmed → Welcomed | Calm editorial, no rush |
-| Consideration | Confused → Confident | 4-Dunia framework, educational |
+| Consideration | Confused → Confident | Dunia Pintu framework, educational |
 | Konsultasi | Nervous → Heard | Door Expert warm + listen |
 | Decision | Hesitant → Aligned | Transparent + gentle |
 | Delivery | Anxious → Proud | Refined process + share moment |
@@ -276,7 +276,7 @@ Secondary:
 | Stage | Trigger | Brand Action |
 |---|---|---|
 | Awareness | Resource discovery | Peer-level intellectual depth |
-| Consideration | Quality + framework | 4-Dunia framework intellectual |
+| Consideration | Quality + framework | Dunia Pintu framework intellectual |
 | Konsultasi | Collaboration peer | Door Expert peer-level |
 | Decision | Client interest | Co-presentation possible |
 | Delivery | Project alignment | Coordination smooth |
@@ -305,7 +305,7 @@ Secondary:
 ## Brand Touchpoint Emotional Architecture
 
 ### Universal across persona
-- **First touch:** Calm + welcomed (Aesop reference store entry)
+- **First touch:** Calm + welcomed (BP Latest reference store entry)
 - **Engagement:** Heard + educated (Door Expert 5 kompetensi applied)
 - **Decision:** Confident + cared for (premium hangat)
 - **Realization:** Joyful + proud (delivery + installation moment)
@@ -314,7 +314,7 @@ Secondary:
 ### Sensory + emotional pairing
 | Sense | Emotional Pairing |
 |---|---|
-| Visual (Aesop refined) | Calm + intentional |
+| Visual (Premium refined) | Calm + intentional |
 | Tactile (material wall) | Connected + tangible |
 | Auditory (ambient calm) | Peaceful + focused |
 | Olfactory (subtle wood) | Natural + warm |
@@ -331,7 +331,7 @@ Secondary:
 
 ### Embrace these emotional drives
 - ✅ Curiosity ("Apa yang membuat tempat Anda bermakna?")
-- ✅ Aspiration ("Tempat impian dimulai dari pintu yang tepat")
+- ✅ Aspiration ("1000 Pintu, 1000 Mimpi (A Thousand Doors, A Thousand Dreams)")
 - ✅ Warmth ("Kami sediakan waktu untuk Anda")
 - ✅ Pride ("Karya yang menemani Anda bertahun-tahun")
 - ✅ Belonging ("Komunitas yang menghargai detail")
@@ -408,9 +408,9 @@ quadrantChart
 ## Knowledge Dependency
 
 - 6 Persona spec full
-- Filosofi 4-Dunia
+- Filosofi Dunia Pintu (4-negara cultural context)
 - 5 Nilai Gerai
-- Anchor Aesop + DWR + Kinfolk
+- Anchor BP Latest reference
 - door-expert-operating-model (COO)
 - showroom-experience-design (COO)
 - brand-storytelling (paired)
@@ -441,11 +441,11 @@ Switch: DISCUSSION jika emotional architecture debate
 **Input:** "Emotional mapping persona Retail untuk Wave 1 launch journey"
 
 **Output summary:**
-- Persona: Retail (rumah-pribadi premium curated seeker)
+- Persona: Retail (rumah-pribadi premium tetapi inklusif seeker)
 - Core aspiration: Tempat yang refleksi karakter Anda
 - Core fear: Overpay, wrong choice, generic outcome
 - 7 stage mapped: Awareness (curious + welcomed), Consideration (confident + informed), Booking (welcomed + safe), Konsultasi (heard + educated), Decision (aligned + cared), Delivery (joyful + proud), Aftersales (cared + advocate)
-- Brand action per stage: Calm editorial (A), 4-Dunia framework (C), warm welcome (B), deep listening Door Expert (K), gentle support (D), refined delivery (Del), proactive check-in (AS)
+- Brand action per stage: Calm editorial (A), Dunia Pintu framework (C), warm welcome (B), deep listening Door Expert (K), gentle support (D), refined delivery (Del), proactive check-in (AS)
 - Sensory pairing: Visual calm + Tactile material wall + Auditory ambient + Olfactory wood + Gustatory kopi premium
 - Anti-pattern: no urgency push, no fear-based, no exclusionary
 - Measurement: 60%+ booking from inquiry, 9/10+ NPS konsultasi, 30%+ UGC delivery

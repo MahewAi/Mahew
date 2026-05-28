@@ -93,7 +93,7 @@ Secondary:
 - Personal touch
 - Specific (not generic)
 - Brand canon strict
-- Aesop + DWR refined
+- BP Latest reference refined
 
 **Sample WhatsApp brief (prospective customer):**
 ```
@@ -156,7 +156,7 @@ Permintaan ke depan:
 Sediakan waktu untuk meeting tatap muka atau Zoom minggu depan?
 
 Salam hangat,
-Matthew Wijaya
+Matthew
 Founder Gerai 1000 Pintu
 ```
 
@@ -174,19 +174,19 @@ Founder Gerai 1000 Pintu
 
 **Key elements:**
 - Mutual respect (peer-level)
-- Filosofi 4-Dunia framework (intellectual angle)
+- Filosofi Dunia Pintu framework (intellectual angle)
 - Project-specific
 - Long-term partnership signal
 - Documentation rigor
 
 **Sample partner brief (Architect firm):**
 ```
-Subject: Project Cluster Borneo — Kurasi Pintu Bersama Filosofi 4-Dunia
+Subject: Project Cluster Borneo — Kurasi Pintu Bersama Filosofi Dunia Pintu (4-negara cultural context)
 
 Bapak/Ibu {Architect Name},
 
 Terima kasih atas kepercayaan untuk berkolaborasi di Project Cluster Borneo. 
-Filosofi 4-Dunia kami dapat memberi framework yang berguna untuk presentasi 
+Filosofi Dunia Pintu (4-negara cultural context) kami dapat memberi framework yang berguna untuk presentasi 
 ke client Anda.
 
 Per discovery session kemarin:
@@ -207,7 +207,7 @@ support presentasi Anda.
 Kapan kita lanjut discussion?
 
 Salam hangat,
-Matthew Wijaya
+Matthew
 Founder Gerai 1000 Pintu
 ```
 
@@ -224,7 +224,7 @@ Founder Gerai 1000 Pintu
 **Length:** Per outlet standard
 
 **Key elements:**
-- Anchor reference Aesop + DWR + Kinfolk
+- Anchor reference BP Latest reference
 - Cultural angle
 - Quote-ready Matthew
 - Photography kit ready
@@ -235,7 +235,7 @@ Founder Gerai 1000 Pintu
 **Sample press pitch email:**
 ```
 Subject: Story Pitch — Gerai 1000 Pintu: Indonesia's First Premium Curated 
-Pintu Retail with Aesop+DWR Reference
+Pintu Retail with BP Latest reference Reference
 
 Dear {Editor Name},
 
@@ -243,14 +243,14 @@ Hope this email finds you well. Saya menulis untuk memperkenalkan story
 yang mungkin menarik untuk {Outlet Name}.
 
 Gerai 1000 Pintu launched November 2026 di Balikpapan sebagai tempat 
-curated premium pintu pertama di Indonesia yang anchor pada Aesop dan 
-Design Within Reach untuk retail experience.
+premium pintu di Indonesia pertama di Indonesia yang anchor pada BP Latest reference dan 
+BP Latest reference untuk retail experience.
 
 Beberapa angle yang mungkin resonate:
-- Filosofi 4-Dunia: framework cultural yang kami susun
+- Filosofi Dunia Pintu (4-negara cultural context): framework cultural yang kami susun
 - Lean Store + Door Expert remote: operational innovation
-- Founder Matthew Wijaya: technical+creative dual capability
-- Indonesia premium curated retail emergence
+- Founder Matthew: technical+creative dual capability
+- Indonesia premium tetapi inklusif emergence
 
 Press kit lengkap tersedia. Saya senang menyediakan 30 menit interview 
 dengan Matthew kalau {Outlet Name} tertarik mengembangkan story.

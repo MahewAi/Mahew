@@ -260,7 +260,7 @@ Switch: DISCUSSION jika rating calibration debate
 - Career path mapped per role
 - PIP framework explicit
 - Brand canon audit included
-- NOT commission-based (Lean Store + premium curated standard)
+- NOT commission-based (Lean Store + premium tetapi inklusif standard)
 
 ## Sample I/O
 

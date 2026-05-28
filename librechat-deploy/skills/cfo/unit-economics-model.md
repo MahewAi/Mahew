@@ -50,7 +50,7 @@ Secondary:
 ### LTV / CAC Ratio
 - LTV: Rp 51jt
 - CAC: Rp 500k (high-end)
-- **Ratio: 100x** (premium curated extreme healthy)
+- **Ratio: 100x** (premium tetapi inklusif extreme healthy)
 
 ### Industry benchmark
 - SaaS healthy: 3x+
