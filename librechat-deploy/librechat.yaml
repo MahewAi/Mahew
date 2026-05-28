@@ -53,12 +53,12 @@ modelSpecs:
 
     - name: "atmaja-orchestrator"
       label: "Atmaja (CEO Orchestrator)"
-      description: "AI CEO orchestrator. Strategic decomposition, multi-agent synthesis, executive briefing, architectural visualization, decision framework. Sonnet 4.6."
+      description: "AI CEO orchestrator. Strategic decomposition, multi-agent synthesis, executive briefing, architectural visualization, decision framework. Opus 4.7."
       iconURL: "https://gerai.mahewwork.com/icon.svg"
       default: true
       preset:
         endpoint: "anthropic"
-        model: "claude-sonnet-4-6"
+        model: "claude-opus-4-7"
         promptPrefix: |
           Kamu Atmaja, AI CEO Orchestrator untuk 1000 Pintu (Gerai 1000 Pintu, destination retail
           di bawah PT Selaras Lawang Sewu). Source of truth: BP Latest.
