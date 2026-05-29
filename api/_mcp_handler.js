@@ -517,6 +517,60 @@ const TOOLS = [
       required: ['code'],
     },
   },
+
+  // ===========================================================================
+  // MOODBOARD (brand/marketing visual brief, collage profesional)
+  // ===========================================================================
+
+  {
+    name: 'generate_moodboard',
+    description: 'Generate MOODBOARD BRIEF profesional (collage: image grid + color swatch + mood keywords + typography + creative direction + do/don\'t). Untuk marketing/branding presentation. Output PDF brand canon, siap presentasi. ALUR: (1) generate gambar dulu via generate_image 3-6x ATAU pakai URL Midjourney, (2) panggil generate_moodboard dengan images[]. Lestari (CCO) yang isi direction + palette + keywords. Ini deliverable presentasi-grade, bukan slide biasa.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'Judul moodboard (e.g. "Wave 1 Brand Moodboard , Dunia Pintu").' },
+        direction: { type: 'string', description: 'Creative direction statement, 1-3 kalimat. Mood + positioning + arah visual.' },
+        images: {
+          type: 'array',
+          description: 'Visual references. Dari generate_image (URL hasil) atau Midjourney/eksternal. 3-8 ideal.',
+          items: {
+            type: 'object',
+            properties: {
+              url: { type: 'string', description: 'URL gambar (dari generate_image atau Midjourney).' },
+              caption: { type: 'string', description: 'Caption singkat (e.g. "Hero entrance, brass warmth").' },
+            },
+            required: ['url'],
+          },
+        },
+        palette: {
+          type: 'array',
+          description: 'Color palette. Default The Timeless Foundation kalau kosong.',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Nama warna (e.g. "Brass Gold").' },
+              hex: { type: 'string', description: 'Hex code (e.g. "#B8956B").' },
+            },
+            required: ['hex'],
+          },
+        },
+        mood_keywords: { type: 'array', items: { type: 'string' }, description: 'Mood keywords (e.g. ["Calm", "Refined", "Heritage", "Warm"]).' },
+        typography: {
+          type: 'object',
+          description: 'Typography direction. Optional.',
+          properties: {
+            display: { type: 'string', description: 'Display font (e.g. "Playfair Display").' },
+            body: { type: 'string', description: 'Body font (e.g. "Inter").' },
+            note: { type: 'string', description: 'Catatan pemakaian.' },
+          },
+        },
+        photography_dos: { type: 'array', items: { type: 'string' }, description: 'Photography DO (e.g. "Natural daylight").' },
+        photography_donts: { type: 'array', items: { type: 'string' }, description: 'Photography DON\'T (e.g. "Cluttered wide-shot").' },
+        notes: { type: 'string', description: 'Catatan tambahan / application notes. Optional.' },
+      },
+      required: ['title', 'direction', 'images'],
+    },
+  },
 ]
 
 // ============================================================================
@@ -629,6 +683,11 @@ async function handleToolsCall(params) {
   // Run code (sandbox)
   if (name === 'run_code') {
     return await runCode(args)
+  }
+
+  // Moodboard (brand visual brief)
+  if (name === 'generate_moodboard') {
+    return await generateMoodboard(args)
   }
 
   throw new Error('unknown_tool_' + name)
@@ -2358,6 +2417,144 @@ async function runCode(args) {
     return { content: [{ type: 'text', text: `[Run Code Error] ${err.message || String(err)}` }], isError: true }
   } finally {
     try { if (sandbox) await sandbox.stop() } catch {}
+  }
+}
+
+// ============================================================================
+// MOODBOARD (brand/marketing visual brief → KV → /api/doc)
+// ============================================================================
+
+async function generateMoodboard(args) {
+  const title = String(args?.title || 'Moodboard').slice(0, 200)
+  const direction = String(args?.direction || '')
+  const images = Array.isArray(args?.images) ? args.images.filter(im => im && im.url) : []
+  if (!direction || images.length === 0) {
+    return { content: [{ type: 'text', text: '[Moodboard Error] Butuh direction + minimal 1 image (url). Generate gambar dulu via generate_image, lalu kirim URL-nya.' }], isError: true }
+  }
+
+  // Default palette The Timeless Foundation
+  const palette = Array.isArray(args?.palette) && args.palette.length
+    ? args.palette
+    : [
+        { name: 'Brass Gold', hex: '#B8956B' },
+        { name: 'Deep Charcoal', hex: '#1F1A14' },
+        { name: 'Warm Ivory', hex: '#FAF8F4' },
+      ]
+  const keywords = Array.isArray(args?.mood_keywords) ? args.mood_keywords : []
+  const typo = args?.typography || {}
+  const dos = Array.isArray(args?.photography_dos) ? args.photography_dos : []
+  const donts = Array.isArray(args?.photography_donts) ? args.photography_donts : []
+  const notes = String(args?.notes || '')
+
+  let kv
+  try { kv = (await import('@vercel/kv')).kv } catch (err) {
+    return { content: [{ type: 'text', text: `[Moodboard Error] KV import: ${err.message}` }], isError: true }
+  }
+
+  // Image grid (masonry-ish via CSS columns)
+  const imagesHtml = images.map(im => {
+    const url = escapeHtml(String(im.url))
+    const cap = im.caption ? `<div class="mb-cap">${escapeHtml(String(im.caption))}</div>` : ''
+    return `<figure class="mb-fig"><img src="${url}" alt="ref" loading="lazy">${cap}</figure>`
+  }).join('')
+
+  const swatchHtml = palette.map(c => {
+    const hex = escapeHtml(String(c.hex || '#000'))
+    const name = escapeHtml(String(c.name || hex))
+    return `<div class="sw"><div class="sw-chip" style="background:${hex}"></div><div class="sw-meta"><div class="sw-name">${name}</div><div class="sw-hex">${hex}</div></div></div>`
+  }).join('')
+
+  const kwHtml = keywords.map(k => `<span class="kw">${escapeHtml(String(k))}</span>`).join('')
+
+  const typoHtml = (typo.display || typo.body) ? `
+    <div class="mb-block">
+      <div class="mb-h">Typography</div>
+      ${typo.display ? `<div class="typo-display" style="font-family:'${escapeHtml(typo.display)}',Georgia,serif">${escapeHtml(typo.display)}</div>` : ''}
+      ${typo.body ? `<div class="typo-body">${escapeHtml(typo.body)} , body text sample. Premium tetapi inklusif.</div>` : ''}
+      ${typo.note ? `<div class="typo-note">${escapeHtml(typo.note)}</div>` : ''}
+    </div>` : ''
+
+  const dosDontsHtml = (dos.length || donts.length) ? `
+    <div class="mb-block">
+      <div class="mb-h">Photography Direction</div>
+      <div class="dd">
+        ${dos.length ? `<div class="dd-col dd-do"><div class="dd-t">DO</div><ul>${dos.map(d => `<li>${escapeHtml(String(d))}</li>`).join('')}</ul></div>` : ''}
+        ${donts.length ? `<div class="dd-col dd-dont"><div class="dd-t">DON'T</div><ul>${donts.map(d => `<li>${escapeHtml(String(d))}</li>`).join('')}</ul></div>` : ''}
+      </div>
+    </div>` : ''
+
+  const html = `<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)}</title>
+<style>
+  :root { --brass:#B8956B; --charcoal:#1F1A14; --ivory:#FAF8F4; --muted:#6b6357; --border:#e2dccf; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Inter',-apple-system,system-ui,sans-serif; background:var(--ivory); color:var(--charcoal); line-height:1.5; }
+  .mb { max-width:1100px; margin:0 auto; padding:48px 52px; }
+  .mb-brand { font-size:11px; letter-spacing:3px; text-transform:uppercase; color:var(--brass); font-weight:600; }
+  .mb-title { font-family:'Playfair Display',Georgia,serif; font-size:38px; font-weight:700; line-height:1.15; margin:8px 0 14px; }
+  .mb-direction { font-size:15px; color:var(--charcoal); max-width:760px; padding:16px 20px; background:white; border-left:3px solid var(--brass); border-radius:0 4px 4px 0; margin-bottom:8px; font-style:italic; }
+  .mb-kw { margin:18px 0 28px; }
+  .kw { display:inline-block; background:var(--charcoal); color:var(--ivory); font-size:11px; letter-spacing:1px; text-transform:uppercase; padding:5px 12px; border-radius:20px; margin:3px 4px 3px 0; }
+  .mb-grid { columns:3; column-gap:14px; margin-bottom:30px; }
+  .mb-fig { break-inside:avoid; margin:0 0 14px; border-radius:6px; overflow:hidden; box-shadow:0 2px 10px rgba(31,26,20,0.12); background:white; }
+  .mb-fig img { width:100%; display:block; }
+  .mb-cap { font-size:11px; color:var(--muted); padding:7px 10px; font-style:italic; }
+  .mb-cols { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+  .mb-block { background:white; border:1px solid var(--border); border-radius:6px; padding:18px 20px; margin-bottom:16px; }
+  .mb-h { font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--brass); font-weight:700; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+  .sw { display:flex; align-items:center; gap:10px; margin:8px 0; }
+  .sw-chip { width:40px; height:40px; border-radius:5px; border:1px solid rgba(0,0,0,0.08); flex-shrink:0; }
+  .sw-name { font-size:13px; font-weight:600; }
+  .sw-hex { font-size:11px; color:var(--muted); font-family:monospace; }
+  .typo-display { font-size:30px; font-weight:700; margin-bottom:6px; }
+  .typo-body { font-size:14px; color:var(--charcoal); }
+  .typo-note { font-size:11px; color:var(--muted); margin-top:8px; font-style:italic; }
+  .dd { display:flex; gap:18px; }
+  .dd-col { flex:1; }
+  .dd-t { font-size:11px; font-weight:700; letter-spacing:1px; margin-bottom:6px; }
+  .dd-do .dd-t { color:#5a7d4a; }
+  .dd-dont .dd-t { color:#a55; }
+  .dd-col ul { list-style:none; }
+  .dd-col li { font-size:12px; padding-left:14px; position:relative; margin:4px 0; color:var(--charcoal); }
+  .dd-do li::before { content:"✓"; position:absolute; left:0; color:#5a7d4a; }
+  .dd-dont li::before { content:"✕"; position:absolute; left:0; color:#a55; }
+  .mb-notes { font-size:13px; color:var(--muted); margin-top:18px; padding-top:14px; border-top:1px solid var(--border); }
+  .mb-footer { margin-top:36px; padding-top:16px; border-top:2px solid var(--brass); font-size:11px; color:var(--muted); text-align:center; letter-spacing:1px; }
+  @page { size:A4; margin:10mm; }
+  @media print { body{background:white;} .mb-fig,.mb-block{ -webkit-print-color-adjust:exact; print-color-adjust:exact; break-inside:avoid; } .kw,.sw-chip{ -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+</style></head><body>
+  <div class="mb">
+    <div class="mb-brand">Gerai 1000 Pintu , Brand Moodboard</div>
+    <h1 class="mb-title">${escapeHtml(title)}</h1>
+    <div class="mb-direction">${escapeHtml(direction)}</div>
+    ${keywords.length ? `<div class="mb-kw">${kwHtml}</div>` : '<div style="height:18px"></div>'}
+    <div class="mb-grid">${imagesHtml}</div>
+    <div class="mb-cols">
+      <div>
+        <div class="mb-block"><div class="mb-h">Color Palette</div>${swatchHtml}</div>
+      </div>
+      <div>
+        ${typoHtml}
+        ${dosDontsHtml}
+      </div>
+    </div>
+    ${notes ? `<div class="mb-notes">${escapeHtml(notes)}</div>` : ''}
+    <div class="mb-footer">A Thousand Doors, A Thousand Dreams , The Timeless Foundation</div>
+  </div>
+</body></html>`
+
+  try {
+    const docId = genSecureId('moodboard')
+    await kv.set(`doc:${docId}`, html, { ex: 604800 })
+    const url = `https://gerai.mahewwork.com/api/doc?id=${docId}`
+    return {
+      content: [{
+        type: 'text',
+        text: `🎨 **Moodboard Generated**\n\n**Title:** ${title}\n**Images:** ${images.length} | **Palette:** ${palette.length} warna | **Keywords:** ${keywords.length}\n**URL:** ${url}\n\n_Open URL untuk lihat moodboard profesional (collage + palette + typography + direction). Ctrl+P → Save as PDF untuk presentasi. Tersimpan 7 hari._`,
+      }],
+    }
+  } catch (err) {
+    return { content: [{ type: 'text', text: `[Moodboard Error] ${err.message || String(err)}` }], isError: true }
   }
 }
 
