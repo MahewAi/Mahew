@@ -256,7 +256,7 @@ const TOOLS = [
 
   {
     name: 'generate_document',
-    description: 'Generate styled HTML document dengan brand canon (palette The Timeless Foundation). Upload ke Vercel Blob, return public URL. Matthew open URL → browser print (Ctrl+P) → save as PDF. Pakai saat Matthew butuh deliverable formal: executive brief, decision document, proposal, report, meeting notes. Content input: markdown (auto-convert to styled HTML).',
+    description: 'Generate styled HTML document dengan brand canon (palette The Timeless Foundation). Simpan di KV, return URL. Matthew open URL → browser print (Ctrl+P) → save as PDF. Pakai saat Matthew butuh deliverable LINEAR: executive brief, decision document, proposal, report, meeting notes. Content input: markdown. UNTUK architectural map / org-chart visual (4-level hierarchy multi-kolom), pakai generate_architecture_map.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -270,6 +270,74 @@ const TOOLS = [
         },
       },
       required: ['title', 'content_markdown'],
+    },
+  },
+
+  {
+    name: 'generate_architecture_map',
+    description: 'Generate VISUAL architecture map (org-chart / tree diagram style) dengan format hirarki 4-level: SEKTOR (banner) → SUB-AREA (kolom sejajar) → KERJAAN (block) → TASK (bullet). Landscape layout, 1 sektor per halaman, brand canon palette. Match format "Foundation Phase" Matthew. Pakai saat Matthew butuh peta arsitektur/struktur tim/roadmap visual yang multi-kolom (BUKAN dokumen linear). Output: URL → browser print landscape → PDF.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        title: {
+          type: 'string',
+          description: 'Judul utama (e.g., "Architectural Model Gerai 1000 Pintu v25").',
+        },
+        subtitle: {
+          type: 'string',
+          description: 'Subtitle (e.g., "Foundation Phase, evolusi dari v24"). Optional.',
+        },
+        footer_label: {
+          type: 'string',
+          description: 'Label footer tiap halaman (e.g., "Gerai 1000 Pintu , Foundation Phase (Pre-Launch)"). Optional, default brand.',
+        },
+        intro_notes: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Bullet notes di cover page (e.g., penjelasan format, list sektor, perubahan vs versi sebelumnya). Optional.',
+        },
+        sectors: {
+          type: 'array',
+          description: 'Array sektor (Level 0). Tiap sektor jadi 1 halaman dengan banner + kolom sub-area.',
+          items: {
+            type: 'object',
+            properties: {
+              number: { type: 'string', description: 'Nomor sektor (e.g., "01").' },
+              name: { type: 'string', description: 'Nama sektor (e.g., "MARKETING & DISTRIBUSI").' },
+              meta: { type: 'string', description: 'Meta info optional (e.g., "Owner: CMO (Citra) | Timeline: Juni-Agustus").' },
+              sub_areas: {
+                type: 'array',
+                description: 'Sub-area (Level 1) = kolom sejajar dalam sektor.',
+                items: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string', description: 'Nama sub-area (header kolom).' },
+                    kerjaan: {
+                      type: 'array',
+                      description: 'Kerjaan (Level 2) dalam sub-area ini.',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          name: { type: 'string', description: 'Nama kerjaan (bold).' },
+                          tasks: {
+                            type: 'array',
+                            items: { type: 'string' },
+                            description: 'Task (Level 3) bullet points. Boleh pakai prefix "> " untuk sub-task indent.',
+                          },
+                        },
+                        required: ['name'],
+                      },
+                    },
+                  },
+                  required: ['name'],
+                },
+              },
+            },
+            required: ['number', 'name', 'sub_areas'],
+          },
+        },
+      },
+      required: ['title', 'sectors'],
     },
   },
 ]
@@ -341,6 +409,11 @@ async function handleToolsCall(params) {
   // Document generation (HTML, browser-printable to PDF)
   if (name === 'generate_document') {
     return await generateDocument(args)
+  }
+
+  // Architecture map (visual multi-column 4-level hierarchy)
+  if (name === 'generate_architecture_map') {
+    return await generateArchitectureMap(args)
   }
 
   throw new Error('unknown_tool_' + name)
@@ -1106,6 +1179,311 @@ async function generateDocument(args) {
   } catch (err) {
     return {
       content: [{ type: 'text', text: `[Document Gen Error] ${err.message || String(err)}` }],
+      isError: true,
+    }
+  }
+}
+
+// ============================================================================
+// ARCHITECTURE MAP (visual multi-column 4-level hierarchy → KV → /api/doc)
+// ============================================================================
+
+async function generateArchitectureMap(args) {
+  const title = String(args?.title || 'Architecture Map').slice(0, 200)
+  const subtitle = String(args?.subtitle || '')
+  const footerLabel = String(args?.footer_label || 'Gerai 1000 Pintu , Foundation Phase')
+  const introNotes = Array.isArray(args?.intro_notes) ? args.intro_notes : []
+  const sectors = Array.isArray(args?.sectors) ? args.sectors : []
+
+  if (sectors.length === 0) {
+    return {
+      content: [{ type: 'text', text: '[Architecture Map Error] sectors array kosong. Kirim minimal 1 sektor dengan sub_areas.' }],
+      isError: true,
+    }
+  }
+
+  let kv
+  try {
+    const kvModule = await import('@vercel/kv')
+    kv = kvModule.kv
+  } catch (err) {
+    return {
+      content: [{ type: 'text', text: `[Architecture Map Error] KV import failed: ${err.message}` }],
+      isError: true,
+    }
+  }
+
+  // Render task (support "> " prefix untuk sub-task indent)
+  const renderTask = (task) => {
+    const t = String(task || '')
+    if (t.startsWith('> ')) {
+      return `<li class="subtask">${escapeHtml(t.slice(2))}</li>`
+    }
+    return `<li>${escapeHtml(t)}</li>`
+  }
+
+  // Render kerjaan block
+  const renderKerjaan = (k) => {
+    const name = escapeHtml(String(k?.name || ''))
+    const tasks = Array.isArray(k?.tasks) ? k.tasks : []
+    const tasksHtml = tasks.length > 0
+      ? `<ul class="tasks">${tasks.map(renderTask).join('')}</ul>`
+      : ''
+    return `<div class="kerjaan"><div class="kerjaan-name">${name}</div>${tasksHtml}</div>`
+  }
+
+  // Render sub-area column
+  const renderSubArea = (sa) => {
+    const name = escapeHtml(String(sa?.name || ''))
+    const kerjaan = Array.isArray(sa?.kerjaan) ? sa.kerjaan : []
+    const kerjaanHtml = kerjaan.map(renderKerjaan).join('')
+    return `<div class="subarea"><div class="subarea-head">${name}</div>${kerjaanHtml}</div>`
+  }
+
+  // Render sektor page
+  const renderSector = (s) => {
+    const num = escapeHtml(String(s?.number || ''))
+    const name = escapeHtml(String(s?.name || ''))
+    const meta = s?.meta ? `<div class="sector-meta">${escapeHtml(String(s.meta))}</div>` : ''
+    const subAreas = Array.isArray(s?.sub_areas) ? s.sub_areas : []
+    const columnsHtml = subAreas.map(renderSubArea).join('')
+    return `<section class="sector-page">
+      <div class="sector-banner">
+        <span class="sector-num">${num}</span>
+        <span class="sector-name">${name}</span>
+      </div>
+      ${meta}
+      <div class="columns">${columnsHtml}</div>
+      <div class="page-footer">${escapeHtml(footerLabel)}</div>
+    </section>`
+  }
+
+  const sectorsHtml = sectors.map(renderSector).join('')
+
+  const introHtml = introNotes.length > 0
+    ? `<div class="intro-box">${introNotes.map(n => `<div class="intro-line">${escapeHtml(String(n))}</div>`).join('')}</div>`
+    : ''
+
+  const styledHtml = `<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${escapeHtml(title)}</title>
+<style>
+  :root {
+    --brass: #B8956B;
+    --charcoal: #1F1A14;
+    --ivory: #FAF8F4;
+    --muted: #6b6357;
+    --border: #d8d2c4;
+    --col-bg: #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--ivory); }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    color: var(--charcoal);
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  /* Cover page */
+  .cover {
+    min-height: 90vh;
+    padding: 80px 60px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    page-break-after: always;
+  }
+  .cover-brand {
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--brass);
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+  .cover-title {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 42px;
+    font-weight: 700;
+    color: var(--charcoal);
+    line-height: 1.2;
+    margin-bottom: 12px;
+  }
+  .cover-subtitle {
+    font-size: 16px;
+    color: var(--muted);
+    margin-bottom: 32px;
+  }
+  .intro-box {
+    border-left: 3px solid var(--brass);
+    background: white;
+    padding: 20px 26px;
+    max-width: 800px;
+  }
+  .intro-line {
+    font-size: 13px;
+    color: var(--charcoal);
+    margin: 6px 0;
+    line-height: 1.5;
+  }
+
+  /* Sector page */
+  .sector-page {
+    padding: 30px 36px 50px;
+    page-break-after: always;
+    position: relative;
+    min-height: 90vh;
+  }
+  .sector-banner {
+    background: var(--charcoal);
+    color: var(--ivory);
+    padding: 14px 28px;
+    text-align: center;
+    border-radius: 4px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+  }
+  .sector-num {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--brass);
+  }
+  .sector-name {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .sector-meta {
+    text-align: center;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 18px;
+    font-style: italic;
+  }
+
+  /* Columns layout (sub-areas side by side) */
+  .columns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .subarea {
+    flex: 1 1 220px;
+    min-width: 200px;
+    max-width: 320px;
+    background: var(--col-bg);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--brass);
+    border-radius: 3px;
+    padding: 14px 16px;
+  }
+  .subarea-head {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--charcoal);
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .kerjaan {
+    margin-bottom: 12px;
+  }
+  .kerjaan:last-child { margin-bottom: 0; }
+  .kerjaan-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--brass);
+    margin-bottom: 4px;
+  }
+  .tasks {
+    list-style: none;
+    padding-left: 2px;
+  }
+  .tasks li {
+    font-size: 11px;
+    color: var(--charcoal);
+    padding-left: 14px;
+    position: relative;
+    margin: 3px 0;
+    line-height: 1.35;
+  }
+  .tasks li::before {
+    content: "•";
+    color: var(--brass);
+    position: absolute;
+    left: 2px;
+  }
+  .tasks li.subtask {
+    padding-left: 26px;
+    color: var(--muted);
+  }
+  .tasks li.subtask::before {
+    content: "▸";
+    left: 14px;
+    font-size: 9px;
+  }
+
+  .page-footer {
+    position: absolute;
+    bottom: 18px;
+    left: 36px;
+    right: 36px;
+    text-align: center;
+    font-size: 10px;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    padding-top: 8px;
+  }
+
+  @page { size: A4 landscape; margin: 12mm; }
+  @media print {
+    body { background: white; }
+    .cover, .sector-page { min-height: auto; }
+    .subarea { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+  <div class="cover">
+    <div class="cover-brand">Gerai 1000 Pintu , AI Department</div>
+    <h1 class="cover-title">${escapeHtml(title)}</h1>
+    ${subtitle ? `<div class="cover-subtitle">${escapeHtml(subtitle)}</div>` : ''}
+    ${introHtml}
+  </div>
+  ${sectorsHtml}
+</body>
+</html>`
+
+  try {
+    const safeTitle = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50) || 'map'
+    const rand = Math.abs(hashString(styledHtml)).toString(36).slice(0, 8)
+    const docId = `map-${safeTitle}-${rand}`
+
+    await kv.set(`doc:${docId}`, styledHtml, { ex: 604800 })
+
+    const docUrl = `https://gerai.mahewwork.com/api/doc?id=${docId}`
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `🗺️ **Architecture Map Generated**\n\n**Title:** ${title}\n**Sektor:** ${sectors.length} halaman\n**URL:** ${docUrl}\n\n_Open URL di browser. Layout LANDSCAPE multi-kolom (banner sektor + kolom sub-area + kerjaan + task). Ctrl+P → pilih "Landscape" orientation → "Save as PDF". Tersimpan 7 hari._`,
+        },
+      ],
+    }
+  } catch (err) {
+    return {
+      content: [{ type: 'text', text: `[Architecture Map Error] ${err.message || String(err)}` }],
       isError: true,
     }
   }
