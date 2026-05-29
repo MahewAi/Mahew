@@ -576,3 +576,21 @@ mcpServers:
     initTimeout: 30000
     iconPath: "https://gerai.mahewwork.com/icon.svg"
     serverInstructions: "AI Department inter-agent tools. Atmaja gunakan consult_* untuk fan-out ke C-level (Citra/Wira/Lestari/Aksa). alert_matthew untuk escalation. log_decision untuk vault append. Note: tool calls can take 30-60s karena C-level run Sonnet 4.6 dengan persona detail prompt."
+    chatMenu: true
+
+# Endpoints config supaya Agents bisa pakai MCP tools.
+# `capabilities: tools` enable Agents call external tools (termasuk MCP).
+endpoints:
+  agents:
+    recursionLimit: 25
+    maxRecursionLimit: 50
+    disableBuilder: false
+    capabilities:
+      - "tools"
+      - "actions"
+      - "artifacts"
+      - "ocr"
+      - "execute_code"
+      - "file_search"
+      - "web_search"
+      - "chain"
