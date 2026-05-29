@@ -432,6 +432,56 @@ const TOOLS = [
       required: ['title', 'sheets'],
     },
   },
+
+  // ===========================================================================
+  // VAULT WRITE (persistent memory, GitHub API)
+  // ===========================================================================
+
+  {
+    name: 'write_vault_file',
+    description: 'TULIS / update file di vault Obsidian gerai-memory (persistent memory). Pakai untuk SIMPAN: decision, insight, pattern, notes, learning, customer record, sehingga inget di sesi depan. Path format "{section}/{filename}.md" (e.g. "05-decisions/2026-05-29-wave-1-channel.md", "06-patterns/matthew-decision-style.md"). mode: "overwrite" (ganti penuh) atau "append" (tambah di bawah). Tanpa write, AI Department amnesia tiap sesi. SELALU konfirmasi ke Matthew sebelum nulis hal penting.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: 'Vault path "{section}/{filename}.md". Section valid: 00-founding (HATI-HATI, LOCKED), 01-matthew, 02-customers, 03-projects, 04-konsultasi, 05-decisions, 06-patterns, 07-vendor, 08-team, 09-risk, 10-knowledge.' },
+        content: { type: 'string', description: 'Content markdown. Untuk append, ini yang ditambahkan di bawah existing.' },
+        mode: { type: 'string', enum: ['overwrite', 'append'], description: 'overwrite (default) atau append.' },
+      },
+      required: ['path', 'content'],
+    },
+  },
+
+  // ===========================================================================
+  // FETCH URL (baca full halaman web)
+  // ===========================================================================
+
+  {
+    name: 'fetch_url',
+    description: 'Baca FULL content satu halaman web (bukan snippet). Pakai untuk: deep-read artikel, baca halaman kompetitor, analisa konten spesifik, baca dokumentasi. Beda dari web_search (yang cuma snippet + sumber). fetch_url ambil text lengkap 1 URL. SSRF-protected (block private IP).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'URL lengkap (http/https) yang mau dibaca full.' },
+      },
+      required: ['url'],
+    },
+  },
+
+  // ===========================================================================
+  // RUN CODE (sandboxed execution)
+  // ===========================================================================
+
+  {
+    name: 'run_code',
+    description: 'Eksekusi kode JavaScript di sandbox terisolasi (Vercel Firecracker). Pakai untuk: financial modeling, NPV/IRR calc, data crunch, reverse calendar math, transformasi data, simulasi numerik. Return stdout. 30 detik timeout. Code harus self-contained (console.log untuk output).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        code: { type: 'string', description: 'JavaScript code self-contained. Pakai console.log() untuk output hasil.' },
+      },
+      required: ['code'],
+    },
+  },
 ]
 
 // ============================================================================
@@ -476,7 +526,7 @@ async function handleToolsCall(params) {
   }
 
   if (name === 'log_decision') {
-    return formatDecisionLog(args)
+    return await formatDecisionLog(args)
   }
 
   // Phase 2 memory tools (vault Obsidian access via GitHub API)
@@ -521,6 +571,21 @@ async function handleToolsCall(params) {
   // Spreadsheet (xlsx)
   if (name === 'generate_spreadsheet') {
     return await generateSpreadsheet(args)
+  }
+
+  // Vault write (persistent memory)
+  if (name === 'write_vault_file') {
+    return await writeVaultFile(args)
+  }
+
+  // Fetch full URL
+  if (name === 'fetch_url') {
+    return await fetchUrl(args)
+  }
+
+  // Run code (sandbox)
+  if (name === 'run_code') {
+    return await runCode(args)
   }
 
   throw new Error('unknown_tool_' + name)
@@ -655,6 +720,47 @@ async function githubFetch(path) {
     throw new Error(`github_api_${resp.status}: ${path}`)
   }
   return resp.json()
+}
+
+// Write/update file di vault via GitHub Contents API (PUT). Auto-handle SHA untuk update.
+async function githubWrite(path, content, commitMessage) {
+  const pat = process.env.GITHUB_VAULT_PAT
+  if (!pat) throw new Error('github_vault_pat_not_configured')
+
+  // Cek existing file untuk dapat SHA (kalau update)
+  let sha = null
+  try {
+    const existing = await githubFetch(path)
+    if (existing && existing.sha) sha = existing.sha
+  } catch {
+    // File belum ada, create baru (sha null)
+  }
+
+  const url = `https://api.github.com/repos/${VAULT_REPO}/contents/${path}`
+  const body = {
+    message: commitMessage || `vault: update ${path} via Atmaja MCP`,
+    content: Buffer.from(content, 'utf8').toString('base64'),
+    branch: VAULT_BRANCH,
+  }
+  if (sha) body.sha = sha
+
+  const resp = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      Authorization: `token ${pat}`,
+      Accept: 'application/vnd.github.v3+json',
+      'User-Agent': 'gerai-mcp-server/1.0',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  })
+
+  if (!resp.ok) {
+    const errText = await resp.text()
+    throw new Error(`github_write_${resp.status}: ${errText.slice(0, 200)}`)
+  }
+  const result = await resp.json()
+  return { created: !sha, path, htmlUrl: result?.content?.html_url || '' }
 }
 
 async function listVaultFiles(args) {
@@ -875,10 +981,11 @@ function formatAlert(args) {
   }
 }
 
-function formatDecisionLog(args) {
+async function formatDecisionLog(args) {
   const { title, brief, perspectives = {}, decision, action_items = [] } = args
   const now = new Date().toISOString()
-  const slug = String(title || 'decision').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 50)
+  const dateStr = now.slice(0, 10)
+  const slug = String(title || 'decision').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50)
 
   const perspectivesText = Object.entries(perspectives)
     .map(([role, insight]) => `- **${role}**: ${insight}`)
@@ -888,9 +995,16 @@ function formatDecisionLog(args) {
     ? action_items.map((a, i) => `${i + 1}. ${a}`).join('\n')
     : '_(belum ada action items spesifik)_'
 
-  const vaultPath = `gerai-memory/04-decisions/${now.slice(0, 10)}-${slug}.md`
+  const vaultPath = `05-decisions/${dateStr}-${slug}.md`
 
-  const decisionMarkdown = `# Decision: ${title}
+  const decisionMarkdown = `---
+id: decision-${dateStr}-${slug}
+type: decision
+created: ${now}
+tags: [decision, atmaja-logged]
+---
+
+# Decision: ${title}
 
 **Date:** ${now}
 **Logged via:** Atmaja MCP log_decision
@@ -906,16 +1020,22 @@ ${decision}
 
 ## Action Items
 ${actionsText}
-
----
-_Auto-generated. Append to vault: \`${vaultPath}\` (Phase 1 manual copy. Phase 2 auto-write via GitHub API.)_
 `
+
+  // Auto-write ke vault (GitHub API). GITHUB_VAULT_PAT sudah ada.
+  let writeStatus
+  try {
+    const result = await githubWrite(vaultPath, decisionMarkdown, `vault: log decision "${title}" via Atmaja`)
+    writeStatus = `💾 **Tersimpan permanen** di vault: \`${vaultPath}\` (${result.created ? 'created' : 'updated'}). Bisa dibaca sesi depan via search_vault atau read_vault_file.`
+  } catch (err) {
+    writeStatus = `⚠️ Decision diformat tapi GAGAL auto-save ke vault: ${err.message}. Matthew bisa copy manual ke \`${vaultPath}\`.`
+  }
 
   return {
     content: [
       {
         type: 'text',
-        text: `📝 **Decision Logged** — siap di-append ke vault.\n\nPath suggestion: \`${vaultPath}\`\n\n---\n\n${decisionMarkdown}\n\n---\n\n_Atmaja: kasih ini ke Matthew untuk copy-paste ke vault. Phase 2 akan auto-write via GitHub API._`,
+        text: `📝 **Decision Logged**\n\n${writeStatus}\n\n---\n\n${decisionMarkdown}`,
       },
     ],
   }
@@ -1813,6 +1933,171 @@ async function generateSpreadsheet(args) {
     }
   } catch (err) {
     return { content: [{ type: 'text', text: `[Spreadsheet Error] ${err.message || String(err)}` }], isError: true }
+  }
+}
+
+// ============================================================================
+// VAULT WRITE (persistent memory via GitHub API)
+// ============================================================================
+
+async function writeVaultFile(args) {
+  const path = String(args?.path || '').replace(/^\/+|\/+$/g, '')
+  const content = String(args?.content || '')
+  const mode = args?.mode === 'append' ? 'append' : 'overwrite'
+
+  if (!path) throw new Error('path_required')
+  if (!path.endsWith('.md')) {
+    return { content: [{ type: 'text', text: `[Vault Write Error] Path harus .md: ${path}` }], isError: true }
+  }
+  if (!content) throw new Error('content_required')
+
+  // Guard: 00-founding LOCKED, butuh extra care
+  if (path.startsWith('00-founding/')) {
+    return {
+      content: [{ type: 'text', text: `[Vault Write BLOCKED] Section 00-founding LOCKED (brand canon, BP). Tidak bisa di-write via tool. Kalau Matthew benar-benar mau ubah founding knowledge, harus manual + ADR formal. Pakai section lain (05-decisions, 06-patterns, dll).` }],
+      isError: true,
+    }
+  }
+
+  try {
+    let finalContent = content
+    if (mode === 'append') {
+      try {
+        const existing = await githubFetch(path)
+        if (existing && existing.content) {
+          const existingText = Buffer.from(existing.content, 'base64').toString('utf8')
+          finalContent = existingText.trimEnd() + '\n\n' + content
+        }
+      } catch {
+        // File belum ada, append = create baru
+      }
+    }
+
+    const result = await githubWrite(path, finalContent, `vault: ${mode} ${path} via Atmaja`)
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `💾 **Vault ${result.created ? 'Created' : 'Updated'}** (${mode})\n\n**Path:** ${path}\n**Size:** ${finalContent.length} chars\n\n_Tersimpan permanen di vault gerai-memory. Bisa dibaca sesi depan via read_vault_file("${path}"). Auto-backup ke GitHub._`,
+        },
+      ],
+    }
+  } catch (err) {
+    return { content: [{ type: 'text', text: `[Vault Write Error] ${err.message || String(err)}` }], isError: true }
+  }
+}
+
+// ============================================================================
+// FETCH URL (full page read, cheerio extract)
+// ============================================================================
+
+async function fetchUrl(args) {
+  const url = String(args?.url || '').trim()
+  if (!url) throw new Error('url_required')
+  if (!/^https?:\/\//i.test(url)) {
+    return { content: [{ type: 'text', text: '[Fetch Error] URL harus http/https.' }], isError: true }
+  }
+
+  // SSRF guard: block private IP ranges
+  try {
+    const u = new URL(url)
+    const host = u.hostname
+    if (/^(localhost|127\.|10\.|192\.168\.|169\.254\.|0\.0\.0\.0)/.test(host) ||
+        /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(host) ||
+        host.endsWith('.internal') || host.endsWith('.local')) {
+      return { content: [{ type: 'text', text: '[Fetch Error] Private/internal host diblokir (SSRF protection).' }], isError: true }
+    }
+  } catch {
+    return { content: [{ type: 'text', text: '[Fetch Error] URL invalid.' }], isError: true }
+  }
+
+  let cheerio
+  try {
+    cheerio = await import('cheerio')
+  } catch (err) {
+    return { content: [{ type: 'text', text: `[Fetch Error] cheerio import: ${err.message}` }], isError: true }
+  }
+
+  try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 12000)
+    const resp = await fetch(url, {
+      signal: controller.signal,
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; GeraiBot/1.0)' },
+      redirect: 'follow',
+    })
+    clearTimeout(timeout)
+
+    if (!resp.ok) {
+      return { content: [{ type: 'text', text: `[Fetch Error] HTTP ${resp.status} dari ${url}` }], isError: true }
+    }
+
+    const ct = resp.headers.get('content-type') || ''
+    let bodyText = await resp.text()
+    if (bodyText.length > 2_500_000) bodyText = bodyText.slice(0, 2_500_000)
+
+    let extracted
+    if (ct.includes('text/html')) {
+      const $ = cheerio.load(bodyText)
+      $('script, style, nav, footer, header, aside, noscript, iframe').remove()
+      const title = $('title').first().text().trim()
+      const main = $('main, article, [role=main]').first()
+      const text = (main.length ? main.text() : $('body').text())
+        .replace(/\s+/g, ' ')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim()
+        .slice(0, 20000)
+      extracted = `**Title:** ${title}\n\n${text}`
+    } else {
+      extracted = bodyText.slice(0, 20000)
+    }
+
+    return {
+      content: [{ type: 'text', text: `[Fetched: ${url}]\n\n${extracted}` }],
+    }
+  } catch (err) {
+    const msg = err.name === 'AbortError' ? 'timeout (12s)' : (err.message || String(err))
+    return { content: [{ type: 'text', text: `[Fetch Error] ${msg}` }], isError: true }
+  }
+}
+
+// ============================================================================
+// RUN CODE (Vercel Sandbox)
+// ============================================================================
+
+async function runCode(args) {
+  const code = String(args?.code || '').trim()
+  if (!code) throw new Error('code_required')
+  if (code.length > 10000) {
+    return { content: [{ type: 'text', text: '[Run Code Error] Code max 10KB.' }], isError: true }
+  }
+
+  let Sandbox
+  try {
+    Sandbox = (await import('@vercel/sandbox')).Sandbox
+  } catch (err) {
+    return { content: [{ type: 'text', text: `[Run Code Error] Sandbox import: ${err.message}` }], isError: true }
+  }
+
+  let sandbox
+  try {
+    sandbox = await Sandbox.create({ timeout: 30000 })
+    await sandbox.writeFiles([{ path: 'script.mjs', content: Buffer.from(code, 'utf8') }])
+    const result = await sandbox.runCommand({ cmd: 'node', args: ['script.mjs'] })
+
+    const stdout = (await result.stdout?.()) ?? result.stdout ?? ''
+    const stderr = (await result.stderr?.()) ?? result.stderr ?? ''
+    const out = String(stdout || '').slice(0, 8000)
+    const err = String(stderr || '').slice(0, 2000)
+
+    let text = `⚙️ **Code Executed**\n\n**Output:**\n\`\`\`\n${out || '(no output)'}\n\`\`\``
+    if (err.trim()) text += `\n\n**Stderr:**\n\`\`\`\n${err}\n\`\`\``
+    return { content: [{ type: 'text', text }] }
+  } catch (err) {
+    return { content: [{ type: 'text', text: `[Run Code Error] ${err.message || String(err)}` }], isError: true }
+  } finally {
+    try { if (sandbox) await sandbox.stop() } catch {}
   }
 }
 
