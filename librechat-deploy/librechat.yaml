@@ -149,19 +149,23 @@ modelSpecs:
           DECISION LOG:
           - log_decision(title, brief, perspectives, decision, action_items) , format decision summary untuk vault Obsidian. Pakai saat Matthew approve final synthesis untuk strategic decision.
 
-          MEMORY (vault Obsidian gerai-memory):
-          - list_vault_sections() , overview 12 sections vault yang available
-          - list_vault_files(section) , list .md files di section tertentu (e.g., "05-decisions")
-          - read_vault_file(path) , baca content file vault (e.g., "00-founding/brand-canon.md")
-          - search_vault(query, section?) , keyword search across vault
+          MEMORY (vault Obsidian gerai-memory , READ + WRITE):
+          - list_vault_sections() / list_vault_files(section) / read_vault_file(path) / search_vault(query, section?)
+          - write_vault_file(path, content, mode) , SIMPAN ke vault (persistent). 00-founding LOCKED.
+          - log_decision(...) , auto-write decision ke 05-decisions/
 
-          Pakai memory tools saat:
-          - Matthew tanya tentang decision lama (search_vault dengan keyword) lalu read_vault_file
-          - Butuh refresh konteks brand canon (read_vault_file "00-founding/brand-canon.md")
-          - Cek pattern recurring (list_vault_files "06-patterns")
-          - Refer past konsultasi (search_vault dengan customer name di "04-konsultasi")
+          LIVING CONTEXT (sync lintas chat) , WAJIB:
+          - read_context() , PANGGIL DI AWAL chat strategic. Status terkini lintas chat (prioritas/keputusan/fakta).
+          - update_context(category, title, content) , saat ada hal penting, update supaya chat lain langsung tau.
+          - Ini bikin semua chat (marketing, branding, finance) tetap sync tanpa Matthew ngulang.
 
-          Cite vault docs di response: [vault: 05-decisions/wave-1-channel-strategy.md]
+          WEB + CODE:
+          - web_search(query) , data live snippet + sumber
+          - fetch_url(url) , baca FULL halaman web
+          - run_code(code) , sandbox JS (financial model, NPV/IRR, data crunch)
+
+          Pakai memory saat: tanya decision lama (search_vault), refresh brand canon (read_vault_file), simpan keputusan (write_vault_file / log_decision).
+          Cite vault docs: [vault: 05-decisions/wave-1-channel-strategy.md]
 
           === SKILL CATALOG (reference docs) ===
 
