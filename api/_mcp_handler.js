@@ -23,6 +23,13 @@
 import { hasValidBearerToken } from './_shared.js'
 import { callLLM } from './_providers/index.js'
 import { AGENTS, buildSystemPromptFromAgent, listAgents } from './_agents.js'
+import { randomBytes } from 'node:crypto'
+
+// Secure unguessable doc ID: {type}-{128-bit random hex}. Capability-URL model
+// (kayak Google Docs share link). Title TIDAK di-embed supaya URL gak bocorin content.
+function genSecureId(prefix) {
+  return `${prefix}-${randomBytes(16).toString('hex')}`
+}
 
 // MCP protocol version we support
 const MCP_PROTOCOL_VERSION = '2024-11-05'
@@ -1388,8 +1395,7 @@ async function generateDocument(args) {
 
     // Store di KV dengan TTL 7 hari (604800 detik). Serve via /api/doc rewrite.
     const safeTitle = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50) || 'doc'
-    const rand = Math.abs(hashString(styledHtml + title)).toString(36).slice(0, 8)
-    const docId = `${safeTitle}-${rand}`
+    const docId = genSecureId('doc')
 
     await kv.set(`doc:${docId}`, styledHtml, { ex: 604800 })
 
@@ -1693,8 +1699,7 @@ async function generateArchitectureMap(args) {
 
   try {
     const safeTitle = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50) || 'map'
-    const rand = Math.abs(hashString(styledHtml)).toString(36).slice(0, 8)
-    const docId = `map-${safeTitle}-${rand}`
+    const docId = genSecureId('map')
 
     await kv.set(`doc:${docId}`, styledHtml, { ex: 604800 })
 
@@ -1766,8 +1771,7 @@ async function generateImage(args) {
       return { content: [{ type: 'text', text: '[Image Gen Error] No image data returned.' }], isError: true }
     }
 
-    const rand = Math.abs(hashString(prompt + size + quality)).toString(36).slice(0, 8)
-    const docId = `img-${rand}`
+    const docId = genSecureId('img')
     await kv.set(`doc:${docId}`, { ct: 'image/png', body: b64 }, { ex: 604800 })
 
     const url = `https://gerai.mahewwork.com/api/doc?id=${docId}`
@@ -1861,8 +1865,7 @@ async function generateSlides(args) {
 
   try {
     const safeTitle = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50) || 'deck'
-    const rand = Math.abs(hashString(html)).toString(36).slice(0, 8)
-    const docId = `slides-${safeTitle}-${rand}`
+    const docId = genSecureId('slides')
     await kv.set(`doc:${docId}`, html, { ex: 604800 })
     const url = `https://gerai.mahewwork.com/api/doc?id=${docId}`
     return {
@@ -1913,8 +1916,7 @@ async function generateSpreadsheet(args) {
     const b64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' })
 
     const safeTitle = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50) || 'sheet'
-    const rand = Math.abs(hashString(b64.slice(0, 200) + title)).toString(36).slice(0, 8)
-    const docId = `xlsx-${safeTitle}-${rand}`
+    const docId = genSecureId('xlsx')
     await kv.set(`doc:${docId}`, {
       ct: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       body: b64,
@@ -2110,30 +2112,26 @@ function escapeHtml(s) {
     .replace(/'/g, '&#39;')
 }
 
-// Deterministic hash (no Math.random, supaya same content = same id, dedup-friendly).
-function hashString(str) {
-  let hash = 0
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i)
-    hash = (hash << 5) - hash + char
-    hash |= 0 // 32-bit int
-  }
-  return hash
-}
-
 // ============================================================================
 // DOCUMENT SERVING (dipanggil dari api/agent/reply.js saat ?type=doc&id=...)
 // Fetch HTML dari KV, serve dengan content-type text/html.
 // ============================================================================
 
 export async function serveDocument(req, res) {
+  // Security headers: dokumen bisnis sensitif. Capability-URL model (unguessable id).
+  // noindex: jangan ke-crawl search engine. no-referrer: URL gak bocor via referrer.
+  res.setHeader('x-robots-tag', 'noindex, nofollow, noarchive')
+  res.setHeader('referrer-policy', 'no-referrer')
+  res.setHeader('x-content-type-options', 'nosniff')
+
   let docId = ''
   try {
     const url = new URL(req.url, 'http://localhost')
     docId = url.searchParams.get('id') || ''
   } catch {}
 
-  if (!docId || !/^[a-z0-9-]+$/i.test(docId)) {
+  // Strict id format: {prefix}-{32 hex}. Tolak yang gak match (anti-enumeration).
+  if (!docId || !/^[a-z]+-[a-f0-9]{8,64}$/i.test(docId)) {
     res.statusCode = 400
     res.setHeader('content-type', 'text/plain; charset=utf-8')
     res.end('Invalid document id.')
