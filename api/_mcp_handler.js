@@ -222,6 +222,33 @@ const TOOLS = [
       required: ['query'],
     },
   },
+
+  // ===========================================================================
+  // WEB SEARCH (Tavily API)
+  // ===========================================================================
+
+  {
+    name: 'web_search',
+    description: 'Web search via Tavily. AI-optimized response format. Pakai saat butuh data live: market trend, kompetitor terbaru, kurs/inflation, KOL Instagram metrics, industry intelligence (HDII, IAI, ArchDaily), atau verify claim. JANGAN pakai untuk brand canon, decision history, persona detail, C-level consult (pakai vault atau consult tools instead). Free tier: 1000 search/bulan.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Search query (Indonesia atau English). Spesifik lebih baik daripada generic.',
+        },
+        max_results: {
+          type: 'integer',
+          description: 'Number of top results (1-10). Default 5.',
+        },
+        include_answer: {
+          type: 'boolean',
+          description: 'Include Tavily AI-synthesized answer (recommended true). Default true.',
+        },
+      },
+      required: ['query'],
+    },
+  },
 ]
 
 // ============================================================================
@@ -283,7 +310,92 @@ async function handleToolsCall(params) {
     return await searchVault(args)
   }
 
+  // Web search via Tavily
+  if (name === 'web_search') {
+    return await webSearch(args)
+  }
+
   throw new Error('unknown_tool_' + name)
+}
+
+// ============================================================================
+// WEB SEARCH (Tavily API)
+// ============================================================================
+
+async function webSearch(args) {
+  const query = String(args?.query || '').trim()
+  if (!query) throw new Error('query_required')
+
+  const apiKey = process.env.TAVILY_API_KEY
+  if (!apiKey) {
+    return {
+      content: [{ type: 'text', text: '[Web Search Error] TAVILY_API_KEY not configured di Vercel env vars. Matthew add API key dulu (signup tavily.com).' }],
+      isError: true,
+    }
+  }
+
+  const maxResults = Math.min(Math.max(Number(args?.max_results) || 5, 1), 10)
+  const includeAnswer = args?.include_answer !== false
+
+  try {
+    const resp = await fetch('https://api.tavily.com/search', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        api_key: apiKey,
+        query,
+        search_depth: 'basic',
+        max_results: maxResults,
+        include_answer: includeAnswer,
+        include_raw_content: false,
+        include_images: false,
+      }),
+    })
+
+    if (!resp.ok) {
+      const errText = await resp.text()
+      return {
+        content: [{ type: 'text', text: `[Web Search Error] Tavily API ${resp.status}: ${errText.slice(0, 300)}` }],
+        isError: true,
+      }
+    }
+
+    const data = await resp.json()
+
+    let output = `[Web Search: "${query}"]\n\n`
+
+    if (data.answer && includeAnswer) {
+      output += `**AI Answer:**\n${data.answer}\n\n---\n\n`
+    }
+
+    if (Array.isArray(data.results) && data.results.length > 0) {
+      output += `**Sources (${data.results.length}):**\n\n`
+      output += data.results
+        .map((r, i) => {
+          const title = r.title || 'Untitled'
+          const url = r.url || ''
+          const content = (r.content || '').slice(0, 300)
+          const score = typeof r.score === 'number' ? ` (score: ${r.score.toFixed(2)})` : ''
+          return `${i + 1}. **${title}**${score}\n   ${url}\n   > ${content}${r.content && r.content.length > 300 ? '...' : ''}`
+        })
+        .join('\n\n')
+    } else {
+      output += '_(no results)_'
+    }
+
+    output += `\n\n_Tavily search ${resp.status} OK._`
+
+    return {
+      content: [{ type: 'text', text: output }],
+    }
+  } catch (err) {
+    return {
+      content: [{ type: 'text', text: `[Web Search Error] ${err.message || String(err)}` }],
+      isError: true,
+    }
+  }
 }
 
 // ============================================================================
