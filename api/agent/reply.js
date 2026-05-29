@@ -442,7 +442,29 @@ function buildUserContent(message, attachments) {
   return blocks
 }
 
+// MCP handler import. File _mcp_handler.js underscore prefix = bukan route Vercel,
+// tapi tetap importable. Vercel rewrites /api/mcp ke endpoint ini dengan ?type=mcp.
+import { handleMcpRequest } from '../_mcp_handler.js'
+
+function isMcpRequest(req) {
+  // Detect via URL query param (di-set lewat vercel.json rewrite /api/mcp)
+  try {
+    const url = new URL(req.url, 'http://localhost')
+    if (url.searchParams.get('type') === 'mcp') return true
+  } catch {}
+  // Detect via header (set kalau caller mau force MCP mode)
+  const xMcp = String(req.headers?.['x-mcp'] ?? '').toLowerCase()
+  if (xMcp === 'true' || xMcp === '1') return true
+  return false
+}
+
 export default async function handler(req, res) {
+  // === MCP DISPATCH (sebelum route checks) ===
+  // Detect MCP via URL query atau header. Kalau ya, route ke MCP handler.
+  if (isMcpRequest(req)) {
+    return handleMcpRequest(req, res)
+  }
+
   if (req.method === 'OPTIONS') {
     res.writeHead(204, jsonHeaders)
     res.end()

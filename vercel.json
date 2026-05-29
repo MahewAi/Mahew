@@ -5,6 +5,10 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
+      "source": "/api/mcp",
+      "destination": "/api/agent/reply?type=mcp"
+    },
+    {
       "source": "/((?!api/|src/|@vite/|@react-refresh|@fs/|@id/|node_modules/|assets/|favicon|icon|manifest|sw\\.js|workbox|robots\\.txt).*)",
       "destination": "/"
     }

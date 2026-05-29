@@ -398,10 +398,12 @@ function readBody(req) {
 }
 
 // ============================================================================
-// HTTP handler (Vercel serverless function entry)
+// HTTP handler. Exported untuk dipanggil dari api/agent/reply.js (file underscore
+// gak jadi route Vercel, tapi tetap importable. Vercel rewrites /api/mcp ke
+// /api/agent/reply yang dispatch ke sini berdasarkan query param ?type=mcp).
 // ============================================================================
 
-export default async function handler(req, res) {
+export async function handleMcpRequest(req, res) {
   // CORS preflight
   if (req.method === 'OPTIONS') {
     res.statusCode = 204
