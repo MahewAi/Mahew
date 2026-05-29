@@ -494,6 +494,10 @@ export async function handleMcpRequest(req, res) {
       case 'initialize':
         result = handleInitialize(params)
         break
+      case 'ping':
+        // MCP spec keep-alive. Server respond dengan empty result {}.
+        result = {}
+        break
       case 'tools/list':
         result = handleToolsList()
         break
@@ -501,6 +505,22 @@ export async function handleMcpRequest(req, res) {
         console.log(`[MCP ${reqId}] dispatching tools/call to: ${params?.name}`)
         result = await handleToolsCall(params)
         console.log(`[MCP ${reqId}] tools/call ${params?.name} completed (${Date.now() - startTime}ms)`)
+        break
+      case 'resources/list':
+        // We don't expose resources, return empty list
+        result = { resources: [] }
+        break
+      case 'prompts/list':
+        // We don't expose prompts, return empty list
+        result = { prompts: [] }
+        break
+      case 'completion/complete':
+        // We don't support argument autocompletion
+        result = { completion: { values: [], total: 0, hasMore: false } }
+        break
+      case 'logging/setLevel':
+        // Accept any log level setting
+        result = {}
         break
       default:
         console.log(`[MCP ${reqId}] method_not_found: ${method}`)
