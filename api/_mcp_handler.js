@@ -957,24 +957,18 @@ async function generateDocument(args) {
   const content = String(args?.content_markdown || '')
   if (!content) throw new Error('content_markdown_required')
 
-  // Lazy import: marked + @vercel/blob
-  let marked, put
+  // Lazy import: marked + @vercel/kv
+  // KV (bukan Blob) supaya gak bentrok dengan private Blob store (BP + memory files).
+  // Document HTML disimpan di KV dengan TTL 7 hari, di-serve via /api/doc rewrite.
+  let marked, kv
   try {
     const markedModule = await import('marked')
     marked = markedModule.marked || markedModule.default
-    const blobModule = await import('@vercel/blob')
-    put = blobModule.put
+    const kvModule = await import('@vercel/kv')
+    kv = kvModule.kv
   } catch (err) {
     return {
       content: [{ type: 'text', text: `[Document Gen Error] Dependencies missing: ${err.message}. Run "npm install" + redeploy.` }],
-      isError: true,
-    }
-  }
-
-  const blobToken = process.env.BLOB_READ_WRITE_TOKEN
-  if (!blobToken) {
-    return {
-      content: [{ type: 'text', text: '[Document Gen Error] BLOB_READ_WRITE_TOKEN not set di Vercel env.' }],
       isError: true,
     }
   }
@@ -1092,22 +1086,20 @@ async function generateDocument(args) {
 </body>
 </html>`
 
-    // Upload to Vercel Blob
-    const safeTitle = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'doc'
-    const timestamp = Date.now()
-    const filename = `documents/${timestamp}-${safeTitle}.html`
+    // Store di KV dengan TTL 7 hari (604800 detik). Serve via /api/doc rewrite.
+    const safeTitle = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50) || 'doc'
+    const rand = Math.abs(hashString(styledHtml + title)).toString(36).slice(0, 8)
+    const docId = `${safeTitle}-${rand}`
 
-    const blob = await put(filename, styledHtml, {
-      access: 'public',
-      contentType: 'text/html; charset=utf-8',
-      token: blobToken,
-    })
+    await kv.set(`doc:${docId}`, styledHtml, { ex: 604800 })
+
+    const docUrl = `https://gerai.mahewwork.com/api/doc?id=${docId}`
 
     return {
       content: [
         {
           type: 'text',
-          text: `📄 **Document Generated**\n\n**Title:** ${title}\n**URL:** ${blob.url}\n\n_Open URL di browser, lalu Ctrl+P (atau Cmd+P) untuk print. Pilih "Save as PDF" sebagai destination untuk export PDF._\n\n_Format: HTML dengan brand canon styling (The Timeless Foundation palette). Print-optimized layout._`,
+          text: `📄 **Document Generated**\n\n**Title:** ${title}\n**URL:** ${docUrl}\n\n_Open URL di browser, lalu Ctrl+P (atau Cmd+P) untuk print. Pilih "Save as PDF" sebagai destination untuk export PDF._\n\n_Format: HTML dengan brand canon styling (The Timeless Foundation palette). Print-optimized. Tersimpan 7 hari._`,
         },
       ],
     }
@@ -1126,4 +1118,56 @@ function escapeHtml(s) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
+}
+
+// Deterministic hash (no Math.random, supaya same content = same id, dedup-friendly).
+function hashString(str) {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i)
+    hash = (hash << 5) - hash + char
+    hash |= 0 // 32-bit int
+  }
+  return hash
+}
+
+// ============================================================================
+// DOCUMENT SERVING (dipanggil dari api/agent/reply.js saat ?type=doc&id=...)
+// Fetch HTML dari KV, serve dengan content-type text/html.
+// ============================================================================
+
+export async function serveDocument(req, res) {
+  let docId = ''
+  try {
+    const url = new URL(req.url, 'http://localhost')
+    docId = url.searchParams.get('id') || ''
+  } catch {}
+
+  if (!docId || !/^[a-z0-9-]+$/i.test(docId)) {
+    res.statusCode = 400
+    res.setHeader('content-type', 'text/plain; charset=utf-8')
+    res.end('Invalid document id.')
+    return
+  }
+
+  try {
+    const kvModule = await import('@vercel/kv')
+    const html = await kvModule.kv.get(`doc:${docId}`)
+
+    if (!html) {
+      res.statusCode = 404
+      res.setHeader('content-type', 'text/html; charset=utf-8')
+      res.end('<!DOCTYPE html><html><body style="font-family:sans-serif;padding:40px;color:#1F1A14"><h1>Document not found</h1><p>Dokumen ini sudah expired (TTL 7 hari) atau id salah. Minta Atmaja generate ulang.</p></body></html>')
+      return
+    }
+
+    res.statusCode = 200
+    res.setHeader('content-type', 'text/html; charset=utf-8')
+    res.setHeader('cache-control', 'private, max-age=3600')
+    res.end(html)
+  } catch (err) {
+    res.statusCode = 500
+    res.setHeader('content-type', 'text/plain; charset=utf-8')
+    res.end(`Document serve error: ${err.message || String(err)}`)
+  }
 }

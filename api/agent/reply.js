@@ -442,27 +442,30 @@ function buildUserContent(message, attachments) {
   return blocks
 }
 
-// MCP handler import. File _mcp_handler.js underscore prefix = bukan route Vercel,
-// tapi tetap importable. Vercel rewrites /api/mcp ke endpoint ini dengan ?type=mcp.
-import { handleMcpRequest } from '../_mcp_handler.js'
+// MCP + doc handler import. File _mcp_handler.js underscore prefix = bukan route Vercel,
+// tapi tetap importable. Vercel rewrites /api/mcp + /api/doc ke endpoint ini via ?type=.
+import { handleMcpRequest, serveDocument } from '../_mcp_handler.js'
 
-function isMcpRequest(req) {
-  // Detect via URL query param (di-set lewat vercel.json rewrite /api/mcp)
+function getRequestType(req) {
   try {
     const url = new URL(req.url, 'http://localhost')
-    if (url.searchParams.get('type') === 'mcp') return true
+    const t = url.searchParams.get('type')
+    if (t === 'mcp' || t === 'doc') return t
   } catch {}
-  // Detect via header (set kalau caller mau force MCP mode)
   const xMcp = String(req.headers?.['x-mcp'] ?? '').toLowerCase()
-  if (xMcp === 'true' || xMcp === '1') return true
-  return false
+  if (xMcp === 'true' || xMcp === '1') return 'mcp'
+  return null
 }
 
 export default async function handler(req, res) {
-  // === MCP DISPATCH (sebelum route checks) ===
-  // Detect MCP via URL query atau header. Kalau ya, route ke MCP handler.
-  if (isMcpRequest(req)) {
+  // === DISPATCH (sebelum route checks) ===
+  const reqType = getRequestType(req)
+  if (reqType === 'mcp') {
     return handleMcpRequest(req, res)
+  }
+  if (reqType === 'doc') {
+    // Serve generated document HTML dari KV (GET, no auth: dokumen publik untuk print).
+    return serveDocument(req, res)
   }
 
   if (req.method === 'OPTIONS') {

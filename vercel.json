@@ -9,6 +9,10 @@
       "destination": "/api/agent/reply?type=mcp"
     },
     {
+      "source": "/api/doc",
+      "destination": "/api/agent/reply?type=doc"
+    },
+    {
       "source": "/((?!api/|src/|@vite/|@react-refresh|@fs/|@id/|node_modules/|assets/|favicon|icon|manifest|sw\\.js|workbox|robots\\.txt).*)",
       "destination": "/"
     }
