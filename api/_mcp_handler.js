@@ -459,6 +459,29 @@ const TOOLS = [
   },
 
   // ===========================================================================
+  // LIVING CONTEXT (shared state lintas chat)
+  // ===========================================================================
+
+  {
+    name: 'read_context',
+    description: 'Baca KONTEKS AKTIF (living state lintas chat) = status terkini yang penting: prioritas aktif, keputusan terbaru, fakta terkunci, open questions. WAJIB dipanggil di AWAL setiap chat strategic supaya tau perkembangan dari chat lain (marketing, branding, finance, dll). Ini yang bikin semua chat tetap sync meski terpisah.',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'update_context',
+    description: 'Update KONTEKS AKTIF saat ada hal PENTING (keputusan, prioritas baru, fakta berubah, milestone). Entry langsung kebaca di chat lain via read_context. Pakai ini biar info penting selalu sync lintas chat tanpa Matthew ngulang. Contoh: habis decide channel marketing IG-primary, update_context supaya chat branding langsung tau.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        category: { type: 'string', enum: ['prioritas', 'keputusan', 'fakta', 'open-question', 'milestone'], description: 'Jenis update.' },
+        title: { type: 'string', description: 'Judul singkat update (1 baris).' },
+        content: { type: 'string', description: 'Detail update. Sebut sumber chat kalau relevan (e.g. "dari diskusi marketing").' },
+      },
+      required: ['category', 'title', 'content'],
+    },
+  },
+
+  // ===========================================================================
   // FETCH URL (baca full halaman web)
   // ===========================================================================
 
@@ -583,6 +606,14 @@ async function handleToolsCall(params) {
   // Vault write (persistent memory)
   if (name === 'write_vault_file') {
     return await writeVaultFile(args)
+  }
+
+  // Living context (shared state lintas chat)
+  if (name === 'read_context') {
+    return await readContext()
+  }
+  if (name === 'update_context') {
+    return await updateContext(args)
   }
 
   // Fetch full URL
@@ -2119,6 +2150,85 @@ async function writeVaultFile(args) {
     }
   } catch (err) {
     return { content: [{ type: 'text', text: `[Vault Write Error] ${err.message || String(err)}` }], isError: true }
+  }
+}
+
+// ============================================================================
+// LIVING CONTEXT (shared state lintas chat) — 03-projects/active-context.md
+// ============================================================================
+
+const CONTEXT_PATH = '03-projects/active-context.md'
+
+const CONTEXT_HEADER = `---
+id: active-context
+type: living-state
+tags: [active, shared, cross-chat]
+---
+
+# Konteks Aktif , Gerai 1000 Pintu
+
+_Living state lintas chat. Dibaca di awal tiap chat strategic, di-update saat ada hal penting. Entry terbaru di atas._
+`
+
+async function readContext() {
+  try {
+    const file = await githubFetch(CONTEXT_PATH)
+    const content = Buffer.from(file.content, 'base64').toString('utf8')
+    return {
+      content: [{ type: 'text', text: `[KONTEKS AKTIF , status terkini lintas chat]\n\n${content}` }],
+    }
+  } catch (err) {
+    // File belum ada = belum ada konteks
+    return {
+      content: [{ type: 'text', text: `[KONTEKS AKTIF] Belum ada konteks tersimpan. Ini chat pertama atau belum ada update penting. Mulai isi via update_context saat ada keputusan/prioritas/fakta penting.` }],
+    }
+  }
+}
+
+async function updateContext(args) {
+  const category = String(args?.category || 'fakta')
+  const title = String(args?.title || '').trim()
+  const content = String(args?.content || '').trim()
+  if (!title || !content) throw new Error('title_and_content_required')
+
+  const now = new Date().toISOString()
+  const dateStr = now.slice(0, 16).replace('T', ' ')
+  const icon = { prioritas: '🎯', keputusan: '✅', fakta: '🔒', 'open-question': '⏳', milestone: '🚩' }[category] || '•'
+
+  const newEntry = `\n### ${icon} [${category}] ${title}\n_${dateStr}_\n\n${content}\n`
+
+  try {
+    // Baca existing, prepend entry baru setelah header
+    let existing = ''
+    try {
+      const file = await githubFetch(CONTEXT_PATH)
+      existing = Buffer.from(file.content, 'base64').toString('utf8')
+    } catch {
+      existing = CONTEXT_HEADER
+    }
+
+    // Insert entry baru setelah header (setelah baris "_Living state..._")
+    const splitMarker = 'Entry terbaru di atas._\n'
+    let finalContent
+    if (existing.includes(splitMarker)) {
+      const idx = existing.indexOf(splitMarker) + splitMarker.length
+      finalContent = existing.slice(0, idx) + newEntry + existing.slice(idx)
+    } else {
+      finalContent = (existing || CONTEXT_HEADER) + newEntry
+    }
+
+    // Cap: keep max ~40 entries (trim oldest kalau kepanjangan)
+    if (finalContent.length > 30000) {
+      finalContent = finalContent.slice(0, 30000) + '\n\n_(entry lama di-trim, lihat 05-decisions untuk arsip lengkap)_\n'
+    }
+
+    await githubWrite(CONTEXT_PATH, finalContent, `context: ${category} "${title}" via Atmaja`)
+
+    return {
+      content: [{ type: 'text', text: `🔄 **Konteks Aktif Updated** [${category}]\n\n**${title}**\n${content}\n\n_Langsung kebaca di chat lain via read_context. Semua chat sekarang sync._` }],
+    }
+  } catch (err) {
+    return { content: [{ type: 'text', text: `[Update Context Error] ${err.message || String(err)}` }], isError: true }
   }
 }
 
