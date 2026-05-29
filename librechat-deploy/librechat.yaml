@@ -572,6 +572,7 @@ mcpServers:
     url: "https://gerai.mahewwork.com/api/mcp"
     headers:
       Authorization: "Bearer ${GERAI_BEARER_TOKEN}"
-    timeout: 30000
+    timeout: 120000
+    initTimeout: 30000
     iconPath: "https://gerai.mahewwork.com/icon.svg"
-    serverInstructions: "AI Department inter-agent tools. Atmaja gunakan consult_* untuk fan-out ke C-level (Citra/Wira/Lestari/Aksa). alert_matthew untuk escalation. log_decision untuk vault append."
+    serverInstructions: "AI Department inter-agent tools. Atmaja gunakan consult_* untuk fan-out ke C-level (Citra/Wira/Lestari/Aksa). alert_matthew untuk escalation. log_decision untuk vault append. Note: tool calls can take 30-60s karena C-level run Sonnet 4.6 dengan persona detail prompt."
