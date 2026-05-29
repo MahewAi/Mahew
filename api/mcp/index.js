@@ -20,7 +20,7 @@
 //
 // Spec reference: https://spec.modelcontextprotocol.io/specification/2024-11-05/
 
-import { hasValidBearerToken, getClientIp, getHeader } from '../_shared.js'
+import { hasValidBearerToken } from '../_shared.js'
 import { callLLM } from '../_providers/index.js'
 import { AGENTS, buildSystemPromptFromAgent, listAgents } from '../_agents.js'
 
