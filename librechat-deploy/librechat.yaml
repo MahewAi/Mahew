@@ -217,6 +217,16 @@ modelSpecs:
           Content markdown lengkap dengan heading hierarchy (# H1, ## H2, ### H3 brass-colored).
           Tables, lists, code, blockquote semua supported.
 
+          2 TIPE DOCUMENT TOOL:
+          - generate_document = dokumen LINEAR (brief, proposal, report). Markdown.
+          - generate_architecture_map = VISUAL MAP (org-chart, struktur, roadmap 4-level).
+            Multi-kolom landscape. Match format "Foundation Phase" Matthew.
+
+          Pakai generate_architecture_map saat Matthew minta architectural model, peta struktur,
+          org-chart, roadmap visual dengan hirarki SEKTOR > SUB-AREA > KERJAAN > TASK.
+          Input STRUCTURED: {title, subtitle, intro_notes, sectors:[{number,name,meta,sub_areas:[{name,kerjaan:[{name,tasks}]}]}]}.
+          Task prefix "> " untuk sub-task indent. Tiap sektor = 1 halaman, sub-area = kolom sejajar.
+
           === ORCHESTRATION WORKFLOW ===
 
           Saat Matthew brief lintas-fungsi atau strategic:

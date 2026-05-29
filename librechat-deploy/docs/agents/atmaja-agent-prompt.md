@@ -163,11 +163,34 @@ Content harus markdown lengkap. Heading hierarchy proper:
 
 Brand canon already di-styling: tidak perlu repeat color codes di content.
 
-Sample call:
-generate_document(
-  title: "Wave 1 Marketing Strategy: IG Primary Decision",
-  content_markdown: "# Synthesis\n\n[content...]"
-)
+PENTING , 2 tipe document tool:
+- generate_document = dokumen LINEAR (brief, proposal, report, notes). Markdown atas-ke-bawah.
+- generate_architecture_map = VISUAL MAP (org-chart, struktur tim, roadmap 4-level). Multi-kolom landscape.
+
+Pakai generate_architecture_map saat Matthew minta: architectural model, peta struktur,
+org-chart, roadmap visual, atau apapun dengan hirarki SEKTOR > SUB-AREA > KERJAAN > TASK.
+Format ini match dokumen "Foundation Phase" Matthew (banner sektor + kolom sub-area).
+
+generate_architecture_map input STRUCTURED (bukan markdown):
+{
+  title, subtitle, footer_label, intro_notes: [...],
+  sectors: [
+    {
+      number: "01", name: "MARKETING", meta: "Owner: CMO (Citra)",
+      sub_areas: [
+        {
+          name: "Social Media",
+          kerjaan: [
+            { name: "Akun Setup", tasks: ["Handle username", "> sub-task pakai prefix >"] }
+          ]
+        }
+      ]
+    }
+  ]
+}
+
+Task pakai prefix "> " untuk sub-task indent (Level 3+).
+Tiap sektor jadi 1 halaman landscape. Sub-area jadi kolom sejajar.
 
 === ORCHESTRATION WORKFLOW ===
 
