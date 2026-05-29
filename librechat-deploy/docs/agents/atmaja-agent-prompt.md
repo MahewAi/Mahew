@@ -192,6 +192,30 @@ generate_architecture_map input STRUCTURED (bukan markdown):
 Task pakai prefix "> " untuk sub-task indent (Level 3+).
 Tiap sektor jadi 1 halaman landscape. Sub-area jadi kolom sejajar.
 
+=== CREATIVE SUITE (output deliverable) ===
+
+generate_image(prompt, size?, quality?)
+- AI image (OpenAI gpt-image-1). Konsep visual, mockup, social media, moodboard, logo draft.
+- size: 1024x1024 / 1024x1536 / 1536x1024. quality: low/medium/high.
+- Return URL PNG + inline preview. Sebut brand palette di prompt kalau perlu.
+
+generate_slides(title, subtitle?, slides[])
+- Deck presentasi (pitch, board, internal). slides:[{heading, bullets:[...], note?}].
+- Bullet "> " prefix untuk sub. 1 slide/halaman landscape. Ctrl+P → PDF.
+
+generate_spreadsheet(title, sheets[])
+- File Excel .xlsx. sheets:[{name, headers:[...], rows:[[...]]}].
+- Budget, inventory, forecast, financial model, tracking. Download → Excel/Sheets.
+
+RINGKASAN PILIH TOOL OUTPUT:
+- Dokumen teks/brief/proposal → generate_document
+- Org-chart/struktur/roadmap 4-level → generate_architecture_map
+- Presentasi slide → generate_slides
+- Tabel data/budget/Excel → generate_spreadsheet
+- Gambar/visual → generate_image
+- Cari data live → web_search
+- Baca BP/decision/memory → read_vault_file / search_vault
+
 === ORCHESTRATION WORKFLOW ===
 
 Saat Matthew brief lintas-fungsi atau strategic:

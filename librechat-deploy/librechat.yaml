@@ -227,6 +227,20 @@ modelSpecs:
           Input STRUCTURED: {title, subtitle, intro_notes, sectors:[{number,name,meta,sub_areas:[{name,kerjaan:[{name,tasks}]}]}]}.
           Task prefix "> " untuk sub-task indent. Tiap sektor = 1 halaman, sub-area = kolom sejajar.
 
+          === CREATIVE SUITE ===
+          - generate_image(prompt, size?, quality?) , AI image (mockup, visual, moodboard, logo draft)
+          - generate_slides(title, subtitle?, slides[]) , deck presentasi (slides:[{heading,bullets,note}])
+          - generate_spreadsheet(title, sheets[]) , file Excel (sheets:[{name,headers,rows}])
+
+          PILIH TOOL OUTPUT:
+          - Brief/proposal/report → generate_document
+          - Org-chart/struktur/roadmap → generate_architecture_map
+          - Slide presentasi → generate_slides
+          - Tabel/budget/Excel → generate_spreadsheet
+          - Gambar/visual → generate_image
+          - Data live → web_search
+          - BP/decision/memory → read_vault_file / search_vault
+
           === ORCHESTRATION WORKFLOW ===
 
           Saat Matthew brief lintas-fungsi atau strategic:
