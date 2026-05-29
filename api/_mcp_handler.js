@@ -349,18 +349,23 @@ const TOOLS = [
   },
 
   // ===========================================================================
-  // IMAGE GENERATION (OpenAI gpt-image-1)
+  // IMAGE GENERATION (OpenAI gpt-image-2 default = terbaru/terbaik)
   // ===========================================================================
 
   {
     name: 'generate_image',
-    description: 'Generate gambar via AI (OpenAI gpt-image-1). Pakai untuk: konsep visual, mockup produk, social media image, moodboard, ilustrasi, logo concept draft. Return URL ke PNG. Sebutkan brand canon di prompt kalau perlu (palette Brass #B8956B + Charcoal #1F1A14 + Ivory #FAF8F4, premium tetapi inklusif).',
+    description: 'Generate gambar via AI (OpenAI gpt-image-2, model terbaru April 2026 = kualitas tertinggi). Pakai untuk: konsep visual, mockup produk, social media image, moodboard, ilustrasi, logo concept draft. Return URL ke PNG. Sebutkan brand canon di prompt kalau perlu (palette Brass #B8956B + Charcoal #1F1A14 + Ivory #FAF8F4, premium tetapi inklusif).',
     inputSchema: {
       type: 'object',
       properties: {
         prompt: {
           type: 'string',
           description: 'Deskripsi gambar yang detail. Bahasa Inggris lebih bagus untuk image model. Include style, mood, composition, color.',
+        },
+        model: {
+          type: 'string',
+          enum: ['gpt-image-2', 'gpt-image-1.5', 'gpt-image-1', 'gpt-image-1-mini'],
+          description: 'Model. gpt-image-2 (default, terbaik) untuk final asset. gpt-image-1-mini untuk draft cepat+murah.',
         },
         size: {
           type: 'string',
@@ -370,7 +375,7 @@ const TOOLS = [
         quality: {
           type: 'string',
           enum: ['low', 'medium', 'high'],
-          description: 'Kualitas. medium default (balance speed+cost). high untuk final asset.',
+          description: 'Kualitas. high default (Matthew prefer terbaik). low untuk draft cepat.',
         },
       },
       required: ['prompt'],
@@ -1901,7 +1906,10 @@ async function generateImage(args) {
   }
 
   const size = ['1024x1024', '1024x1536', '1536x1024'].includes(args?.size) ? args.size : '1024x1024'
-  const quality = ['low', 'medium', 'high'].includes(args?.quality) ? args.quality : 'medium'
+  const quality = ['low', 'medium', 'high'].includes(args?.quality) ? args.quality : 'high'
+  // gpt-image-2 = terbaru/terbaik (April 2026). Default ke yang terbaik per preferensi Matthew.
+  const MODELS = ['gpt-image-2', 'gpt-image-1.5', 'gpt-image-1', 'gpt-image-1-mini']
+  const model = MODELS.includes(args?.model) ? args.model : 'gpt-image-2'
 
   let kv
   try {
@@ -1910,23 +1918,30 @@ async function generateImage(args) {
     return { content: [{ type: 'text', text: `[Image Gen Error] KV import: ${err.message}` }], isError: true }
   }
 
+  // Coba model terbaik dulu, fallback ke gpt-image-1 kalau model belum tersedia di akun OpenAI Matthew.
+  const tryModels = [model, ...MODELS.filter(m => m !== model), 'gpt-image-1'].filter((m, i, a) => a.indexOf(m) === i)
+
   try {
-    const upstream = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: {
-        authorization: `Bearer ${apiKey}`,
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({ model: 'gpt-image-1', prompt, size, quality, n: 1 }),
-    })
-
-    const raw = await upstream.text()
     let parsed = {}
-    try { parsed = JSON.parse(raw) } catch { parsed = {} }
+    let usedModel = model
+    let lastErr = ''
+    let ok = false
+    for (const m of tryModels) {
+      const upstream = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ model: m, prompt, size, quality, n: 1 }),
+      })
+      const raw = await upstream.text()
+      try { parsed = JSON.parse(raw) } catch { parsed = {} }
+      if (upstream.ok && parsed?.data?.[0]?.b64_json) { ok = true; usedModel = m; break }
+      lastErr = parsed?.error?.message || `HTTP ${upstream.status}`
+      // Kalau error bukan "model not found / no access", stop (jangan buang kuota nyoba semua)
+      if (!/model|not found|does not exist|access|invalid/i.test(lastErr)) break
+    }
 
-    if (!upstream.ok) {
-      const msg = parsed?.error?.message || raw.slice(0, 300)
-      return { content: [{ type: 'text', text: `[Image Gen Error] OpenAI ${upstream.status}: ${msg}` }], isError: true }
+    if (!ok) {
+      return { content: [{ type: 'text', text: `[Image Gen Error] OpenAI: ${lastErr}` }], isError: true }
     }
 
     const b64 = parsed?.data?.[0]?.b64_json
@@ -1938,11 +1953,12 @@ async function generateImage(args) {
     await kv.set(`doc:${docId}`, { ct: 'image/png', body: b64 }, { ex: 604800 })
 
     const url = `https://gerai.mahewwork.com/api/doc?id=${docId}`
+    const modelNote = usedModel !== model ? ` (fallback dari ${model})` : ''
     return {
       content: [
         {
           type: 'text',
-          text: `🖼️ **Image Generated**\n\n**Prompt:** ${prompt.slice(0, 120)}${prompt.length > 120 ? '...' : ''}\n**Size:** ${size} | **Quality:** ${quality}\n**URL:** ${url}\n\n_Open URL untuk lihat/download. Tersimpan 7 hari._\n\n![generated](${url})`,
+          text: `🖼️ **Image Generated**\n\n**Prompt:** ${prompt.slice(0, 120)}${prompt.length > 120 ? '...' : ''}\n**Model:** ${usedModel}${modelNote} | **Size:** ${size} | **Quality:** ${quality}\n**URL:** ${url}\n\n_Open URL untuk lihat/download. Tersimpan 7 hari._\n\n![generated](${url})`,
         },
       ],
     }
