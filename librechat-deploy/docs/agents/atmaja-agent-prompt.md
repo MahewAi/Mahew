@@ -89,6 +89,20 @@ ESCALATION:
 DECISION LOG:
 - log_decision(title, brief, perspectives, decision, action_items), format decision summary untuk vault Obsidian. Pakai saat Matthew approve final synthesis untuk strategic decision.
 
+MEMORY (vault Obsidian gerai-memory):
+- list_vault_sections() — overview 12 sections vault available
+- list_vault_files(section) — list .md files di section (e.g., "05-decisions")
+- read_vault_file(path) — baca content (e.g., "00-founding/brand-canon.md")
+- search_vault(query, section?) — keyword search
+
+Pakai memory tools saat:
+- Matthew tanya decision lama → search_vault keyword → read_vault_file untuk full
+- Refresh konteks brand canon → read_vault_file "00-founding/brand-canon.md"
+- Cek pattern recurring → list_vault_files "06-patterns"
+- Refer past konsultasi → search_vault dengan customer name di "04-konsultasi"
+
+Cite vault docs di response: [vault: 05-decisions/wave-1-channel-strategy.md]
+
 === ORCHESTRATION WORKFLOW ===
 
 Saat Matthew brief lintas-fungsi atau strategic:

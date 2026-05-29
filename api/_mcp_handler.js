@@ -163,6 +163,65 @@ const TOOLS = [
       required: ['title', 'brief', 'decision'],
     },
   },
+
+  // ===========================================================================
+  // PHASE 2: MEMORY TOOLS (vault Obsidian gerai-memory)
+  // ===========================================================================
+
+  {
+    name: 'list_vault_sections',
+    description: 'List semua section folder di vault Obsidian gerai-memory. Atmaja pakai ini untuk overview struktur memory yang available. Return: 12 sections (00-founding, 01-matthew, 02-customers, 03-projects, 04-konsultasi, 05-decisions, 06-patterns, 07-vendor, 08-team, 09-risk, 10-knowledge, 11-skill-catalog).',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'list_vault_files',
+    description: 'List markdown files di section vault tertentu. Pakai sebelum read_vault_file untuk discover apa yang available. Contoh section: "05-decisions" untuk decision history, "00-founding" untuk BP core docs, "06-patterns" untuk recurring patterns.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        section: {
+          type: 'string',
+          description: 'Section folder name (e.g., "05-decisions", "00-founding", "06-patterns").',
+        },
+      },
+      required: ['section'],
+    },
+  },
+  {
+    name: 'read_vault_file',
+    description: 'Baca content markdown file di vault Obsidian. Pakai untuk reference founding docs, past decisions, patterns, customer notes. Path format: "{section}/{filename}.md" (e.g., "00-founding/brand-canon.md", "05-decisions/2026-05-29-samarinda-q3-decision.md").',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        path: {
+          type: 'string',
+          description: 'Vault path relatif (e.g., "05-decisions/wave-1-channel-strategy.md").',
+        },
+      },
+      required: ['path'],
+    },
+  },
+  {
+    name: 'search_vault',
+    description: 'Search vault Obsidian by keyword. Simple text match across all .md files. Pakai saat butuh refer past content tapi gak tau exact file. Return: list matching files dengan snippet.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Search keyword (case-insensitive). Spesifik lebih baik daripada generic.',
+        },
+        section: {
+          type: 'string',
+          description: 'Optional: limit search to specific section. Kosong = search semua sections.',
+        },
+      },
+      required: ['query'],
+    },
+  },
 ]
 
 // ============================================================================
@@ -210,7 +269,218 @@ async function handleToolsCall(params) {
     return formatDecisionLog(args)
   }
 
+  // Phase 2 memory tools (vault Obsidian access via GitHub API)
+  if (name === 'list_vault_sections') {
+    return listVaultSections()
+  }
+  if (name === 'list_vault_files') {
+    return await listVaultFiles(args)
+  }
+  if (name === 'read_vault_file') {
+    return await readVaultFile(args)
+  }
+  if (name === 'search_vault') {
+    return await searchVault(args)
+  }
+
   throw new Error('unknown_tool_' + name)
+}
+
+// ============================================================================
+// PHASE 2: Vault Obsidian access (GitHub API)
+// ============================================================================
+
+const VAULT_REPO = 'MahewAi/gerai-memory'
+const VAULT_BRANCH = 'main'
+const VAULT_SECTIONS = [
+  { name: '00-founding', desc: 'LOCKED founding knowledge: brand canon, vision, 5 nilai, filosofi Dunia Pintu' },
+  { name: '01-matthew', desc: 'Matthew profile, communication style, decision patterns, preferences' },
+  { name: '02-customers', desc: 'Customer personas: End User, Arsitek, Kontraktor, Developer, Procurement Korporat, Aplikator' },
+  { name: '03-projects', desc: 'Active projects (Wave 1 launch, vendor sourcing, dll)' },
+  { name: '04-konsultasi', desc: 'Konsultasi records dengan customer / partner' },
+  { name: '05-decisions', desc: 'Past strategic decisions, recommended, executed, accepted/declined' },
+  { name: '06-patterns', desc: 'Recurring patterns identified, recurring questions, decision frameworks' },
+  { name: '07-vendor', desc: 'Vendor relationships, PO history, payment terms, QC notes' },
+  { name: '08-team', desc: 'Team members, hiring, performance, roles' },
+  { name: '09-risk', desc: 'Risk register, mitigation strategies, contingencies' },
+  { name: '10-knowledge', desc: 'External knowledge: industry research, competitor intel, market data' },
+  { name: '11-skill-catalog', desc: 'Reference: skill catalog dari repo librechat-deploy/skills/ (122 skills)' },
+]
+
+function listVaultSections() {
+  return {
+    content: [
+      {
+        type: 'text',
+        text: `[Vault Sections]\n\n${VAULT_SECTIONS.map(s => `- **${s.name}**: ${s.desc}`).join('\n')}\n\n_Total 12 sections. Pakai list_vault_files(section) untuk lihat files di section tertentu._`,
+      },
+    ],
+  }
+}
+
+async function githubFetch(path) {
+  const pat = process.env.GITHUB_VAULT_PAT
+  if (!pat) {
+    throw new Error('github_vault_pat_not_configured')
+  }
+  const url = `https://api.github.com/repos/${VAULT_REPO}/contents/${path}?ref=${VAULT_BRANCH}`
+  const resp = await fetch(url, {
+    headers: {
+      Authorization: `token ${pat}`,
+      Accept: 'application/vnd.github.v3+json',
+      'User-Agent': 'gerai-mcp-server/1.0',
+    },
+  })
+  if (!resp.ok) {
+    throw new Error(`github_api_${resp.status}: ${path}`)
+  }
+  return resp.json()
+}
+
+async function listVaultFiles(args) {
+  const section = String(args?.section || '').replace(/^\/+|\/+$/g, '')
+  if (!section) throw new Error('section_required')
+
+  const validSections = VAULT_SECTIONS.map(s => s.name)
+  if (!validSections.includes(section)) {
+    return {
+      content: [{ type: 'text', text: `[Error] Section "${section}" not found. Valid: ${validSections.join(', ')}` }],
+      isError: true,
+    }
+  }
+
+  try {
+    const listing = await githubFetch(section)
+    const mdFiles = listing
+      .filter(item => item.type === 'file' && item.name.endsWith('.md'))
+      .map(item => `- ${section}/${item.name} (${item.size} bytes)`)
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `[Vault ${section}]\n\n${mdFiles.length > 0 ? mdFiles.join('\n') : '_(no markdown files)_'}\n\n_${mdFiles.length} files. Pakai read_vault_file(path) untuk full content._`,
+        },
+      ],
+    }
+  } catch (err) {
+    return {
+      content: [{ type: 'text', text: `[Vault Error] ${err.message}` }],
+      isError: true,
+    }
+  }
+}
+
+async function readVaultFile(args) {
+  const path = String(args?.path || '').replace(/^\/+|\/+$/g, '')
+  if (!path) throw new Error('path_required')
+  if (!path.endsWith('.md')) {
+    return {
+      content: [{ type: 'text', text: `[Error] Path must end with .md: ${path}` }],
+      isError: true,
+    }
+  }
+
+  try {
+    const file = await githubFetch(path)
+    if (file.type !== 'file') {
+      throw new Error(`not_a_file: ${path}`)
+    }
+    // GitHub API returns base64-encoded content
+    const content = Buffer.from(file.content, 'base64').toString('utf8')
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `[Vault: ${path}]\n\n${content}`,
+        },
+      ],
+    }
+  } catch (err) {
+    return {
+      content: [{ type: 'text', text: `[Vault Error reading ${path}] ${err.message}` }],
+      isError: true,
+    }
+  }
+}
+
+async function searchVault(args) {
+  const query = String(args?.query || '').toLowerCase()
+  const sectionFilter = String(args?.section || '').replace(/^\/+|\/+$/g, '')
+  if (!query) throw new Error('query_required')
+
+  const sectionsToSearch = sectionFilter
+    ? [sectionFilter]
+    : VAULT_SECTIONS.map(s => s.name)
+
+  const matches = []
+  const MAX_FILES_PER_SECTION = 10
+  const MAX_MATCHES = 15
+
+  try {
+    for (const section of sectionsToSearch) {
+      if (matches.length >= MAX_MATCHES) break
+
+      let listing
+      try {
+        listing = await githubFetch(section)
+      } catch {
+        continue
+      }
+      if (!Array.isArray(listing)) continue
+
+      const mdFiles = listing
+        .filter(item => item.type === 'file' && item.name.endsWith('.md'))
+        .slice(0, MAX_FILES_PER_SECTION)
+
+      for (const file of mdFiles) {
+        if (matches.length >= MAX_MATCHES) break
+        try {
+          const fileData = await githubFetch(`${section}/${file.name}`)
+          const content = Buffer.from(fileData.content, 'base64').toString('utf8')
+          const lowerContent = content.toLowerCase()
+
+          if (lowerContent.includes(query)) {
+            // Extract snippet around first match
+            const idx = lowerContent.indexOf(query)
+            const start = Math.max(0, idx - 80)
+            const end = Math.min(content.length, idx + query.length + 200)
+            const snippet = content.slice(start, end).trim()
+            matches.push({
+              path: `${section}/${file.name}`,
+              snippet: snippet.length < content.length ? `...${snippet}...` : snippet,
+            })
+          }
+        } catch {
+          continue
+        }
+      }
+    }
+  } catch (err) {
+    return {
+      content: [{ type: 'text', text: `[Vault Search Error] ${err.message}` }],
+      isError: true,
+    }
+  }
+
+  if (matches.length === 0) {
+    return {
+      content: [{ type: 'text', text: `[Vault Search] No matches for "${query}"${sectionFilter ? ` in ${sectionFilter}` : ''}.` }],
+    }
+  }
+
+  const matchesText = matches
+    .map((m, i) => `**${i + 1}. \`${m.path}\`**\n\n> ${m.snippet}`)
+    .join('\n\n---\n\n')
+
+  return {
+    content: [
+      {
+        type: 'text',
+        text: `[Vault Search: "${query}"]\n\nFound ${matches.length} match${matches.length > 1 ? 'es' : ''}${sectionFilter ? ` in ${sectionFilter}` : ''}.\n\n${matchesText}\n\n_Pakai read_vault_file(path) untuk full content._`,
+      },
+    ],
+  }
 }
 
 // ============================================================================

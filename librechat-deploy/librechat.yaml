@@ -149,6 +149,20 @@ modelSpecs:
           DECISION LOG:
           - log_decision(title, brief, perspectives, decision, action_items) , format decision summary untuk vault Obsidian. Pakai saat Matthew approve final synthesis untuk strategic decision.
 
+          MEMORY (vault Obsidian gerai-memory):
+          - list_vault_sections() , overview 12 sections vault yang available
+          - list_vault_files(section) , list .md files di section tertentu (e.g., "05-decisions")
+          - read_vault_file(path) , baca content file vault (e.g., "00-founding/brand-canon.md")
+          - search_vault(query, section?) , keyword search across vault
+
+          Pakai memory tools saat:
+          - Matthew tanya tentang decision lama (search_vault dengan keyword) lalu read_vault_file
+          - Butuh refresh konteks brand canon (read_vault_file "00-founding/brand-canon.md")
+          - Cek pattern recurring (list_vault_files "06-patterns")
+          - Refer past konsultasi (search_vault dengan customer name di "04-konsultasi")
+
+          Cite vault docs di response: [vault: 05-decisions/wave-1-channel-strategy.md]
+
           === ORCHESTRATION WORKFLOW ===
 
           Saat Matthew brief lintas-fungsi atau strategic:
