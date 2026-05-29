@@ -404,18 +404,37 @@ function readBody(req) {
 // ============================================================================
 
 export async function handleMcpRequest(req, res) {
+  const startTime = Date.now()
+  const reqId = Math.random().toString(36).slice(2, 8)
+
+  // Comprehensive request logging (Vercel auto-captures console)
+  console.log(`[MCP ${reqId}] ${req.method} ${req.url}`, {
+    method: req.method,
+    url: req.url,
+    headers: {
+      authorization: req.headers?.authorization ? 'Bearer [REDACTED]' : 'MISSING',
+      'content-type': req.headers?.['content-type'],
+      accept: req.headers?.accept,
+      'mcp-session-id': req.headers?.['mcp-session-id'],
+      'user-agent': req.headers?.['user-agent'],
+    },
+  })
+
   // CORS preflight
   if (req.method === 'OPTIONS') {
     res.statusCode = 204
     res.setHeader('access-control-allow-origin', '*')
-    res.setHeader('access-control-allow-methods', 'POST, OPTIONS')
-    res.setHeader('access-control-allow-headers', 'authorization, content-type')
+    res.setHeader('access-control-allow-methods', 'POST, GET, OPTIONS')
+    res.setHeader('access-control-allow-headers', 'authorization, content-type, mcp-session-id, mcp-protocol-version')
+    res.setHeader('access-control-expose-headers', 'mcp-session-id')
     res.end()
+    console.log(`[MCP ${reqId}] OPTIONS preflight (${Date.now() - startTime}ms)`)
     return
   }
 
   // GET → info endpoint (untuk debug / health check)
   if (req.method === 'GET') {
+    console.log(`[MCP ${reqId}] GET info endpoint`)
     return sendJson(res, 200, {
       server: SERVER_INFO,
       protocol_version: MCP_PROTOCOL_VERSION,
@@ -427,11 +446,13 @@ export async function handleMcpRequest(req, res) {
   }
 
   if (req.method !== 'POST') {
+    console.log(`[MCP ${reqId}] method_not_allowed: ${req.method}`)
     return sendJson(res, 405, jsonRpcError(null, -32600, 'method_not_allowed'))
   }
 
   // Auth
   if (!hasValidBearerToken(req)) {
+    console.log(`[MCP ${reqId}] unauthorized: bearer missing or invalid`)
     return sendJson(res, 401, jsonRpcError(null, -32001, 'unauthorized', {
       hint: 'Bearer token required. Set Authorization header.',
     }))
@@ -442,19 +463,32 @@ export async function handleMcpRequest(req, res) {
   try {
     envelope = await readBody(req)
   } catch (err) {
+    console.log(`[MCP ${reqId}] parse_error:`, err.message)
     return sendJson(res, 400, jsonRpcError(null, -32700, 'parse_error', { detail: err.message }))
   }
 
   // Validate JSON-RPC envelope
   if (envelope?.jsonrpc !== '2.0' || !envelope?.method) {
+    console.log(`[MCP ${reqId}] invalid_request:`, JSON.stringify(envelope).slice(0, 200))
     return sendJson(res, 400, jsonRpcError(envelope?.id ?? null, -32600, 'invalid_request', {
       hint: 'Expected JSON-RPC 2.0 envelope with method field.',
     }))
   }
 
   const { id, method, params = {} } = envelope
+  console.log(`[MCP ${reqId}] method=${method} id=${id} params=`, JSON.stringify(params).slice(0, 300))
 
   try {
+    // Handle notifications (no response per JSON-RPC 2.0).
+    // MCP Streamable HTTP spec: respond with 202 Accepted, empty body.
+    if (method.startsWith('notifications/')) {
+      console.log(`[MCP ${reqId}] notification handled (${Date.now() - startTime}ms)`)
+      res.statusCode = 202
+      res.setHeader('access-control-allow-origin', '*')
+      res.end()
+      return
+    }
+
     let result
     switch (method) {
       case 'initialize':
@@ -464,18 +498,19 @@ export async function handleMcpRequest(req, res) {
         result = handleToolsList()
         break
       case 'tools/call':
+        console.log(`[MCP ${reqId}] dispatching tools/call to: ${params?.name}`)
         result = await handleToolsCall(params)
+        console.log(`[MCP ${reqId}] tools/call ${params?.name} completed (${Date.now() - startTime}ms)`)
         break
-      case 'notifications/initialized':
-        // Client notification (no response needed for notifications)
-        res.statusCode = 204
-        res.end()
-        return
       default:
+        console.log(`[MCP ${reqId}] method_not_found: ${method}`)
         return sendJson(res, 200, jsonRpcError(id, -32601, 'method_not_found', { method }))
     }
+
+    console.log(`[MCP ${reqId}] success ${method} (${Date.now() - startTime}ms)`)
     return sendJson(res, 200, jsonRpcSuccess(id, result))
   } catch (err) {
+    console.log(`[MCP ${reqId}] server_error in ${method}:`, err.message, err.stack?.slice(0, 300))
     return sendJson(res, 200, jsonRpcError(id, -32000, 'server_error', {
       detail: err.message || String(err),
       method,
