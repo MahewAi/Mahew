@@ -340,6 +340,98 @@ const TOOLS = [
       required: ['title', 'sectors'],
     },
   },
+
+  // ===========================================================================
+  // IMAGE GENERATION (OpenAI gpt-image-1)
+  // ===========================================================================
+
+  {
+    name: 'generate_image',
+    description: 'Generate gambar via AI (OpenAI gpt-image-1). Pakai untuk: konsep visual, mockup produk, social media image, moodboard, ilustrasi, logo concept draft. Return URL ke PNG. Sebutkan brand canon di prompt kalau perlu (palette Brass #B8956B + Charcoal #1F1A14 + Ivory #FAF8F4, premium tetapi inklusif).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        prompt: {
+          type: 'string',
+          description: 'Deskripsi gambar yang detail. Bahasa Inggris lebih bagus untuk image model. Include style, mood, composition, color.',
+        },
+        size: {
+          type: 'string',
+          enum: ['1024x1024', '1024x1536', '1536x1024'],
+          description: 'Ukuran. 1024x1024 square (default), 1024x1536 portrait, 1536x1024 landscape.',
+        },
+        quality: {
+          type: 'string',
+          enum: ['low', 'medium', 'high'],
+          description: 'Kualitas. medium default (balance speed+cost). high untuk final asset.',
+        },
+      },
+      required: ['prompt'],
+    },
+  },
+
+  // ===========================================================================
+  // SLIDES (HTML deck, printable to PDF landscape)
+  // ===========================================================================
+
+  {
+    name: 'generate_slides',
+    description: 'Generate slide deck presentasi (HTML, brand canon styled). Pakai untuk: pitch deck, board presentation, internal deck, proposal visual. 1 slide per halaman landscape. Return URL → browser Ctrl+P → PDF. Untuk dokumen teks panjang pakai generate_document; untuk org-chart pakai generate_architecture_map.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'Judul deck (jadi slide cover).' },
+        subtitle: { type: 'string', description: 'Subtitle cover. Optional.' },
+        slides: {
+          type: 'array',
+          description: 'Array slide. Tiap slide jadi 1 halaman.',
+          items: {
+            type: 'object',
+            properties: {
+              heading: { type: 'string', description: 'Judul slide.' },
+              bullets: { type: 'array', items: { type: 'string' }, description: 'Bullet points. Prefix "> " untuk sub-bullet.' },
+              note: { type: 'string', description: 'Catatan kecil di bawah slide (optional).' },
+            },
+            required: ['heading'],
+          },
+        },
+      },
+      required: ['title', 'slides'],
+    },
+  },
+
+  // ===========================================================================
+  // SPREADSHEET (XLSX export)
+  // ===========================================================================
+
+  {
+    name: 'generate_spreadsheet',
+    description: 'Generate file Excel (.xlsx) multi-sheet. Pakai untuk: budget, inventory, forecast, data tabel, financial model, tracking. Return URL download. Bisa dibuka di Excel / Google Sheets. Untuk laporan naratif pakai generate_document.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'Nama file (tanpa .xlsx).' },
+        sheets: {
+          type: 'array',
+          description: 'Array sheet. Tiap sheet punya nama + rows.',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Nama sheet/tab.' },
+              headers: { type: 'array', items: { type: 'string' }, description: 'Header kolom (baris pertama, bold).' },
+              rows: {
+                type: 'array',
+                description: 'Array baris data. Tiap baris = array cell (string atau number).',
+                items: { type: 'array', items: {} },
+              },
+            },
+            required: ['name', 'rows'],
+          },
+        },
+      },
+      required: ['title', 'sheets'],
+    },
+  },
 ]
 
 // ============================================================================
@@ -414,6 +506,21 @@ async function handleToolsCall(params) {
   // Architecture map (visual multi-column 4-level hierarchy)
   if (name === 'generate_architecture_map') {
     return await generateArchitectureMap(args)
+  }
+
+  // Image generation (OpenAI gpt-image-1)
+  if (name === 'generate_image') {
+    return await generateImage(args)
+  }
+
+  // Slides (HTML deck)
+  if (name === 'generate_slides') {
+    return await generateSlides(args)
+  }
+
+  // Spreadsheet (xlsx)
+  if (name === 'generate_spreadsheet') {
+    return await generateSpreadsheet(args)
   }
 
   throw new Error('unknown_tool_' + name)
@@ -1489,6 +1596,226 @@ async function generateArchitectureMap(args) {
   }
 }
 
+// ============================================================================
+// IMAGE GENERATION (OpenAI gpt-image-1 → KV → /api/doc)
+// ============================================================================
+
+async function generateImage(args) {
+  const prompt = String(args?.prompt || '').trim()
+  if (!prompt) throw new Error('prompt_required')
+
+  const apiKey = process.env.OPENAI_API_KEY
+  if (!apiKey) {
+    return {
+      content: [{ type: 'text', text: '[Image Gen Error] OPENAI_API_KEY not set di Vercel env.' }],
+      isError: true,
+    }
+  }
+
+  const size = ['1024x1024', '1024x1536', '1536x1024'].includes(args?.size) ? args.size : '1024x1024'
+  const quality = ['low', 'medium', 'high'].includes(args?.quality) ? args.quality : 'medium'
+
+  let kv
+  try {
+    kv = (await import('@vercel/kv')).kv
+  } catch (err) {
+    return { content: [{ type: 'text', text: `[Image Gen Error] KV import: ${err.message}` }], isError: true }
+  }
+
+  try {
+    const upstream = await fetch('https://api.openai.com/v1/images/generations', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${apiKey}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ model: 'gpt-image-1', prompt, size, quality, n: 1 }),
+    })
+
+    const raw = await upstream.text()
+    let parsed = {}
+    try { parsed = JSON.parse(raw) } catch { parsed = {} }
+
+    if (!upstream.ok) {
+      const msg = parsed?.error?.message || raw.slice(0, 300)
+      return { content: [{ type: 'text', text: `[Image Gen Error] OpenAI ${upstream.status}: ${msg}` }], isError: true }
+    }
+
+    const b64 = parsed?.data?.[0]?.b64_json
+    if (!b64) {
+      return { content: [{ type: 'text', text: '[Image Gen Error] No image data returned.' }], isError: true }
+    }
+
+    const rand = Math.abs(hashString(prompt + size + quality)).toString(36).slice(0, 8)
+    const docId = `img-${rand}`
+    await kv.set(`doc:${docId}`, { ct: 'image/png', body: b64 }, { ex: 604800 })
+
+    const url = `https://gerai.mahewwork.com/api/doc?id=${docId}`
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `🖼️ **Image Generated**\n\n**Prompt:** ${prompt.slice(0, 120)}${prompt.length > 120 ? '...' : ''}\n**Size:** ${size} | **Quality:** ${quality}\n**URL:** ${url}\n\n_Open URL untuk lihat/download. Tersimpan 7 hari._\n\n![generated](${url})`,
+        },
+      ],
+    }
+  } catch (err) {
+    return { content: [{ type: 'text', text: `[Image Gen Error] ${err.message || String(err)}` }], isError: true }
+  }
+}
+
+// ============================================================================
+// SLIDES (HTML deck, landscape → KV → /api/doc)
+// ============================================================================
+
+async function generateSlides(args) {
+  const title = String(args?.title || 'Presentation').slice(0, 200)
+  const subtitle = String(args?.subtitle || '')
+  const slides = Array.isArray(args?.slides) ? args.slides : []
+  if (slides.length === 0) {
+    return { content: [{ type: 'text', text: '[Slides Error] slides array kosong.' }], isError: true }
+  }
+
+  let kv
+  try {
+    kv = (await import('@vercel/kv')).kv
+  } catch (err) {
+    return { content: [{ type: 'text', text: `[Slides Error] KV import: ${err.message}` }], isError: true }
+  }
+
+  const renderBullet = (b) => {
+    const t = String(b || '')
+    if (t.startsWith('> ')) return `<li class="sub">${escapeHtml(t.slice(2))}</li>`
+    return `<li>${escapeHtml(t)}</li>`
+  }
+
+  const renderSlide = (s, i) => {
+    const heading = escapeHtml(String(s?.heading || ''))
+    const bullets = Array.isArray(s?.bullets) ? s.bullets : []
+    const bulletsHtml = bullets.length ? `<ul class="bullets">${bullets.map(renderBullet).join('')}</ul>` : ''
+    const note = s?.note ? `<div class="slide-note">${escapeHtml(String(s.note))}</div>` : ''
+    return `<section class="slide">
+      <div class="slide-num">${String(i + 1).padStart(2, '0')}</div>
+      <h2 class="slide-heading">${heading}</h2>
+      ${bulletsHtml}
+      ${note}
+      <div class="slide-footer">Gerai 1000 Pintu , 1000 Mimpi</div>
+    </section>`
+  }
+
+  const slidesHtml = slides.map(renderSlide).join('')
+
+  const html = `<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title>
+<style>
+  :root { --brass:#B8956B; --charcoal:#1F1A14; --ivory:#FAF8F4; --muted:#6b6357; --border:#d8d2c4; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Inter',-apple-system,system-ui,sans-serif; background:var(--charcoal); color:var(--charcoal); }
+  .slide, .cover {
+    width:100%; min-height:96vh; padding:70px 80px; background:var(--ivory);
+    page-break-after:always; position:relative; display:flex; flex-direction:column; justify-content:center;
+  }
+  .cover { background:var(--charcoal); color:var(--ivory); }
+  .cover-brand { font-size:14px; letter-spacing:3px; text-transform:uppercase; color:var(--brass); font-weight:600; margin-bottom:24px; }
+  .cover-title { font-family:'Playfair Display',Georgia,serif; font-size:54px; font-weight:700; line-height:1.15; margin-bottom:16px; }
+  .cover-subtitle { font-size:20px; color:#cabfa9; }
+  .slide-num { position:absolute; top:50px; right:70px; font-family:'Playfair Display',Georgia,serif; font-size:28px; color:var(--brass); font-weight:700; }
+  .slide-heading { font-family:'Playfair Display',Georgia,serif; font-size:38px; font-weight:700; color:var(--charcoal); margin-bottom:30px; padding-bottom:16px; border-bottom:3px solid var(--brass); }
+  .bullets { list-style:none; }
+  .bullets li { font-size:22px; line-height:1.5; margin:14px 0; padding-left:32px; position:relative; }
+  .bullets li::before { content:"•"; color:var(--brass); position:absolute; left:6px; font-size:24px; }
+  .bullets li.sub { font-size:18px; padding-left:60px; color:var(--muted); }
+  .bullets li.sub::before { content:"▸"; left:36px; font-size:16px; }
+  .slide-note { margin-top:auto; padding-top:24px; font-size:14px; color:var(--muted); font-style:italic; }
+  .slide-footer { position:absolute; bottom:36px; left:80px; font-size:12px; color:var(--muted); letter-spacing:1px; }
+  @page { size:A4 landscape; margin:0; }
+  @media print { body { background:white; } .slide, .cover { min-height:100vh; } }
+</style></head><body>
+  <div class="cover">
+    <div class="cover-brand">Gerai 1000 Pintu , AI Department</div>
+    <div class="cover-title">${escapeHtml(title)}</div>
+    ${subtitle ? `<div class="cover-subtitle">${escapeHtml(subtitle)}</div>` : ''}
+  </div>
+  ${slidesHtml}
+</body></html>`
+
+  try {
+    const safeTitle = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50) || 'deck'
+    const rand = Math.abs(hashString(html)).toString(36).slice(0, 8)
+    const docId = `slides-${safeTitle}-${rand}`
+    await kv.set(`doc:${docId}`, html, { ex: 604800 })
+    const url = `https://gerai.mahewwork.com/api/doc?id=${docId}`
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `📊 **Slides Generated**\n\n**Title:** ${title}\n**Slides:** ${slides.length} + cover\n**URL:** ${url}\n\n_Open URL → Ctrl+P → Landscape → Save as PDF. Tersimpan 7 hari._`,
+        },
+      ],
+    }
+  } catch (err) {
+    return { content: [{ type: 'text', text: `[Slides Error] ${err.message || String(err)}` }], isError: true }
+  }
+}
+
+// ============================================================================
+// SPREADSHEET (XLSX → KV → /api/doc download)
+// ============================================================================
+
+async function generateSpreadsheet(args) {
+  const title = String(args?.title || 'spreadsheet').slice(0, 100)
+  const sheets = Array.isArray(args?.sheets) ? args.sheets : []
+  if (sheets.length === 0) {
+    return { content: [{ type: 'text', text: '[Spreadsheet Error] sheets array kosong.' }], isError: true }
+  }
+
+  let XLSX, kv
+  try {
+    XLSX = (await import('xlsx')).default || (await import('xlsx'))
+    kv = (await import('@vercel/kv')).kv
+  } catch (err) {
+    return { content: [{ type: 'text', text: `[Spreadsheet Error] Dependency: ${err.message}. npm install xlsx + redeploy.` }], isError: true }
+  }
+
+  try {
+    const wb = XLSX.utils.book_new()
+
+    sheets.forEach((sheet, idx) => {
+      const name = String(sheet?.name || `Sheet${idx + 1}`).slice(0, 31).replace(/[\\/?*[\]:]/g, '')
+      const headers = Array.isArray(sheet?.headers) ? sheet.headers : []
+      const rows = Array.isArray(sheet?.rows) ? sheet.rows : []
+      const aoa = headers.length ? [headers, ...rows] : rows
+      const ws = XLSX.utils.aoa_to_sheet(aoa)
+      XLSX.utils.book_append_sheet(wb, ws, name || `Sheet${idx + 1}`)
+    })
+
+    // Write to base64
+    const b64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' })
+
+    const safeTitle = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50) || 'sheet'
+    const rand = Math.abs(hashString(b64.slice(0, 200) + title)).toString(36).slice(0, 8)
+    const docId = `xlsx-${safeTitle}-${rand}`
+    await kv.set(`doc:${docId}`, {
+      ct: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      body: b64,
+      dl: `${safeTitle}.xlsx`,
+    }, { ex: 604800 })
+
+    const url = `https://gerai.mahewwork.com/api/doc?id=${docId}`
+    const totalRows = sheets.reduce((s, sh) => s + (Array.isArray(sh?.rows) ? sh.rows.length : 0), 0)
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `📈 **Spreadsheet Generated**\n\n**File:** ${safeTitle}.xlsx\n**Sheets:** ${sheets.length} | **Total rows:** ${totalRows}\n**URL:** ${url}\n\n_Click URL untuk download .xlsx. Buka di Excel / Google Sheets. Tersimpan 7 hari._`,
+        },
+      ],
+    }
+  } catch (err) {
+    return { content: [{ type: 'text', text: `[Spreadsheet Error] ${err.message || String(err)}` }], isError: true }
+  }
+}
+
 function escapeHtml(s) {
   return String(s)
     .replace(/&/g, '&amp;')
@@ -1530,19 +1857,42 @@ export async function serveDocument(req, res) {
 
   try {
     const kvModule = await import('@vercel/kv')
-    const html = await kvModule.kv.get(`doc:${docId}`)
+    const stored = await kvModule.kv.get(`doc:${docId}`)
 
-    if (!html) {
+    if (!stored) {
       res.statusCode = 404
       res.setHeader('content-type', 'text/html; charset=utf-8')
       res.end('<!DOCTYPE html><html><body style="font-family:sans-serif;padding:40px;color:#1F1A14"><h1>Document not found</h1><p>Dokumen ini sudah expired (TTL 7 hari) atau id salah. Minta Atmaja generate ulang.</p></body></html>')
       return
     }
 
+    // 2 format:
+    // - Legacy: stored = string HTML langsung (text/html)
+    // - New: stored = { ct, body, dl } untuk binary (image, xlsx). body = base64.
+    if (typeof stored === 'string') {
+      res.statusCode = 200
+      res.setHeader('content-type', 'text/html; charset=utf-8')
+      res.setHeader('cache-control', 'private, max-age=3600')
+      res.end(stored)
+      return
+    }
+
+    if (stored && typeof stored === 'object' && stored.ct) {
+      const buf = Buffer.from(stored.body, 'base64')
+      res.statusCode = 200
+      res.setHeader('content-type', stored.ct)
+      res.setHeader('cache-control', 'private, max-age=3600')
+      if (stored.dl) {
+        res.setHeader('content-disposition', `attachment; filename="${stored.dl}"`)
+      }
+      res.end(buf)
+      return
+    }
+
+    // Fallback
     res.statusCode = 200
     res.setHeader('content-type', 'text/html; charset=utf-8')
-    res.setHeader('cache-control', 'private, max-age=3600')
-    res.end(html)
+    res.end(String(stored))
   } catch (err) {
     res.statusCode = 500
     res.setHeader('content-type', 'text/plain; charset=utf-8')
