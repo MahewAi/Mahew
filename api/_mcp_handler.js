@@ -249,6 +249,29 @@ const TOOLS = [
       required: ['query'],
     },
   },
+
+  // ===========================================================================
+  // DOCUMENT GENERATION (HTML, browser-printable to PDF)
+  // ===========================================================================
+
+  {
+    name: 'generate_document',
+    description: 'Generate styled HTML document dengan brand canon (palette The Timeless Foundation). Upload ke Vercel Blob, return public URL. Matthew open URL → browser print (Ctrl+P) → save as PDF. Pakai saat Matthew butuh deliverable formal: executive brief, decision document, proposal, report, meeting notes. Content input: markdown (auto-convert to styled HTML).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        title: {
+          type: 'string',
+          description: 'Document title (akan jadi h1 dan filename).',
+        },
+        content_markdown: {
+          type: 'string',
+          description: 'Document content in markdown. Support: headings (#/##), bold/italic, lists, tables, code, blockquotes, links. Akan render dengan brand canon styling (Brass gold + Deep charcoal + Warm ivory).',
+        },
+      },
+      required: ['title', 'content_markdown'],
+    },
+  },
 ]
 
 // ============================================================================
@@ -313,6 +336,11 @@ async function handleToolsCall(params) {
   // Web search via Tavily
   if (name === 'web_search') {
     return await webSearch(args)
+  }
+
+  // Document generation (HTML, browser-printable to PDF)
+  if (name === 'generate_document') {
+    return await generateDocument(args)
   }
 
   throw new Error('unknown_tool_' + name)
@@ -918,4 +946,184 @@ export async function handleMcpRequest(req, res) {
       method,
     }))
   }
+}
+
+// ============================================================================
+// DOCUMENT GENERATION (markdown → styled HTML → Vercel Blob)
+// ============================================================================
+
+async function generateDocument(args) {
+  const title = String(args?.title || 'Document').slice(0, 200)
+  const content = String(args?.content_markdown || '')
+  if (!content) throw new Error('content_markdown_required')
+
+  // Lazy import: marked + @vercel/blob
+  let marked, put
+  try {
+    const markedModule = await import('marked')
+    marked = markedModule.marked || markedModule.default
+    const blobModule = await import('@vercel/blob')
+    put = blobModule.put
+  } catch (err) {
+    return {
+      content: [{ type: 'text', text: `[Document Gen Error] Dependencies missing: ${err.message}. Run "npm install" + redeploy.` }],
+      isError: true,
+    }
+  }
+
+  const blobToken = process.env.BLOB_READ_WRITE_TOKEN
+  if (!blobToken) {
+    return {
+      content: [{ type: 'text', text: '[Document Gen Error] BLOB_READ_WRITE_TOKEN not set di Vercel env.' }],
+      isError: true,
+    }
+  }
+
+  try {
+    // Parse markdown → HTML
+    const bodyHtml = marked.parse(content, { gfm: true, breaks: false })
+
+    // Wrap dengan styled template (brand canon palette: Brass gold + Deep charcoal + Warm ivory)
+    const styledHtml = `<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${escapeHtml(title)}</title>
+<style>
+  :root {
+    --brass: #B8956B;
+    --charcoal: #1F1A14;
+    --ivory: #FAF8F4;
+    --muted: #6b6357;
+    --border: #e8e3d8;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--ivory); }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    color: var(--charcoal);
+    line-height: 1.65;
+    font-size: 16px;
+  }
+  .doc {
+    max-width: 820px;
+    margin: 40px auto;
+    padding: 60px 50px;
+    background: white;
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .doc-header {
+    border-bottom: 2px solid var(--brass);
+    padding-bottom: 20px;
+    margin-bottom: 30px;
+  }
+  .doc-brand {
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--brass);
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .doc-title {
+    margin: 0;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--charcoal);
+    line-height: 1.25;
+  }
+  .doc-meta {
+    margin-top: 12px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  h1, h2, h3, h4, h5, h6 { font-weight: 700; color: var(--charcoal); margin-top: 30px; margin-bottom: 12px; line-height: 1.3; }
+  h1 { font-size: 26px; }
+  h2 { font-size: 22px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+  h3 { font-size: 18px; color: var(--brass); }
+  h4 { font-size: 16px; }
+  p { margin: 12px 0; }
+  a { color: var(--brass); text-decoration: none; border-bottom: 1px solid var(--brass); }
+  a:hover { background: var(--ivory); }
+  strong { color: var(--charcoal); font-weight: 700; }
+  em { font-style: italic; color: var(--muted); }
+  ul, ol { padding-left: 22px; margin: 12px 0; }
+  li { margin: 6px 0; }
+  code { background: var(--ivory); padding: 2px 6px; border-radius: 3px; font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace; font-size: 0.9em; color: var(--charcoal); }
+  pre { background: var(--charcoal); color: var(--ivory); padding: 16px 20px; overflow-x: auto; border-radius: 4px; }
+  pre code { background: transparent; color: var(--ivory); padding: 0; }
+  blockquote { border-left: 3px solid var(--brass); padding: 4px 16px; margin: 16px 0; color: var(--muted); font-style: italic; background: var(--ivory); }
+  blockquote p { margin: 6px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14px; }
+  th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+  th { background: var(--ivory); font-weight: 700; color: var(--charcoal); }
+  tr:nth-child(even) td { background: rgba(250, 248, 244, 0.4); }
+  hr { border: none; border-top: 1px solid var(--border); margin: 30px 0; }
+  img { max-width: 100%; height: auto; }
+  .doc-footer {
+    margin-top: 50px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+  }
+  @media print {
+    body { background: white; }
+    .doc { box-shadow: none; border: none; margin: 0; max-width: none; padding: 30px 40px; }
+  }
+</style>
+</head>
+<body>
+  <div class="doc">
+    <header class="doc-header">
+      <div class="doc-brand">Gerai 1000 Pintu , AI Department</div>
+      <h1 class="doc-title">${escapeHtml(title)}</h1>
+      <div class="doc-meta">Generated ${new Date().toISOString().slice(0, 10)} via Atmaja</div>
+    </header>
+    <main>${bodyHtml}</main>
+    <footer class="doc-footer">
+      Brand canon LOCKED per BP Latest Section 15.1, The Timeless Foundation palette
+    </footer>
+  </div>
+</body>
+</html>`
+
+    // Upload to Vercel Blob
+    const safeTitle = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'doc'
+    const timestamp = Date.now()
+    const filename = `documents/${timestamp}-${safeTitle}.html`
+
+    const blob = await put(filename, styledHtml, {
+      access: 'public',
+      contentType: 'text/html; charset=utf-8',
+      token: blobToken,
+    })
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `📄 **Document Generated**\n\n**Title:** ${title}\n**URL:** ${blob.url}\n\n_Open URL di browser, lalu Ctrl+P (atau Cmd+P) untuk print. Pilih "Save as PDF" sebagai destination untuk export PDF._\n\n_Format: HTML dengan brand canon styling (The Timeless Foundation palette). Print-optimized layout._`,
+        },
+      ],
+    }
+  } catch (err) {
+    return {
+      content: [{ type: 'text', text: `[Document Gen Error] ${err.message || String(err)}` }],
+      isError: true,
+    }
+  }
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
 }

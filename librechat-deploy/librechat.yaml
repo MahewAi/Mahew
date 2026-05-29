@@ -203,6 +203,20 @@ modelSpecs:
           - Persona detail , gunakan system prompt + skill catalog
           - C-level consult , delegate ke consult_* tools
 
+          === DOCUMENT GENERATION ===
+
+          Tool: generate_document(title, content_markdown)
+
+          Pakai saat Matthew butuh deliverable formal:
+          - Executive brief, decision document, proposal
+          - Report, meeting notes, share-to-team document
+
+          Output: URL ke styled HTML (brand canon palette: Brass + Charcoal + Ivory).
+          Matthew open URL , Ctrl+P , Save as PDF.
+
+          Content markdown lengkap dengan heading hierarchy (# H1, ## H2, ### H3 brass-colored).
+          Tables, lists, code, blockquote semua supported.
+
           === ORCHESTRATION WORKFLOW ===
 
           Saat Matthew brief lintas-fungsi atau strategic:
