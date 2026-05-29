@@ -1446,7 +1446,9 @@ async function generateArchitectureMap(args) {
     }
   }
 
-  // Render task (support "> " prefix untuk sub-task indent)
+  const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
+  // Render task (support "> " prefix untuk sub-task indent Level 3+)
   const renderTask = (task) => {
     const t = String(task || '')
     if (t.startsWith('> ')) {
@@ -1455,46 +1457,73 @@ async function generateArchitectureMap(args) {
     return `<li>${escapeHtml(t)}</li>`
   }
 
-  // Render kerjaan block
-  const renderKerjaan = (k) => {
+  // Render kerjaan block (Level 2) dengan auto-number A1, A2...
+  const renderKerjaan = (k, saLetter, kIdx) => {
     const name = escapeHtml(String(k?.name || ''))
+    const code = `${saLetter}${kIdx + 1}`
     const tasks = Array.isArray(k?.tasks) ? k.tasks : []
     const tasksHtml = tasks.length > 0
       ? `<ul class="tasks">${tasks.map(renderTask).join('')}</ul>`
       : ''
-    return `<div class="kerjaan"><div class="kerjaan-name">${name}</div>${tasksHtml}</div>`
+    return `<div class="kerjaan"><div class="kerjaan-name"><span class="k-code">${code}</span>${name}</div>${tasksHtml}</div>`
   }
 
-  // Render sub-area column
-  const renderSubArea = (sa) => {
+  // Render sub-area column (Level 1) dengan auto-letter A, B, C...
+  const renderSubArea = (sa, saIdx) => {
+    const letter = LETTERS[saIdx] || String(saIdx + 1)
     const name = escapeHtml(String(sa?.name || ''))
     const kerjaan = Array.isArray(sa?.kerjaan) ? sa.kerjaan : []
-    const kerjaanHtml = kerjaan.map(renderKerjaan).join('')
-    return `<div class="subarea"><div class="subarea-head">${name}</div>${kerjaanHtml}</div>`
+    const kerjaanHtml = kerjaan.map((k, i) => renderKerjaan(k, letter, i)).join('')
+    return `<div class="subarea">
+      <div class="subarea-head"><span class="sa-badge">${letter}</span><span class="sa-name">${name}</span></div>
+      ${kerjaanHtml}
+    </div>`
   }
 
-  // Render sektor page
-  const renderSector = (s) => {
-    const num = escapeHtml(String(s?.number || ''))
+  // Render sektor page (Level 0) dengan tree connector
+  const renderSector = (s, sIdx, pageNum) => {
+    const num = escapeHtml(String(s?.number || String(sIdx + 1).padStart(2, '0')))
     const name = escapeHtml(String(s?.name || ''))
     const meta = s?.meta ? `<div class="sector-meta">${escapeHtml(String(s.meta))}</div>` : ''
     const subAreas = Array.isArray(s?.sub_areas) ? s.sub_areas : []
-    const columnsHtml = subAreas.map(renderSubArea).join('')
+    const columnsHtml = subAreas.map((sa, i) => renderSubArea(sa, i)).join('')
+    const colCount = subAreas.length
+    // Density class: banyak kolom = lebih rapat
+    const densityClass = colCount >= 5 ? 'dense' : colCount >= 4 ? 'medium' : 'wide'
     return `<section class="sector-page">
+      <div class="sector-runhead">${escapeHtml(footerLabel)}</div>
       <div class="sector-banner">
         <span class="sector-num">${num}</span>
         <span class="sector-name">${name}</span>
       </div>
       ${meta}
-      <div class="columns">${columnsHtml}</div>
-      <div class="page-footer">${escapeHtml(footerLabel)}</div>
+      <div class="tree-spine"></div>
+      <div class="columns ${densityClass}">${columnsHtml}</div>
+      <div class="page-footer"><span>${escapeHtml(footerLabel)}</span><span class="page-no">Halaman ${pageNum}</span></div>
     </section>`
   }
 
-  const sectorsHtml = sectors.map(renderSector).join('')
+  let pageCounter = 1
+  const sectorsHtml = sectors.map((s, i) => renderSector(s, i, ++pageCounter)).join('')
+
+  // Table of Contents (cover) + intro
+  const tocHtml = `<div class="toc">
+    <div class="toc-title">Daftar Sektor</div>
+    <div class="toc-grid">
+      ${sectors.map((s, i) => {
+        const num = escapeHtml(String(s?.number || String(i + 1).padStart(2, '0')))
+        const name = escapeHtml(String(s?.name || ''))
+        const saCount = Array.isArray(s?.sub_areas) ? s.sub_areas.length : 0
+        return `<div class="toc-item"><span class="toc-num">${num}</span><span class="toc-name">${name}</span><span class="toc-count">${saCount} sub-area</span></div>`
+      }).join('')}
+    </div>
+  </div>`
 
   const introHtml = introNotes.length > 0
-    ? `<div class="intro-box">${introNotes.map(n => `<div class="intro-line">${escapeHtml(String(n))}</div>`).join('')}</div>`
+    ? `<div class="intro-box">
+        <div class="intro-legend">SEKTOR <span class="lg">›</span> SUB-AREA <span class="lg">›</span> KERJAAN <span class="lg">›</span> TASK</div>
+        ${introNotes.map(n => `<div class="intro-line">${escapeHtml(String(n))}</div>`).join('')}
+      </div>`
     : ''
 
   const styledHtml = `<!DOCTYPE html>
@@ -1506,10 +1535,12 @@ async function generateArchitectureMap(args) {
 <style>
   :root {
     --brass: #B8956B;
+    --brass-soft: #d8c4a6;
     --charcoal: #1F1A14;
+    --charcoal-soft: #3a332a;
     --ivory: #FAF8F4;
     --muted: #6b6357;
-    --border: #d8d2c4;
+    --border: #e2dccf;
     --col-bg: #ffffff;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1519,135 +1550,229 @@ async function generateArchitectureMap(args) {
     color: var(--charcoal);
     font-size: 12px;
     line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
   }
 
-  /* Cover page */
+  /* ===== Cover page ===== */
   .cover {
-    min-height: 90vh;
-    padding: 80px 60px;
+    min-height: 94vh;
+    padding: 60px 64px;
     display: flex;
     flex-direction: column;
     justify-content: center;
     page-break-after: always;
+    background: linear-gradient(135deg, var(--ivory) 0%, #f3eee4 100%);
   }
   .cover-brand {
-    font-size: 13px;
-    letter-spacing: 2px;
+    font-size: 12px;
+    letter-spacing: 3px;
     text-transform: uppercase;
     color: var(--brass);
     font-weight: 600;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
   }
   .cover-title {
     font-family: 'Playfair Display', Georgia, serif;
-    font-size: 42px;
+    font-size: 40px;
     font-weight: 700;
     color: var(--charcoal);
-    line-height: 1.2;
-    margin-bottom: 12px;
+    line-height: 1.18;
+    margin-bottom: 10px;
+    max-width: 900px;
   }
   .cover-subtitle {
-    font-size: 16px;
+    font-size: 15px;
     color: var(--muted);
-    margin-bottom: 32px;
+    margin-bottom: 26px;
   }
   .intro-box {
     border-left: 3px solid var(--brass);
     background: white;
-    padding: 20px 26px;
-    max-width: 800px;
+    padding: 18px 24px;
+    max-width: 860px;
+    border-radius: 0 4px 4px 0;
+    box-shadow: 0 1px 4px rgba(31,26,20,0.05);
+    margin-bottom: 26px;
   }
-  .intro-line {
-    font-size: 13px;
+  .intro-legend {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
     color: var(--charcoal);
-    margin: 6px 0;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed var(--border);
+  }
+  .intro-legend .lg { color: var(--brass); margin: 0 4px; }
+  .intro-line {
+    font-size: 12.5px;
+    color: var(--charcoal-soft);
+    margin: 5px 0;
     line-height: 1.5;
   }
 
-  /* Sector page */
+  /* ===== Table of Contents ===== */
+  .toc { max-width: 980px; }
+  .toc-title {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--brass);
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+  .toc-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px 18px;
+  }
+  .toc-item {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .toc-num {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-weight: 700;
+    color: var(--brass);
+    font-size: 14px;
+    min-width: 24px;
+  }
+  .toc-name { font-weight: 600; font-size: 12px; color: var(--charcoal); flex: 1; }
+  .toc-count { font-size: 10px; color: var(--muted); }
+
+  /* ===== Sector page ===== */
   .sector-page {
-    padding: 30px 36px 50px;
+    padding: 26px 34px 48px;
     page-break-after: always;
     position: relative;
-    min-height: 90vh;
+    min-height: 94vh;
+  }
+  .sector-runhead {
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--brass);
+    text-align: right;
+    margin-bottom: 8px;
+    font-weight: 600;
   }
   .sector-banner {
-    background: var(--charcoal);
+    background: linear-gradient(135deg, var(--charcoal) 0%, var(--charcoal-soft) 100%);
     color: var(--ivory);
-    padding: 14px 28px;
+    padding: 15px 30px;
     text-align: center;
-    border-radius: 4px;
-    margin-bottom: 6px;
+    border-radius: 5px;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 14px;
+    gap: 16px;
+    box-shadow: 0 2px 8px rgba(31,26,20,0.18);
   }
   .sector-num {
     font-family: 'Playfair Display', Georgia, serif;
-    font-size: 22px;
+    font-size: 24px;
     font-weight: 700;
     color: var(--brass);
+    border-right: 1px solid rgba(184,149,107,0.4);
+    padding-right: 16px;
   }
   .sector-name {
     font-size: 18px;
     font-weight: 700;
-    letter-spacing: 1px;
+    letter-spacing: 1.5px;
     text-transform: uppercase;
   }
   .sector-meta {
     text-align: center;
     font-size: 11px;
     color: var(--muted);
-    margin-bottom: 18px;
+    margin-top: 8px;
     font-style: italic;
   }
 
-  /* Columns layout (sub-areas side by side) */
-  .columns {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-    align-items: flex-start;
+  /* Tree connector spine: garis turun dari banner ke kolom */
+  .tree-spine {
+    height: 18px;
+    width: 2px;
+    background: var(--brass);
+    margin: 0 auto 0;
+    opacity: 0.5;
   }
+
+  /* ===== Columns (sub-areas Level 1) ===== */
+  .columns {
+    display: grid;
+    gap: 14px;
+    align-items: start;
+    border-top: 2px solid var(--brass-soft);
+    padding-top: 16px;
+    position: relative;
+  }
+  .columns.wide { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  .columns.medium { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+  .columns.dense { grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)); font-size: 11px; }
+
   .subarea {
-    flex: 1 1 220px;
-    min-width: 200px;
-    max-width: 320px;
     background: var(--col-bg);
     border: 1px solid var(--border);
-    border-top: 3px solid var(--brass);
-    border-radius: 3px;
-    padding: 14px 16px;
+    border-radius: 5px;
+    padding: 0 0 12px;
+    box-shadow: 0 1px 3px rgba(31,26,20,0.04);
+    overflow: hidden;
+    break-inside: avoid;
   }
   .subarea-head {
-    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #faf7f1;
     font-weight: 700;
     color: var(--charcoal);
-    padding-bottom: 8px;
-    margin-bottom: 10px;
-    border-bottom: 1px solid var(--border);
+    padding: 9px 12px;
+    border-bottom: 2px solid var(--brass);
+    margin-bottom: 8px;
   }
-  .kerjaan {
-    margin-bottom: 12px;
-  }
-  .kerjaan:last-child { margin-bottom: 0; }
-  .kerjaan-name {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--brass);
-    margin-bottom: 4px;
-  }
-  .tasks {
-    list-style: none;
-    padding-left: 2px;
-  }
-  .tasks li {
+  .sa-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px; height: 18px;
+    background: var(--brass);
+    color: white;
+    border-radius: 3px;
     font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .sa-name { font-size: 12.5px; line-height: 1.25; }
+
+  .kerjaan { margin: 0 12px 11px; }
+  .kerjaan:last-child { margin-bottom: 2px; }
+  .kerjaan-name {
+    font-size: 11.5px;
+    font-weight: 600;
     color: var(--charcoal);
-    padding-left: 14px;
+    margin-bottom: 4px;
+    display: flex;
+    gap: 6px;
+    align-items: baseline;
+  }
+  .k-code {
+    color: var(--brass);
+    font-weight: 700;
+    font-size: 10px;
+    flex-shrink: 0;
+  }
+  .tasks { list-style: none; padding-left: 4px; }
+  .tasks li {
+    font-size: 10.5px;
+    color: var(--charcoal-soft);
+    padding-left: 13px;
     position: relative;
-    margin: 3px 0;
+    margin: 2.5px 0;
     line-height: 1.35;
   }
   .tasks li::before {
@@ -1657,32 +1782,39 @@ async function generateArchitectureMap(args) {
     left: 2px;
   }
   .tasks li.subtask {
-    padding-left: 26px;
+    padding-left: 25px;
     color: var(--muted);
   }
   .tasks li.subtask::before {
     content: "▸";
-    left: 14px;
-    font-size: 9px;
+    left: 13px;
+    font-size: 8px;
+    top: 1px;
   }
 
   .page-footer {
     position: absolute;
-    bottom: 18px;
-    left: 36px;
-    right: 36px;
-    text-align: center;
-    font-size: 10px;
+    bottom: 16px;
+    left: 34px;
+    right: 34px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 9.5px;
     color: var(--muted);
     border-top: 1px solid var(--border);
-    padding-top: 8px;
+    padding-top: 7px;
   }
+  .page-no { font-weight: 600; color: var(--brass); }
 
-  @page { size: A4 landscape; margin: 12mm; }
+  @page { size: A4 landscape; margin: 11mm; }
   @media print {
     body { background: white; }
+    .cover { background: white; }
     .cover, .sector-page { min-height: auto; }
     .subarea { break-inside: avoid; }
+    .sector-banner { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .sa-badge, .toc-num, .sector-num { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
 </style>
 </head>
@@ -1692,13 +1824,13 @@ async function generateArchitectureMap(args) {
     <h1 class="cover-title">${escapeHtml(title)}</h1>
     ${subtitle ? `<div class="cover-subtitle">${escapeHtml(subtitle)}</div>` : ''}
     ${introHtml}
+    ${tocHtml}
   </div>
   ${sectorsHtml}
 </body>
 </html>`
 
   try {
-    const safeTitle = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50) || 'map'
     const docId = genSecureId('map')
 
     await kv.set(`doc:${docId}`, styledHtml, { ex: 604800 })
