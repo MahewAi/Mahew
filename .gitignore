@@ -57,3 +57,6 @@ notion-import/*
 !notion-import/README.md
 notion-export-updated/*
 !notion-export-updated/README.md
+
+# Scrape/test artifacts (output sementara, jangan commit)
+scrape_test.json
