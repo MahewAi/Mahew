@@ -1,0 +1,34 @@
+# Gerai 1000 Pintu - Hermes Agent config (TEMPLATE)
+# Taruh di ~/.hermes/config.yaml di VPS. Kunci (OPENROUTER_API_KEY) taruh di ~/.hermes/.env
+# Verifikasi ID model persis di https://openrouter.ai/models pas setup.
+
+model:
+  provider: openrouter
+  default: "openrouter/anthropic/claude-opus-4.7"   # Atmaja = otak utama (content tier)
+  context_length: 200000
+
+# Subagent (specialist riset paralel). Floor kamu = Sonnet 4.6, jangan di bawah.
+delegation:
+  provider: openrouter
+  model: "openrouter/anthropic/claude-sonnet-4.6"
+
+# Tugas bantu (kompresi konteks, vision). Dijaga di floor Sonnet 4.6.
+auxiliary:
+  compression:
+    provider: openrouter
+    model: "openrouter/anthropic/claude-sonnet-4.6"
+  vision:
+    provider: openrouter
+    model: "openrouter/anthropic/claude-sonnet-4.6"
+
+memory:
+  memory_enabled: true
+  user_profile_enabled: true
+
+compression:
+  enabled: true
+  threshold: 0.5            # kompres saat konteks 50 persen penuh
+
+terminal:
+  backend: docker           # tool dieksekusi di sandbox docker (lebih aman)
+  timeout: 180

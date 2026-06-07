@@ -1,0 +1,39 @@
+# Gerai 1000 Pintu — AI Department Stack
+# Fase 1: Open WebUI (jendela chat) -> Claude via OpenRouter.
+# n8n kamu yang sudah ada TIDAK diubah (tetap di tempatnya, disambung lewat API/MCP).
+# Hermes (otak otonom) menyusul di Fase 2 (lihat BUILD-PLAN.md).
+
+services:
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: gerai-open-webui
+    restart: unless-stopped
+    ports:
+      - "3000:8080"
+    environment:
+      # Otak: Claude lewat OpenRouter (OpenAI-compatible)
+      - OPENAI_API_BASE_URL=https://openrouter.ai/api/v1
+      - OPENAI_API_KEY=${OPENROUTER_API_KEY}
+      # Identitas + keamanan sesi
+      - WEBUI_NAME=Gerai 1000 Pintu — AI Department
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
+      # Matikan Ollama (kita pakai OpenRouter, bukan model lokal)
+      - ENABLE_OLLAMA_API=false
+      # Registrasi ditutup setelah admin pertama dibuat (privasi)
+      - ENABLE_SIGNUP=false
+    volumes:
+      - openwebui-data:/app/backend/data
+
+  # --- FASE 2 (nanti): Hermes sebagai otak otonom di belakang Open WebUI ---
+  # hermes:
+  #   image: <diisi setelah verifikasi docs resmi Hermes>
+  #   container_name: gerai-hermes
+  #   restart: unless-stopped
+  #   env_file: .env
+  #   volumes:
+  #     - hermes-data:/root/.hermes
+  #   # Open WebUI akan diarahkan ke Hermes sebagai backend OpenAI-compatible
+
+volumes:
+  openwebui-data:
+  # hermes-data:
