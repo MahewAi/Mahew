@@ -54,11 +54,19 @@ Setiap file punya struktur:
 
 ## Mapping ke sistem existing
 
-Saat ini system prompt agent di-hardcoded di:
-- Atmaja CEO: `api/atmaja/chat.js` `buildSystemPrompt()`
-- 4 C-Suite + 12 specialists: `api/agent/reply.js` `ROLE_DEFINITIONS`
+**SINGLE SOURCE OF TRUTH untuk persona 17 agent (C-suite + specialist) = `api/_agents.js`**
+(object `AGENTS` + `buildSystemPromptFromAgent`). Dibaca oleh:
+- `api/agent/reply.js` → chat C-Suite/specialist di PWA + brief workflow n8n
+- `api/_mcp_handler.js` → consult_* tools (LibreChat)
 
-File YAML ini = **single source of truth** untuk persona. Kalau migrate ke LibreChat, tinggal generate Agent + SKILL.md dari file ini. Kalau tetap di Atmaja current, bisa update `ROLE_DEFINITIONS` dari YAML.
+Keduanya pakai builder yang sama, jadi TIDAK ADA drift persona antar pintu masuk.
+(Dulu persona ada di 4 tempat berbeda dan tidak sinkron. Disatukan 2026-05-31.)
+
+Atmaja CEO chat masih punya prompt sendiri di `api/atmaja/chat.js` `buildSystemPrompt()`,
+item berikutnya untuk disatukan saat cara kerja baru sudah final.
+
+File YAML di folder ini = referensi human-readable, boleh di-regenerate dari `_agents.js`.
+BUKAN lagi dibaca runtime.
 
 ## Status
 
@@ -80,20 +88,13 @@ File YAML ini = **single source of truth** untuk persona. Kalau migrate ke Libre
 4. (Optional) Sync ke `api/agent/reply.js` ROLE_DEFINITIONS untuk inject persona ke production
 5. (Future) Generate LibreChat Agent + SKILL.md dari YAML saat migration
 
-## Future specialists (belum ada YAML)
+## Specialists (12 roles) — SUDAH punya persona penuh
 
-12 specialist roles yang ada di `api/agent/reply.js` ROLE_DEFINITIONS tapi belum punya YAML formal:
-- curator
-- web_researcher
-- brand_strategist
-- editorial
-- document_writer
-- innovation_scout
-- business_designer
-- production_manager
-- financial_analyst
-- market_researcher
-- sales_strategist
-- hr_systems
+Per 2026-05-31, 12 specialist sudah punya persona penuh di `api/_agents.js` (background, voice_signature, quirks, output_template, memorySections), bukan lagi 1 baris generik:
 
-Specialists default = generic role, dipanggil ad-hoc. Tidak urgent kasih persona personal (bukan team member fixed seperti C-Suite). Kalau frequency dipakai naik, baru kasih persona.
+- Tim Wira (COO): hr_systems, production_manager, curator
+- Tim Citra (CMO): brand_strategist, market_researcher, sales_strategist, innovation_scout
+- Tim Aksa (CFO): business_designer, financial_analyst
+- Tim Lestari (CCO): document_writer, editorial, web_researcher
+
+Persona specialist sengaja lebih ramping dari C-Suite (menandakan hierarki support tier), tetap ber-anchor brand canon + dunia parent C-Suite-nya. Field `parent` di tiap entry menandai garis komando.
