@@ -18,6 +18,32 @@ Kamu  ->  Open WebUI (jendela chat)  ->  Hermes (otak otonom, group chat)  ->  A
 - **n8n Cloud**: workflow "Gerai 10 - Riset Kompetitor Mingguan" live + aktif (eksekusi tes sukses).
 - **Hermes**: setup wizard JALAN. Sudah dipilih: provider Anthropic (API key), default model `claude-opus-4-8`, auth API key (bukan subscription), terminal backend `local`, tanpa platform chat, tools = default.
 
+## SUDAH JADI (update 8 Jun 2026)
+- ✅ **Hermes gateway LIVE** (container `hermes`, API server port 8642, kunci di `/root/hermes-api-key.txt`). Default model Atmaja = Opus 4.8 (Anthropic langsung, API key, BUKAN subscription).
+- ✅ **Open WebUI <-> Hermes nyambung** via shared docker network `gerai-net`, base URL di Open WebUI = `http://hermes:8642/v1`. Model `hermes-agent` = Atmaja.
+- ✅ **SOUL Atmaja terpasang** (`/root/.hermes/SOUL.md`, identitas + brand canon + Cara Kerja Hermes). Atmaja jawab on-brand, kenal Gerai, nyebut Matthew, TANPA em-dash.
+- ✅ **Vault tersambung**: repo `MahewAi/Mahew` (PUBLIK) di-clone ke `/root/.hermes/vault` (= `/opt/data/vault` di container). Atmaja baca `docs/` otomatis via file/terminal tool. Pointer ada di SOUL.
+- ✅ **Auto-update vault**: cron `*/30 * * * * /usr/bin/git -C /root/.hermes/vault pull` (tiap 30 menit). Push dari Obsidian/laptop -> Atmaja ikut update.
+- ✅ **Akses dari mana aja**: `http://134.209.102.6:3000` (cowork laptop / PC / HP, satu otak di awan, nggak perlu sync).
+
+- ✅ **Group chat KEBUKTI** (8 Jun): Atmaja delegate ke Wira (COO, profile Sonnet 4.6 via `hermes profile create wira --clone`), Wira analisis, Atmaja sintesis. `delegate_task` + profiles jalan.
+- ✅ **Format output FIXED**: aturan format + CONTOH di PALING ATAS SOUL bikin Atmaja pakai heading/bullet/bold/tabel. PELAJARAN: instruksi format di tengah/bawah SOUL diabaikan model, HARUS di atas + ada contoh konkret.
+
+### Cara nambah specialist (resep, sudah teruji dengan Wira)
+1. `docker exec hermes hermes profile create <nama> --clone --description "<peran + kapan dipakai>"`
+2. Isi SOUL: `printf '<persona>' > /root/.hermes/profiles/<nama>/SOUL.md`
+3. Set model Sonnet 4.6: `sed -i 's/default: claude-opus-4-8/default: claude-sonnet-4-6/' /root/.hermes/profiles/<nama>/config.yaml`
+4. `docker restart hermes`
+- Profile warisin API key Atmaja dari `--clone`. SOUL profile di `/root/.hermes/profiles/<nama>/SOUL.md`.
+- Nanti persona lengkap dari `_agents.js` + 12 specialist via pipeline git (generator).
+
+### Berikutnya (prioritas)
+1. Specialist beneran (Wira/Citra/Aksa/Lestari + 12) buat GROUP CHAT (feedback ke Atmaja). INI maunya Matthew.
+2. Sambung n8n ke Atmaja (eksekutor: kirim/posting/jadwal).
+3. Dashboard Hermes via SSH tunnel (Matthew minta).
+4. Update docs vault yang usang (OpenRouter -> Anthropic, Opus 4.7 -> 4.8) lewat Obsidian.
+5. Benerin Watchtower.
+
 ## Aset/kredensial yang Matthew SUDAH punya (JANGAN lupa lagi)
 Cuma fakta kepemilikan, BUKAN nilai key (key tetap rahasia, Matthew yang pegang).
 - **Anthropic API key** -> otak (Atmaja Opus 4.8 + specialist Sonnet 4.6). Sudah dipasang di Hermes.
@@ -41,6 +67,11 @@ TBD: IG Graph API token (buat Instagram sourcing, dicek pas fase itu).
 6. Sambung **n8n sebagai eksekutor** (MCP/webhook) biar Atmaja bisa nyuruh eksekusi.
 7. Pasang **budget cap + checkpoint keputusan besar + pagar brand canon** sebelum dilepas otonom.
 8. Benerin **Watchtower** (auto-update, sekarang gagal restart).
+
+## Memory: sambung ke pengetahuan existing Matthew (DIA MINTA, prioritas tinggi)
+Atmaja jangan mulai dari nol. Dua sumber, sambungkan SETELAH SOUL kepasang:
+1. **Obsidian vault** (gudang ilmu utama: docs, riset, brand, manuskrip). Rencana: clone repo vault ke server -> Atmaja baca/cari via File tool (sudah nyala) -> auto `git pull` (cron/n8n) biar selalu update tiap Matthew nambah catatan. Bonus: SOUL bisa diambil dari vault, nggak perlu ngetik manual lagi. PERLU dari Matthew: URL repo vault (sama dengan app MahewAi/Mahew atau repo terpisah?) + private/public.
+2. **Memory 3-lapis Atmaja** (di n8n / API Gerai: gerai.mahewwork.com/api/atmaja/memory) sebagai memory runtime/dinamis. Sambungkan via tool/MCP biar Atmaja di Hermes pakai memory yang SAMA dengan department lama.
 
 ## Backlog upgrade (minta Matthew, ada prasyarat)
 Semua nyusul SETELAH pondasi beres. Tiap item butuh syarat dulu.
