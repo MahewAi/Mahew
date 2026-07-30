@@ -1,0 +1,3 @@
+kode_item,nama,kategori,satuan_dasar,lead_time_standar_hari,supplier_utama,jenis
+RAW-001,,material-utama,kg,14,SUP-01,material
+FG-001,,barang-jadi,pcs,,,barang jadi

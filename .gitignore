@@ -57,3 +57,9 @@ notion-import/*
 !notion-import/README.md
 notion-export-updated/*
 !notion-export-updated/README.md
+
+# Tangkapan layar hasil npm run opsflow:visual
+opsflow-shots/
+
+# Hasil build demo satu berkas
+dist-demo/

@@ -1,0 +1,5 @@
+sektor,nama_sub_tim,jumlah_orang_aktif,nama_pemimpin,stage_yang_dipegang,catatan
+Pembelian,Admin Purchasing,4,,"PROC-20, PROC-50",contoh baris - hapus dan ganti dengan data asli
+Finance,Accounts Payable,,,FIN-20,
+Produksi,PPIC,,,"PRD-10, PRD-20",
+Pengiriman,Gudang Finished Goods,,,"PRD-90, DEL-30",

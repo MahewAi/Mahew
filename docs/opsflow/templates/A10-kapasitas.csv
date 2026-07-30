@@ -1,0 +1,3 @@
+jenis,kode,nama,kapasitas_per_jam,sub_tim_operator,area_layanan,lead_time_dijanjikan_hari
+line produksi,LINE-1,,120,Produksi,,
+ekspedisi,CAR-1,,,Logistik,"Jakarta, Surabaya",2

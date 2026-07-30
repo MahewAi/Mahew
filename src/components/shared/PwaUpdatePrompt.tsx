@@ -181,38 +181,51 @@ export function PwaUpdatePrompt() {
     <AnimatePresence>
       {showPrompt && (
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 8 }}
+          // `x: '-50%'` harus ikut dianimasikan, bukan diserahkan ke kelas
+          // `-translate-x-1/2`: framer-motion menulis `transform` sebagai gaya
+          // inline, dan itu menimpa kelas Tailwind-nya. Akibatnya panel ini
+          // sebenarnya tidak pernah benar-benar di tengah — ia menempel di titik
+          // 50% lalu memanjang ke kanan, dan di layar sempit tombolnya terpotong
+          // keluar layar.
+          initial={{ opacity: 0, y: 16, x: '-50%' }}
+          animate={{ opacity: 1, y: 0, x: '-50%' }}
+          exit={{ opacity: 0, y: 8, x: '-50%' }}
           transition={{ duration: 0.24, ease: [0.32, 0.72, 0, 1] }}
           role="status"
           aria-live="polite"
           className={cn(
-            'fixed bottom-24 left-1/2 -translate-x-1/2 z-toast mb-safe-bottom',
+            'fixed bottom-24 left-1/2 z-toast mb-safe-bottom',
             'glass-strong rounded-full shadow-glass-hero',
             'px-3 py-2 flex items-center gap-2.5',
-            'min-w-[300px] max-w-[92vw]',
+            // Isinya harus boleh menyusut di layar sempit. Dengan lebar minimum
+            // tetap, tombol "Update sekarang" terpotong di ponsel kecil — dan
+            // pemberitahuan yang tombolnya tidak terlihat bukan pemberitahuan.
+            'w-[calc(100vw-24px)] max-w-[92vw] sm:w-auto sm:min-w-[300px]',
           )}
         >
           <RefreshCw aria-hidden="true" className="size-4 shrink-0 text-accent-dark" />
-          <span className="flex-1 text-sm font-bold text-text-primary">Versi baru siap dipakai</span>
+          <span className="min-w-0 flex-1 truncate text-sm font-bold text-text-primary">Versi baru siap dipakai</span>
           <button
             type="button"
             onClick={dismissPrompt}
-            className="px-2 text-meta font-medium text-text-muted hover:text-text-primary"
+            className="shrink-0 px-2 text-meta font-medium text-text-muted hover:text-text-primary"
           >
             Nanti
           </button>
           <button
             type="button"
             onClick={() => void hardRefreshApp()}
+            aria-label="Update sekarang"
             className={cn(
-              'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5',
+              'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5',
               'bg-accent text-meta font-semibold text-white shadow-glow-accent',
               'transition-colors duration-fast hover:bg-accent-dark',
             )}
           >
-            Update sekarang
+            {/* Di layar sempit tombolnya dipendekkan supaya kalimat pemberitahuannya
+                tidak habis dipotong. Nama panjangnya tetap ada untuk pembaca layar. */}
+            <span className="sm:hidden">Update</span>
+            <span className="hidden sm:inline">Update sekarang</span>
           </button>
         </motion.div>
       )}

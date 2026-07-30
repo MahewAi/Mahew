@@ -1,0 +1,4 @@
+stage,nilai_minimum_rp,nilai_maksimum_rp,level_wewenang_minimum,butuh_dua_penyetuju,pengganti_saat_penyetuju_tidak_ada
+FIN-40,0,50000000,3,tidak,
+FIN-40,50000000,,5,ya,
+PROC-40,0,100000000,3,tidak,

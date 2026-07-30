@@ -1,0 +1,3 @@
+nama_kalender,berlaku_untuk_sub_tim,hari_kerja,jam_mulai,jam_selesai,istirahat_mulai,istirahat_selesai,jalan_24_jam
+Kantor,"semua sub-tim kantor","Senin-Jumat",08:00,17:00,12:00,13:00,tidak
+Produksi shift,"Produksi, Gudang","Senin-Sabtu",00:00,24:00,,,ya
