@@ -254,6 +254,171 @@
   animation: skeleton-shimmer 1.6s ease-in-out infinite;
 }
 
+/* ============================================================
+   OpsFlow — kemunculan kartu dashboard.
+
+   Sengaja CSS, bukan JavaScript. Alasannya ketahanan: keadaan statis elemen
+   adalah TERLIHAT, dan animasi hanya menambahkan keadaan awal yang transparan.
+   Kalau animasinya tidak pernah jalan — mesin animasi bermasalah, frame di-starve,
+   browser lama — elemennya tetap tampil. Pendekatan berbasis JS punya kegagalan
+   sebaliknya: elemen ditahan pada opacity 0 sampai skripnya menggerakkannya, dan
+   kalau itu tidak terjadi, kartunya tidak pernah muncul sama sekali.
+
+   `--i` adalah urutan kartu, dipakai untuk jeda berurutan 40ms per kartu,
+   dibatasi 8 langkah supaya kartu terakhir di halaman panjang tidak terasa lambat.
+   ============================================================ */
+@keyframes opsflow-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.opsflow-enter {
+  animation: opsflow-enter 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(min(var(--i, 0), 8) * 40ms);
+  will-change: opacity, transform;
+}
+
+/* Pertumbuhan batang horizontal. `scaleX`, bukan `width` — animasi lebar memaksa
+   layout dihitung ulang tiap frame dan tersendat pada daftar puluhan batang. */
+@keyframes opsflow-bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.opsflow-bar {
+  transform-origin: left center;
+  animation: opsflow-bar-grow 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(min(var(--i, 0), 10) * 40ms + 80ms);
+}
+
+/* Segmen batang bertumpuk tumbuh dari bawah, arah berbeda dari batang induknya
+   supaya keduanya tidak terbaca sebagai satu gerakan yang sama. */
+@keyframes opsflow-segment-grow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+.opsflow-segment {
+  transform-origin: bottom center;
+  animation: opsflow-segment-grow 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 60ms + 120ms);
+}
+
+/* Sapuan meter cincin. Panjang busa diatur lewat --arc dari komponennya. */
+@keyframes opsflow-meter-sweep {
+  from {
+    stroke-dashoffset: var(--arc);
+  }
+  to {
+    stroke-dashoffset: var(--offset);
+  }
+}
+
+.opsflow-meter-fill {
+  animation: opsflow-meter-sweep 1s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 120ms;
+}
+
+/* Grafik memudar masuk sebagai satu kesatuan. */
+@keyframes opsflow-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.opsflow-fade {
+  animation: opsflow-fade 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 140ms;
+}
+
+/* ------------------------------------------------------------
+   Peta perjalanan — jalur berkelok bergaya peta permainan.
+   ------------------------------------------------------------ */
+
+/* Jalur bergerak seperti ban berjalan, menyatakan arah aliran pekerjaan.
+   Yang dianimasikan stroke-dashoffset pada garis tipis, bukan geometri. */
+@keyframes opsflow-conveyor {
+  to {
+    stroke-dashoffset: -28;
+  }
+}
+
+.opsflow-conveyor {
+  animation: opsflow-conveyor 1.4s linear infinite;
+}
+
+/* Denyut di stasiun yang macet. Cincin terpisah yang membesar lalu memudar,
+   jadi ukuran stasiunnya sendiri tidak berubah dan tata letak tidak bergeser. */
+@keyframes opsflow-node-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  70% {
+    transform: scale(2.1);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(2.1);
+    opacity: 0;
+  }
+}
+
+.opsflow-node-pulse {
+  animation: opsflow-node-pulse 2.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+/* Stasiun muncul satu per satu menyusuri jalur, seperti peta yang tersingkap. */
+@keyframes opsflow-node-pop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.opsflow-node {
+  /* Keadaan statisnya sudah pada posisi & ukuran akhir; animasinya hanya
+     menambahkan keadaan awal. Animasi gagal jalan = stasiun tetap tampil. */
+  transform: translate(-50%, -50%);
+  animation: opsflow-node-pop 380ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: calc(var(--i, 0) * 45ms + 120ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .opsflow-enter,
+  .opsflow-bar,
+  .opsflow-segment,
+  .opsflow-meter-fill,
+  .opsflow-fade,
+  .opsflow-conveyor,
+  .opsflow-node-pulse,
+  .opsflow-node {
+    animation: none;
+    will-change: auto;
+  }
+}
+
 /* Atmaja chat bubble markdown — compact margins + better table render */
 .atmaja-bubble-markdown > div > *:first-child { margin-top: 0; }
 .atmaja-bubble-markdown > div > *:last-child { margin-bottom: 0; }

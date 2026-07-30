@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutGrid, Sparkles, User } from 'lucide-react'
+import { LayoutGrid, Sparkles, User, Workflow } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 type NavItem = {
@@ -11,6 +11,7 @@ type NavItem = {
 
 const items: NavItem[] = [
   { to: '/', icon: LayoutGrid, label: 'Dashboard' },
+  { to: '/opsflow', icon: Workflow, label: 'Alur' },
   { to: '/atmaja', icon: Sparkles, label: 'Atmaja' },
   { to: '/settings', icon: User, label: 'Profile' },
 ]
@@ -49,7 +50,8 @@ export function BottomNav() {
           <NavLink
             key={item.to}
             to={item.to}
-            end
+            // Hanya root yang butuh pencocokan persis; tab lain tetap aktif di sub-halamannya.
+            end={item.to === '/'}
             aria-label={item.label}
             className={({ isActive }) =>
               cn(

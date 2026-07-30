@@ -1148,6 +1148,67 @@ export function computeFlowMetrics(
 }
 
 // ============================================================
+// Seri harian (tren)
+// ============================================================
+
+export interface DailyPoint {
+  /** 'YYYY-MM-DD' di zona Asia/Jakarta. */
+  date: string
+  /** Kunjungan stage yang selesai pada hari itu. */
+  completed: number
+  /** Di antaranya yang melewati SLA. */
+  breached: number
+  /** Jumlah pekerjaan yang masih berjalan pada akhir hari itu. */
+  wip: number
+}
+
+/**
+ * Tren harian throughput, pelanggaran SLA, dan WIP.
+ *
+ * Dihitung dari kunjungan stage yang sama, bukan dari sumber lain — supaya
+ * angka di grafik tren tidak pernah berbeda dari angka di kartu metrik.
+ * Opsional `sector` membatasi ke satu sektor.
+ */
+export function computeDailySeries(
+  dataset: OpsDataset,
+  visits: StageVisit[],
+  options: MetricsOptions & { sector?: SectorId } = {},
+): DailyPoint[] {
+  const windowDays = options.windowDays ?? DEFAULT_WINDOW_DAYS
+  const snapshotMs = Date.parse(dataset.snapshotAt)
+  const scoped = options.sector ? visits.filter((v) => v.sector === options.sector) : visits
+
+  const points: DailyPoint[] = []
+  for (let dayOffset = windowDays - 1; dayOffset >= 0; dayOffset -= 1) {
+    const dayEndMs = snapshotMs - dayOffset * 86_400_000
+    const dayStartMs = dayEndMs - 86_400_000
+    let completed = 0
+    let breached = 0
+    let wip = 0
+
+    for (const visit of scoped) {
+      const completedMs = visit.completedAt ? Date.parse(visit.completedAt) : null
+      if (completedMs !== null && completedMs > dayStartMs && completedMs <= dayEndMs) {
+        completed += 1
+        if (visit.waitBreached || visit.touchBreached) breached += 1
+      }
+      const arrivedMs = visit.arrivedAt ? Date.parse(visit.arrivedAt) : null
+      if (arrivedMs !== null && arrivedMs <= dayEndMs && (completedMs === null || completedMs > dayEndMs)) {
+        wip += 1
+      }
+    }
+
+    points.push({
+      date: new Date(dayEndMs).toISOString().slice(0, 10),
+      completed,
+      breached,
+      wip,
+    })
+  }
+  return points
+}
+
+// ============================================================
 // Penelusuran lintas sektor
 // ============================================================
 
@@ -1308,6 +1369,8 @@ export interface DashboardSnapshot {
   teams: TeamScorecard[]
   people: PersonScorecard[]
   dataQuality: StageDataQuality[]
+  /** Tren harian throughput, pelanggaran SLA, dan WIP. */
+  daily: DailyPoint[]
   /** Ringkasan tiga kalimat untuk pimpinan — apa yang macet, kenapa, berapa nilainya. */
   headline: string
 }
@@ -1341,6 +1404,7 @@ export function buildDashboardSnapshot(dataset: OpsDataset, options: MetricsOpti
     teams: computeTeamScorecards(normalized, visits, options),
     people: computePersonScorecards(normalized, visits, options),
     dataQuality: assessDataQuality(normalized, visits),
+    daily: computeDailySeries(normalized, visits, options),
     headline: buildHeadline(bottlenecks, flow, incidents),
   }
 }

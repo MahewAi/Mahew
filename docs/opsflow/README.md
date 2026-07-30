@@ -17,18 +17,29 @@ pertanyaan yang harus bisa dijawab kapan saja:
 | Mesin metrik & deteksi bottleneck | Selesai, 46/46 uji lolos — `src/opsflow/metrics.ts` |
 | Perhitungan jam kerja & kalender | Selesai — `src/opsflow/calendar.ts` |
 | Dataset contoh untuk uji & demo | Selesai — `src/opsflow/example.ts` |
+| Dashboard UI (4 halaman) | Selesai — buka `/opsflow` di app |
+| Peta perjalanan bergaya peta permainan | Selesai — 32 stasiun ber-ikon, jalur beranimasi |
+| Palet visualisasi tervalidasi | Selesai — lihat dokumen 07 |
 | **Kebutuhan data dari perusahaan** | **Menunggu — lihat dokumen 05** |
 | Adapter ingestion dari sistem existing | Menunggu jawaban dokumen 05 bagian C |
-| UI dashboard | Menunggu; SLA & nama stage dikonfirmasi dulu |
+| Layar PIC + aplikasi capture 2-tap | Menunggu; digabung dengan Fase 2 |
 
-Jalankan uji mandiri kapan saja:
+Jalankan verifikasi kapan saja:
 
 ```bash
-npm run opsflow:check
+npm run opsflow:check    # 46 pemeriksaan mesin metrik
+npm run typecheck        # tipe
+npm run dev              # buka /opsflow di browser
+
+# Pemeriksaan tata letak & visibilitas (butuh build + preview berjalan)
+npm run build && npm run preview
+npm run opsflow:visual
 ```
 
-Keluarannya menampilkan peringkat bottleneck yang ditemukan mesin dari data simulasi,
+`opsflow:check` menampilkan peringkat bottleneck yang ditemukan mesin dari data simulasi,
 termasuk bukti bahwa kemacetan yang sengaja ditanam di data memang terdeteksi.
+`opsflow:visual` mengukur overflow horizontal, kartu yang tidak terlihat, dan label peta
+yang bertabrakan di enam kombinasi halaman × lebar layar.
 
 ## Daftar dokumen
 
@@ -40,6 +51,7 @@ termasuk bukti bahwa kemacetan yang sengaja ditanam di data memang terdeteksi.
 | 04 | [Katalog Metrik](./04-KATALOG-METRIK.md) | Anda + manajemen |
 | 05 | **[Data yang Dibutuhkan](./05-DATA-YANG-DIBUTUHKAN.md)** | **Anda — ini langkah berikutnya** |
 | 06 | [Roadmap Implementasi](./06-ROADMAP-IMPLEMENTASI.md) | Anda |
+| 07 | [Dashboard: Keputusan Desain & Verifikasi](./07-DASHBOARD-UI.md) | Anda + tim frontend |
 
 Template CSV siap isi ada di [`templates/`](./templates/).
 
