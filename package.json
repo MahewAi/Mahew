@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "opsflow:check": "node --experimental-strip-types src/opsflow/selfcheck.ts",
     "opsflow:docs": "node --experimental-strip-types src/opsflow/docgen.ts",
-    "opsflow:visual": "node scripts/opsflow-visual-check.mjs"
+    "opsflow:visual": "node scripts/opsflow-visual-check.mjs",
+    "opsflow:demo": "vite build --config vite.demo.config.ts && node scripts/opsflow-build-demo.mjs"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.11",
