@@ -477,6 +477,27 @@ function itemById(id: string): WorkItem {
   return found
 }
 
+/** Tandai sebuah stage selesai tanpa menjalankan aksinya — untuk menyiapkan fixture. */
+function markCompleted(itemId: string, stageCode: string): void {
+  wfDataset = {
+    ...wfDataset,
+    events: [
+      ...wfDataset.events,
+      {
+        id: `EV-UJI-${(evSeq += 1)}`,
+        workItemId: itemId,
+        stageCode,
+        type: 'completed',
+        occurredAt: stamp(),
+        recordedAt: stamp(),
+        actorPersonId: null,
+        recordedBy: 'opsflow-uji',
+        recordingLagHours: 0,
+      },
+    ],
+  }
+}
+
 function contextFor(action: ActionDef, itemId: string, values: Record<string, string>, now = stamp()) {
   return {
     dataset: wfDataset,
@@ -637,6 +658,25 @@ const invId = apply('invoice-verifikasi', grnId, { no_invoice_vendor: 'INV-V-1',
 check('Tagihan otomatis lahir dari pencocokan', itemById(invId).type === 'payable_invoice')
 check('Nilai tagihan diambil dari isian, bukan diwarisi buta', itemById(invId).amount === 80_000_000)
 
+// ---- Verifikasi pajak mendahului persetujuan bayar ----
+check('Tagihan baru masuk ke Tax (FIN-30), bukan langsung ke persetujuan', itemById(invId).currentStageCode === 'FIN-30')
+const taxlessInvoice = makeItem({
+  id: 'WI-INV-UJI-TANPA-PAJAK',
+  type: 'payable_invoice',
+  currentStageCode: 'FIN-40',
+  amount: 9_000_000,
+})
+check(
+  'Persetujuan bayar ditahan kalau faktur pajaknya belum diverifikasi',
+  probe('bayar-setujui', taxlessInvoice.id).blockers.some((b) => b.guard === 'pajak-sudah-diverifikasi'),
+)
+apply('pajak-verifikasi', invId, {
+  no_faktur_pajak: '010.000-26.00000123',
+  masa_pajak: '2026-07',
+  data_vendor_cocok: 'ya',
+})
+check('Setelah pajak diverifikasi tagihan lanjut ke FIN-40', itemById(invId).currentStageCode === 'FIN-40')
+
 // ---- Gerbang wewenang di FIN-40 ----
 const gate = probe('bayar-setujui', invId)
 check(
@@ -668,6 +708,7 @@ const smallInvoice = makeItem({
   currentStageCode: 'FIN-40',
   amount: 9_000_000,
 })
+markCompleted(smallInvoice.id, 'FIN-30')
 check('Tagihan 9 jt di FIN-40 lolos (level 3 cukup)', probe('bayar-setujui', smallInvoice.id).ok)
 
 // Band teratas PROC-40 (AR-4) harus menahan nilai di atas 100 jt.
@@ -677,23 +718,7 @@ const bigRequest = makeItem({
   currentStageCode: 'PROC-40',
   amount: 150_000_000,
 })
-wfDataset = {
-  ...wfDataset,
-  events: [
-    ...wfDataset.events,
-    {
-      id: `EV-UJI-${(evSeq += 1)}`,
-      workItemId: bigRequest.id,
-      stageCode: 'FIN-10',
-      type: 'completed',
-      occurredAt: stamp(),
-      recordedAt: stamp(),
-      actorPersonId: null,
-      recordedBy: 'opsflow-uji',
-      recordingLagHours: 0,
-    },
-  ],
-}
+markCompleted(bigRequest.id, 'FIN-10')
 check(
   'Permintaan 150 jt di PROC-40 ditahan band teratas (AR-4)',
   probe('harga-setujui', bigRequest.id).blockers.some((b) => b.guard === 'wewenang-cukup'),
@@ -714,6 +739,239 @@ check(
 check(
   'Pesan gerbang anggaran menyebut akibatnya, bukan hanya aturannya',
   budgetGate.blockers.some((b) => /terpakai dua kali/.test(b.message)),
+)
+
+// ---- Rantai pemenuhan: pesanan pelanggan → produksi → kirim → tagih ----
+// Rantai ini melewati SETIAP sub-tim, termasuk yang dulu dilompati (cek
+// material, kesiapan mesin, QC dalam proses, serah terima gudang barang jadi,
+// picking, penjadwalan armada, pemantauan perjalanan, penagihan). Sub-tim yang
+// dilompati di sistem adalah sub-tim yang koordinasinya kembali ke WhatsApp.
+const so = makeItem({
+  id: 'WI-SO-UJI-1',
+  type: 'sales_order',
+  currentStageCode: 'DEL-10',
+  amount: 45_000_000,
+})
+const spkId = apply('so-konfirmasi', so.id, {
+  tanggal_janji: '2026-08-15',
+  alamat_penerima: 'PT Pelanggan Setia, Jl. Melati 5, Bekasi',
+})
+check('Surat produksi otomatis lahir dari pesanan pelanggan', itemById(spkId).type === 'production_order')
+check(
+  'Surat produksi tertaut sebagai pemenuhan pesanan, bukan dokumen lepas',
+  itemById(spkId).links.some((l) => l.targetWorkItemId === so.id && l.relation === 'fulfills'),
+)
+
+apply('spk-jadwalkan', spkId, { line: 'LINE-2', tanggal_mulai: '2026-08-03', qty_target: '1000' })
+check('Produksi terjadwal masuk cek ketersediaan material (PRD-20)', itemById(spkId).currentStageCode === 'PRD-20')
+
+const shortage = probe('material-alokasi', spkId, {
+  ketersediaan: 'sebagian',
+  kekurangan: 'resin PP 20 kg',
+  stok_fisik_dicek: 'ya',
+})
+check(
+  'Kekurangan material memperingatkan, keputusannya tetap di PPIC',
+  shortage.ok && shortage.warnings.some((w) => w.guard === 'material-tersedia'),
+  shortage.blockers.map((b) => b.message).join(' | '),
+)
+apply('material-alokasi', spkId, { ketersediaan: 'semua', stok_fisik_dicek: 'ya' })
+apply('material-keluarkan', spkId, { no_lot: 'LOT-2026-88', qty_keluar: '1000' })
+check('Material keluar mengantar ke kesiapan mesin (PRD-40)', itemById(spkId).currentStageCode === 'PRD-40')
+
+const noSetup = makeItem({
+  id: 'WI-SPK-UJI-TANPA-SETUP',
+  type: 'production_order',
+  currentStageCode: 'PRD-50',
+})
+markCompleted(noSetup.id, 'PRD-30')
+check(
+  'Produksi ditahan sebelum kesiapan mesin dinyatakan (PRD-40)',
+  probe('produksi-lapor', noSetup.id, { qty_hasil: '10', qty_cacat: '0', shift: 'shift-1' }).blockers.some(
+    (b) => b.guard === 'mesin-sudah-siap',
+  ),
+)
+
+apply('mesin-siapkan', spkId, {
+  mesin: 'Injection-02',
+  checklist_lolos: 'lolos',
+  parameter: 'suhu 180°C, tekanan 6 bar',
+  perawatan_preventif: '2026-07-20',
+})
+apply('produksi-lapor', spkId, { qty_hasil: '980', qty_cacat: '20', shift: 'shift-1', downtime_menit: '35' })
+check('Hasil produksi masuk QC dalam proses (PRD-60)', itemById(spkId).currentStageCode === 'PRD-60')
+
+// Temuan QC harus benar-benar bisa menyetop line, bukan cuma jadi catatan.
+apply('qc-proses-setop', spkId, { alasan: 'Dimensi di luar toleransi 0,3 mm.', qty_terdampak: '120' })
+check('QC dalam proses bisa menyetop line ke jalur rework (PRD-70)', itemById(spkId).currentStageCode === 'PRD-70')
+apply('rework-selesai', spkId, {
+  qty_diperbaiki: '110',
+  qty_scrap: '10',
+  jam_rework: '4',
+  akar_masalah: 'Cetakan aus di sisi kiri; jadwal penggantian mundur dua bulan.',
+})
+check(
+  'Hasil rework wajib diinspeksi ulang, tidak lanjut langsung ke QC akhir',
+  itemById(spkId).currentStageCode === 'PRD-60',
+)
+check(
+  'Akar masalah rework tersimpan di dokumen, bukan hanya di obrolan',
+  String(itemById(spkId).extra?.akar_masalah ?? '').includes('Cetakan aus'),
+)
+
+apply('qc-proses-lanjut', spkId, {
+  frekuensi_sampel: '6',
+  hasil_inspeksi: 'Dimensi kembali dalam toleransi setelah cetakan diganti.',
+  waktu_pencatatan: 'saat-inspeksi',
+})
+apply('qc-akhir-lolos', spkId, { jumlah_sampel: '30', hasil: 'Lolos seluruh parameter.' })
+check('Lolos QC akhir mengantar ke serah terima gudang (PRD-90)', itemById(spkId).currentStageCode === 'PRD-90')
+
+const countGap = probe('barang-jadi-terima', spkId, { qty_diterima: '950', lokasi_simpan: 'RAK-B3' })
+check(
+  'Selisih hitungan gudang vs laporan produksi disebut angkanya',
+  countGap.warnings.some((w) => w.guard === 'jumlah-cocok-produksi' && /950/.test(w.message) && /980/.test(w.message)),
+  countGap.warnings.map((w) => w.message).join(' | '),
+)
+apply('barang-jadi-terima', spkId, { qty_diterima: '980', lokasi_simpan: 'RAK-B3' })
+
+const earlySj = makeItem({
+  id: 'WI-SPK-UJI-BELUM-GUDANG',
+  type: 'production_order',
+  currentStageCode: 'DEL-20',
+})
+markCompleted(earlySj.id, 'PRD-80')
+check(
+  'Surat jalan ditahan kalau barang jadi belum masuk gudang (PRD-90)',
+  probe('sj-terbitkan', earlySj.id, { qty_kirim: '100', ekspedisi: 'Armada sendiri' }).blockers.some(
+    (b) => b.guard === 'barang-jadi-sudah-masuk-gudang',
+  ),
+)
+
+const sjId = apply('sj-terbitkan', spkId, { qty_kirim: '980', ekspedisi: 'Armada sendiri' })
+check('Surat jalan otomatis lahir dari serah terima gudang', itemById(sjId).type === 'delivery_order')
+check('Surat produksi ditutup setelah surat jalannya terbit', itemById(spkId).closedAt !== null)
+check('Surat jalan mulai dari picking (DEL-30), bukan langsung muat', itemById(sjId).currentStageCode === 'DEL-30')
+
+apply('picking-packing', sjId, {
+  qty_dipick: '980',
+  lot_diambil: 'FG-2026-0803',
+  pakai_daftar_pick: 'ya',
+  kemasan: 'Karton 5 lapis + pallet',
+})
+apply('ekspedisi-jadwalkan', sjId, {
+  ekspedisi_terpilih: 'Armada sendiri B-9021',
+  jam_muat: '08:00',
+  tanggal_muat: '2026-08-12',
+  muatan_dikonsolidasi: 'ya',
+})
+apply('sj-muat', sjId, { nama_driver: 'Driver 1', no_kendaraan: 'B 9021 XYZ', muatan_dicek_dua_pihak: 'ya' })
+check('Setelah berangkat kiriman masuk pemantauan perjalanan (DEL-60)', itemById(sjId).currentStageCode === 'DEL-60')
+apply('perjalanan-pantau', sjId, { posisi_terakhir: 'Rest area KM 39', estimasi_tiba: '2026-08-13' })
+
+const arId = apply('pod-catat', sjId, { nama_penerima: 'Budi — Kepala Gudang', qty_diterima_pelanggan: '980' })
+check('Tagihan pelanggan otomatis lahir dari bukti terima', itemById(arId).type === 'receivable_invoice')
+check('Surat jalan ditutup setelah bukti terima tercatat', itemById(sjId).closedAt !== null)
+
+const earlyAr = makeItem({
+  id: 'WI-AR-UJI-TANPA-POD',
+  type: 'receivable_invoice',
+  currentStageCode: 'DEL-90',
+  amount: 10_000_000,
+})
+check(
+  'Penagihan ditahan kalau belum ada bukti terima pelanggan',
+  probe('tagih-terbitkan', earlyAr.id, {
+    no_invoice_pelanggan: 'AR-X',
+    nilai_tagihan: '10000000',
+    jatuh_tempo: '2026-09-01',
+    tanggal_kirim_invoice: '2026-08-14',
+  }).blockers.some((b) => b.guard === 'pelanggan-sudah-terima'),
+)
+apply('tagih-terbitkan', arId, {
+  no_invoice_pelanggan: 'INV-AR-0001',
+  nilai_tagihan: '45000000',
+  jatuh_tempo: '2026-09-12',
+  tanggal_kirim_invoice: '2026-08-14',
+})
+check('Rantai pemenuhan tertutup penuh sampai penagihan', itemById(arId).closedAt !== null)
+check('Dokumen yang sudah ditutup tidak menawarkan aksi apa pun lagi', actionsForItem(itemById(arId)).length === 0)
+check(
+  'Mesin menolak aksi pada dokumen yang sudah ditutup, bukan hanya UI yang menyembunyikannya',
+  probe('tagih-terbitkan', arId, {
+    no_invoice_pelanggan: 'INV-AR-DOBEL',
+    nilai_tagihan: '45000000',
+    jatuh_tempo: '2026-09-12',
+    tanggal_kirim_invoice: '2026-08-14',
+  }).blockers.some((b) => b.guard === 'tahap-cocok' && /sudah ditutup/.test(b.message)),
+)
+
+// ---- Klaim pelanggan menunjuk stage sumbernya ----
+const rejectedDelivery = makeItem({
+  id: 'WI-SJ-UJI-DITOLAK',
+  type: 'delivery_order',
+  currentStageCode: 'DEL-70',
+})
+apply('pod-tolak-sebagian', rejectedDelivery.id, {
+  nama_penerima: 'Sari — Admin Gudang',
+  qty_ditolak: '40',
+  alasan: 'Warna beda dengan sampel yang disetujui.',
+})
+check('Penolakan penerima masuk jalur klaim (DEL-80)', itemById(rejectedDelivery.id).currentStageCode === 'DEL-80')
+const claimForm = actionById('klaim-pelanggan-putuskan')
+check(
+  'Pilihan stage sumber klaim dibangun dari taksonomi, jadi tidak pernah basi',
+  (claimForm.fields.find((f) => f.name === 'stage_sumber')?.options ?? []).length === mainPath().length,
+)
+check(
+  'Stage sumber wajib diisi — tanpa itu pola kesalahan tidak pernah terlihat',
+  Object.keys(
+    probe('klaim-pelanggan-putuskan', rejectedDelivery.id, {
+      keputusan: 'kirim-ulang',
+      barang_masuk_stok: 'ya',
+      tindakan_perbaikan: 'Cek warna sebelum packing.',
+    }).fieldErrors,
+  ).includes('stage_sumber'),
+)
+const claimId = apply('klaim-pelanggan-putuskan', rejectedDelivery.id, {
+  stage_sumber: 'PRD-60',
+  keputusan: 'kirim-ulang',
+  barang_masuk_stok: 'ya',
+  tindakan_perbaikan: 'Tambah pemeriksaan warna terhadap sampel di QC dalam proses.',
+})
+check('Klaim pelanggan tercatat sebagai dokumen tersendiri', itemById(claimId).type === 'return_claim')
+check(
+  'Dokumen klaim membawa sendiri stage sumber & keputusannya, tidak menumpang dokumen induk',
+  itemById(claimId).extra?.stage_sumber === 'PRD-60' && itemById(claimId).extra?.keputusan === 'kirim-ulang',
+  JSON.stringify(itemById(claimId).extra),
+)
+check(
+  'Tagihan vendor membawa nomor invoice vendornya sejak lahir',
+  itemById(invId).extra?.no_invoice_vendor === 'INV-V-1',
+  JSON.stringify(itemById(invId).extra),
+)
+apply('klaim-pelanggan-tutup', claimId, {
+  hasil: 'Kiriman ulang diterima penuh.',
+  perbaikan_dijalankan: 'ya',
+})
+check('Klaim ditutup dengan hasil tercatat', itemById(claimId).closedAt !== null)
+
+// ---- Cakupan katalog terhadap taksonomi ----
+// FIN-80 (Rekonsiliasi & Penutupan Periode) sengaja tidak punya aksi: ia
+// berjalan per PERIODE, bukan per dokumen, jadi memaksanya jadi aksi pada satu
+// objek kerja akan memalsukan bentuk pekerjaannya. Kalau nanti ada objek
+// "periode akuntansi", stage ini menyusul dengan pola yang sama.
+const mainWithoutActions = mainPath()
+  .filter((stage) => ACTIONS.every((a) => a.stageCode !== stage.code))
+  .map((stage) => stage.code)
+check(
+  'Setiap stage jalur utama punya aksi, kecuali FIN-80 yang memang per periode',
+  mainWithoutActions.join(',') === 'FIN-80',
+  `tanpa aksi: ${mainWithoutActions.join(', ') || '(tidak ada)'}`,
+)
+check(
+  'Jalur pengecualian (retur vendor & klaim pelanggan) juga punya aksinya',
+  ['PROC-90', 'PRD-70', 'DEL-80'].every((code) => ACTIONS.some((a) => a.stageCode === code)),
 )
 
 // ---- Peringatan yang tidak menahan ----

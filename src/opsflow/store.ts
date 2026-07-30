@@ -30,6 +30,17 @@ interface PersistedStore {
   workItems: WorkItem[]
   /** Nomor urut terakhir per awalan dokumen per tahun, mis. { 'PO-2026': 12 }. */
   counters: Record<string, number>
+  /**
+   * Nomor urut event tertinggi yang pernah dikeluarkan.
+   *
+   * Harus disimpan tersendiri, TIDAK boleh dihitung dari panjang event log.
+   * Nomor bisa terlewat: aksi yang ditolak gerbang sudah mengambil nomor tapi
+   * tidak pernah menambah event. Setelah halaman dimuat ulang, penomoran yang
+   * bertumpu pada panjang log akan mundur ke nomor yang sudah terpakai — dan id
+   * kembar merusak jejak audit, satu-satunya hal yang harus bisa dipercaya di
+   * sistem ini.
+   */
+  eventSeq?: number
   /** Kapan terakhir ada perubahan. Dipakai sebagai `snapshotAt`. */
   updatedAt: string
 }
@@ -74,6 +85,7 @@ function seedStore(): PersistedStore {
     events: example.events,
     workItems: example.workItems,
     counters: {},
+    eventSeq: example.events.length,
     updatedAt: example.snapshotAt,
   }
 }
@@ -179,6 +191,8 @@ export function commit(input: {
 
   write({
     ...store,
+    // Batas atas nomor event ikut disimpan, bukan disimpulkan dari panjang log.
+    eventSeq: Math.max(issued ?? 0, highWaterMark(store)),
     events: [...store.events, ...events],
     workItems: [...byId.values()],
     // Jangan sampai waktu acuan mundur kalau ada aksi yang waktunya lebih awal.
@@ -200,21 +214,28 @@ export function nextDocumentNumber(prefix: string, at: string): string {
 /**
  * Id event unik dan berurutan di dalam satu penyimpanan.
  *
- * `issued` wajib ada. Sebelumnya id hanya dihitung dari panjang event log, dan
- * karena satu tindakan menghasilkan BEBERAPA event sebelum di-commit, semuanya
- * mendapat id yang sama. Id kembar membuat React memakai ulang elemen daftar
- * milik dokumen yang dibuka sebelumnya — jejak audit sebuah tagihan sempat
- * menampilkan event permintaan barang. Di halaman yang seluruh gunanya adalah
- * "catatan ini bisa dipercaya", itu kerusakan paling parah yang bisa terjadi.
+ * Dua kali salah di sini, dua-duanya ketemu lewat pengujian:
+ *   1. Id dihitung dari panjang log, padahal satu tindakan membuat beberapa
+ *      event sebelum di-commit → semuanya dapat id sama.
+ *   2. Diperbaiki dengan penghitung sesi, tapi tetap bertumpu pada panjang log
+ *      sebagai titik awal. Karena nomor bisa terlewat (aksi yang ditolak sudah
+ *      mengambil nomor), panjang log lebih kecil daripada nomor tertinggi yang
+ *      terpakai — dan setelah muat ulang penomoran mundur ke nomor lama.
+ *
+ * Sekarang nomornya disimpan sebagai batas atas di penyimpanan, jadi tidak bisa
+ * mundur karena alasan apa pun.
  */
-let issued = 0
+let issued: number | null = null
+
+function highWaterMark(store: PersistedStore): number {
+  return store.eventSeq ?? store.events.length
+}
 
 export function nextEventId(): string {
   const store = read()
+  if (issued === null || issued < highWaterMark(store)) issued = highWaterMark(store)
   issued += 1
-  // Panjang log tidak pernah menyusut dan `issued` tidak pernah mundur, jadi
-  // jumlahnya selalu naik — termasuk setelah halaman dimuat ulang.
-  return `E-${String(store.events.length + issued).padStart(6, '0')}`
+  return `E-${String(issued).padStart(6, '0')}`
 }
 
 /** Berlangganan perubahan. Dipakai `useSyncExternalStore` di React. */
@@ -230,12 +251,20 @@ export function getStoreVersion(): string {
 
 /** Kembalikan ke riwayat simulasi awal. Dipakai tombol "mulai ulang demo". */
 export function resetStore(): void {
+  issued = null
   write(seedStore())
 }
 
 /** Kosongkan seluruhnya — mulai dari nol, tanpa riwayat simulasi. */
 export function clearStore(): void {
-  write({ version: SCHEMA_VERSION, events: [], workItems: [], counters: {}, updatedAt: new Date().toISOString() })
+  write({
+    version: SCHEMA_VERSION,
+    events: [],
+    workItems: [],
+    counters: {},
+    eventSeq: 0,
+    updatedAt: new Date().toISOString(),
+  })
 }
 
 /** Berapa banyak yang dibuat lewat sistem ini, bukan berasal dari seed simulasi. */
