@@ -16,6 +16,7 @@
 
 import { calendarHoursBetween, resolveCalendar, workingHoursBetween } from './calendar.ts'
 import type {
+  EventType,
   Incident,
   IncidentType,
   OpsDataset,
@@ -198,6 +199,12 @@ function calendarForStage(
  * waitHours = null. Yang tidak boleh terjadi adalah diam-diam mengarang angka:
  * null tetap null, dan cakupannya dilaporkan lewat `assessDataQuality()`.
  */
+/**
+ * Event yang hanya menempel pada kunjungan yang sedang berjalan — bukan penanda
+ * bahwa pekerjaan sedang berada di sebuah stage.
+ */
+const ANNOTATION_EVENTS = new Set<EventType>(['note', 'field_changed', 'incident_logged', 'reassigned'])
+
 /** Kunjungan yang sedang dibangun saat event log dibaca berurutan. */
 interface VisitAccumulator {
   stageCode: string
@@ -312,6 +319,16 @@ export function buildStageVisits(dataset: OpsDataset): StageVisit[] {
         flush(current, null)
         current = null
       }
+
+      // Event anotasi tidak bisa mendefinisikan kunjungan sendiri. Kalau tidak
+      // ada kunjungan yang sedang terbuka, ia dilewati.
+      //
+      // Tanpa penjagaan ini, sebuah `field_changed` yang terjadi SETELAH stage
+      // ditutup akan membuka "kunjungan hantu": tidak punya arrivedAt, startedAt,
+      // maupun completedAt, lalu ikut terhitung sebagai satu kunjungan stage dan
+      // mengencerkan seluruh persentase. Ditemukan lewat uji mandiri yang
+      // memeriksa bahwa setiap kunjungan punya minimal satu timestamp.
+      if (!current && ANNOTATION_EVENTS.has(event.type)) continue
 
       // 'completed' tanpa pembuka: buat kunjungan sekilas agar throughput tetap terhitung.
       const visit: VisitAccumulator =

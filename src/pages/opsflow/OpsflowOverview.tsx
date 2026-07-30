@@ -13,7 +13,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
-import { AlertTriangle, ArrowRight, Clock, TrendingDown } from 'lucide-react'
+import { AlertTriangle, ArrowRight, Clock, ScanSearch, TrendingDown } from 'lucide-react'
 import { SECTORS, SECTOR_ORDER, type SectorId } from '@/opsflow/taxonomy'
 import { WINDOW_OPTIONS, useOpsflowSnapshot, type WindowDays } from '@/opsflow/useOpsflowSnapshot'
 import {
@@ -45,6 +45,7 @@ import {
   TableViewToggle,
 } from '@/components/opsflow/primitives'
 import { Meter } from '@/components/opsflow/Meter'
+import { RULE_BY_ID, type RuleId } from '@/opsflow/rules'
 import { FlowJourneyMap } from '@/components/opsflow/FlowJourneyMap'
 import { DURATION, EASE, SPRING, pressable } from '@/components/opsflow/motion'
 import { OpsflowShell } from './OpsflowShell'
@@ -79,7 +80,7 @@ export default function OpsflowOverview() {
     )
   }
 
-  const { snapshot, source } = data
+  const { snapshot, source, detection } = data
   const { flow, bottlenecks, incidents, stages, dataQuality, daily } = snapshot
 
   const top = bottlenecks.slice(0, 8)
@@ -142,6 +143,37 @@ export default function OpsflowOverview() {
             ? SEVERITY_COLOR.warning
             : SEVERITY_COLOR.good,
   }))
+
+  // Temuan aturan otomatis, diurutkan dari yang paling banyak. Angkanya jumlah
+  // SEBELUM dipotong, supaya daftar yang dibatasi tidak terbaca sebagai
+  // "hanya sebanyak ini yang terjadi".
+  const detectedRows: BarRow[] = Object.entries(detection.countByRule)
+    .sort((a, b) => b[1] - a[1])
+    .map(([ruleId, count]) => {
+      const rule = RULE_BY_ID[ruleId as RuleId]
+      const cut = detection.truncated[ruleId] ?? 0
+      return {
+        key: ruleId,
+        label: rule?.name ?? ruleId,
+        sublabel: ruleId,
+        value: count,
+        valueLabel: `${count}×`,
+        color: rule?.certainty === 'confirmed' ? SEVERITY_COLOR.critical : SEVERITY_COLOR.warning,
+        badge: (
+          <span className="shrink-0 text-[10px] text-text-muted">
+            {rule?.certainty === 'confirmed' ? 'pasti dari data' : 'perlu diperiksa'}
+            {cut > 0 && ` · ${cut} tidak ditampilkan`}
+          </span>
+        ),
+        tip: rule ? (
+          <div className="space-y-1">
+            <p className="text-[11px] font-bold text-text-primary">{rule.name}</p>
+            <p className="text-[11px] leading-[15px] text-text-secondary">{rule.what}</p>
+            <p className="text-[11px] leading-[15px] text-text-muted">{rule.why}</p>
+          </div>
+        ) : undefined,
+      }
+    })
 
   const lowConfidence = dataQuality.filter((q) => q.confidence === 'low' || q.confidence === 'insufficient')
   const systemicPatterns = incidents.recurringPatterns.filter((p) => p.systemic)
@@ -455,6 +487,50 @@ export default function OpsflowOverview() {
             </div>
           </SectionCard>
         </div>
+
+        {/* Kesalahan yang ditemukan sistem sendiri */}
+        <SectionCard
+          index={10}
+          title="Kesalahan yang ditemukan sistem sendiri"
+          hint="Ditemukan dari jejak yang sudah ada, tanpa seorang pun melapor. Inilah yang membuat data kesalahan tidak bergantung pada kesediaan orang mengakui kesalahannya."
+          action={
+            <TableViewToggle
+              caption="Temuan aturan otomatis"
+              headers={['Aturan', 'Kode', 'Temuan', 'Tidak ditampilkan', 'Kepastian']}
+              numericColumns={[2, 3]}
+              rows={Object.entries(detection.countByRule).map(([ruleId, count]) => [
+                RULE_BY_ID[ruleId as RuleId]?.name ?? ruleId,
+                ruleId,
+                count,
+                detection.truncated[ruleId] ?? 0,
+                RULE_BY_ID[ruleId as RuleId]?.certainty === 'confirmed' ? 'pasti dari data' : 'perlu diperiksa',
+              ])}
+            />
+          }
+        >
+          <div className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <span className="text-[36px] font-bold leading-[38px] tracking-[-0.02em] text-text-primary">
+              {detection.totalFound}
+            </span>
+            <span className="text-[13px] font-semibold text-text-secondary">
+              temuan dari {Object.keys(detection.countByRule).length} aturan
+            </span>
+          </div>
+
+          <BarList rows={detectedRows} />
+
+          <div className="mt-4 rounded-md bg-bg-surface px-3.5 py-3 ring-1 ring-inset ring-border-soft">
+            <p className="flex items-center gap-1.5 text-[12px] font-bold text-text-primary">
+              <ScanSearch aria-hidden="true" className="size-3.5" />
+              Mesin memastikan kejadiannya, bukan sebabnya
+            </p>
+            <p className="mt-1 text-[11px] leading-[16px] text-text-secondary">
+              Semua temuan di atas keluar tanpa atribusi — belum ditetapkan apakah penyebabnya individu, prosedur,
+              sistem, atau pihak luar. Itu keputusan yang butuh penelusuran manusia. Setiap temuan membawa bukti yang
+              bisa diperiksa dan dibantah; temuan yang tidak bisa diperiksa ulang tidak akan dipercaya siapa pun.
+            </p>
+          </div>
+        </SectionCard>
 
         {/* Kualitas data — ditampilkan, bukan disembunyikan */}
         <SectionCard

@@ -16,6 +16,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { buildExampleDataset } from './example.ts'
 import { buildDashboardSnapshot, buildStageVisits, type DashboardSnapshot, type StageVisit } from './metrics.ts'
+import { withDetectedIncidents, type DetectionSummary } from './rules.ts'
 import type { OpsDataset } from './schema.ts'
 
 export type SnapshotSource = 'simulasi' | 'live'
@@ -35,6 +36,12 @@ export interface OpsflowData {
   visits: StageVisit[]
   dataset: OpsDataset
   source: SnapshotSource
+  /**
+   * Ringkasan kesalahan yang ditemukan aturan otomatis, tanpa ada yang melapor.
+   * Dibawa terpisah dari `snapshot` supaya bisa ditampilkan sebagai temuan
+   * sistem — dan supaya jumlah yang dipotong ikut terbaca.
+   */
+  detection: DetectionSummary
 }
 
 /**
@@ -43,13 +50,26 @@ export interface OpsflowData {
  */
 let cachedDataset: OpsDataset | null = null
 let cachedVisits: StageVisit[] | null = null
+let cachedDetection: DetectionSummary | null = null
 
-function loadDataset(): { dataset: OpsDataset; visits: StageVisit[]; source: SnapshotSource } {
-  if (!cachedDataset || !cachedVisits) {
-    cachedDataset = buildExampleDataset()
-    cachedVisits = buildStageVisits(cachedDataset)
+function loadDataset(): {
+  dataset: OpsDataset
+  visits: StageVisit[]
+  source: SnapshotSource
+  detection: DetectionSummary
+} {
+  if (!cachedDataset || !cachedVisits || !cachedDetection) {
+    const raw = buildExampleDataset()
+    const rawVisits = buildStageVisits(raw)
+    // Aturan otomatis dijalankan sekali, lalu temuannya digabung sebagai insiden
+    // supaya metrik kesalahan mencerminkan yang DITEMUKAN sistem, bukan hanya
+    // yang dilaporkan orang. Di bulan-bulan awal, selisihnya besar.
+    const merged = withDetectedIncidents(raw, rawVisits)
+    cachedDataset = merged.dataset
+    cachedVisits = rawVisits
+    cachedDetection = merged.detection
   }
-  return { dataset: cachedDataset, visits: cachedVisits, source: 'simulasi' }
+  return { dataset: cachedDataset, visits: cachedVisits, source: 'simulasi', detection: cachedDetection }
 }
 
 /** Snapshot per jendela waktu, di-cache supaya ganti filter terasa seketika. */
@@ -69,12 +89,12 @@ export function useOpsflowSnapshot(windowDays: WindowDays): OpsflowData | null {
 
   return useMemo(() => {
     if (!ready) return null
-    const { dataset, visits, source } = loadDataset()
+    const { dataset, visits, source, detection } = loadDataset()
     let snapshot = snapshotCache.get(windowDays)
     if (!snapshot) {
       snapshot = buildDashboardSnapshot(dataset, { windowDays })
       snapshotCache.set(windowDays, snapshot)
     }
-    return { snapshot, visits, dataset, source }
+    return { snapshot, visits, dataset, source, detection }
   }, [ready, windowDays])
 }

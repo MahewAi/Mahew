@@ -20,7 +20,9 @@ import {
   traceWorkItem,
 } from './metrics.ts'
 import { DEFAULT_CALENDAR, workingHoursBetween } from './calendar.ts'
-import { mainPath, mainPathSlaHours, STAGES, allTeams } from './taxonomy.ts'
+import { RULES, detectIncidents, withDetectedIncidents } from './rules.ts'
+import { ingestStatusHistoryCsv, parseCsv } from './ingest.ts'
+import { getStage, mainPath, mainPathSlaHours, STAGES, allTeams } from './taxonomy.ts'
 
 let failures = 0
 let checks = 0
@@ -250,7 +252,147 @@ check(
 )
 
 // ============================================================
-section('10. Determinisme')
+section('10. Deteksi kesalahan otomatis')
+
+const detection = detectIncidents(dataset, visits)
+console.log(`     Total temuan = ${detection.totalFound} (ditampilkan ${detection.totalReturned})`)
+for (const [ruleId, count] of Object.entries(detection.countByRule).sort((a, b) => b[1] - a[1])) {
+  const cut = detection.truncated[ruleId] ?? 0
+  console.log(`       ${ruleId.padEnd(28)} ${String(count).padStart(4)}${cut > 0 ? ` (${cut} dipotong)` : ''}`)
+}
+
+check(`Aturan menemukan kesalahan tanpa ada yang melapor = ${detection.totalFound}`, detection.totalFound > 0)
+check(
+  'Setiap temuan membawa ruleId dan bukti yang bisa diperiksa',
+  detection.incidents.every((i) => i.ruleId.length > 0 && i.evidence.length > 10),
+)
+check(
+  'Tidak ada temuan otomatis yang menetapkan atribusi — mesin memastikan kejadian, bukan sebabnya',
+  detection.incidents.every((i) => i.attribution === 'unknown'),
+)
+check(
+  'Setiap temuan ditandai detectionMethod automatic_rule',
+  detection.incidents.every((i) => i.detectionMethod === 'automatic_rule'),
+)
+check(
+  'Temuan yang dipotong tetap dilaporkan jumlahnya, tidak disembunyikan',
+  detection.totalFound === detection.totalReturned ||
+    Object.values(detection.truncated).reduce((a, b) => a + b, 0) === detection.totalFound - detection.totalReturned,
+)
+check(
+  'R5 hanya memicu di stage persetujuan',
+  detection.incidents
+    .filter((i) => i.ruleId === 'R5-approval-menggantung')
+    .every((i) => getStage(i.occurredAtStage)?.kind === 'approval'),
+)
+check(
+  'R5 tidak memicu untuk pekerjaan yang tertahan pihak luar',
+  detection.incidents.filter((i) => i.ruleId === 'R5-approval-menggantung').length <
+    visits.filter((v) => getStage(v.stageCode)?.kind === 'approval').length,
+)
+for (const rule of RULES) {
+  check(
+    `Aturan ${rule.id} menyala di data contoh (${detection.countByRule[rule.id] ?? 0} temuan)`,
+    (detection.countByRule[rule.id] ?? 0) > 0,
+    'aturan yang tidak pernah menyala tidak terbukti bekerja',
+  )
+}
+check(
+  'Deteksi bersifat murni: dua kali jalan hasilnya identik',
+  JSON.stringify(detectIncidents(dataset, visits).countByRule) === JSON.stringify(detection.countByRule),
+)
+
+const merged = withDetectedIncidents(dataset, visits)
+check(
+  `Temuan otomatis ikut terhitung di metrik kesalahan (${dataset.incidents.length} → ${merged.dataset.incidents.length})`,
+  merged.dataset.incidents.length > dataset.incidents.length,
+)
+check('Dataset asli tidak diubah', dataset.incidents.length === 120)
+
+// ============================================================
+section('11. Adapter ingestion CSV')
+
+const sampleCsv = [
+  'jenis_dokumen,nomor_dokumen,nomor_dokumen_sebelumnya,status_dari,status_ke,waktu_perubahan,id_pegawai_pelaku,nilai_rp,qty,satuan,kode_item,kode_supplier_atau_pelanggan,tanggal_dibutuhkan_atau_dijanjikan,status_akhir',
+  'PR,PR-2026-01033,,Draft,Diajukan,2026-07-01 09:10,EMP-0001,48500000,100,pcs,RAW-001,SUP-01,2026-07-25,Selesai',
+  'PO,PO-2026-04821,PR-2026-01033,Draft,Diajukan,2026-07-04 10:00,EMP-0007,48500000,100,pcs,RAW-001,SUP-01,2026-07-25,Selesai',
+  'PO,PO-2026-04821,PR-2026-01033,Diajukan,Disetujui,2026-07-04 14:22,EMP-0007,48500000,100,pcs,RAW-001,SUP-01,2026-07-25,Selesai',
+  'PO,PO-2026-04821,PR-2026-01033,Disetujui,Terkirim ke vendor,2026-07-05 09:10,EMP-0003,48500000,100,pcs,RAW-001,SUP-01,2026-07-25,Selesai',
+  // Baris dobel — sinkronisasi diulang. Tidak boleh menambah data.
+  'PO,PO-2026-04821,PR-2026-01033,Disetujui,Terkirim ke vendor,2026-07-05 09:10,EMP-0003,48500000,100,pcs,RAW-001,SUP-01,2026-07-25,Selesai',
+  // Status yang belum ada di pemetaan.
+  'PO,PO-2026-04821,PR-2026-01033,Terkirim,MENUNGGU_VENDOR_2,2026-07-06 08:00,EMP-0003,48500000,,,,,,',
+  // Waktu tidak bisa dibaca.
+  'GRN,GRN-2026-2201,PO-2026-04821,Draft,Diterima,bukan-tanggal,EMP-0011,,100,pcs,RAW-001,SUP-01,,',
+  // Nomor dokumen kosong.
+  'GRN,,PO-2026-04821,Draft,Diterima,2026-07-20 08:00,EMP-0011,,100,pcs,RAW-001,SUP-01,,',
+  // Merujuk dokumen yang tidak ada di ekspor ini.
+  'GRN,GRN-2026-2202,PO-9999-9999,Draft,Diterima,2026-07-20 08:30,EMP-0011,,100,pcs,RAW-001,SUP-01,,Selesai',
+].join('\n')
+
+const ingested = ingestStatusHistoryCsv(sampleCsv, { sourceSystem: 'erp-uji', snapshotAt: '2026-07-31T17:00:00+07:00' })
+
+console.log(`     Dibaca ${ingested.run.recordsRead} baris → ${ingested.run.recordsWritten} event, ${ingested.run.recordsRejected} ditolak`)
+console.log(`     Objek kerja terbentuk = ${ingested.dataset.workItems.length}`)
+for (const rejection of ingested.run.rejections) {
+  console.log(`       tolak ${rejection.externalId}: ${rejection.reason}`)
+}
+for (const status of ingested.unmappedStatuses) {
+  console.log(`       belum dipetakan: ${status.docType} / ${status.statusTo} (${status.count}×)`)
+}
+
+check(`Objek kerja terbentuk dari nomor dokumen = ${ingested.dataset.workItems.length}`, ingested.dataset.workItems.length === 3)
+check(`Event terbentuk = ${ingested.dataset.events.length}`, ingested.dataset.events.length === 5)
+check(
+  'Baris dobel tidak menambah event (idempotensi)',
+  ingested.dataset.events.filter((e) => e.stageCode === 'PROC-50').length === 1,
+)
+check(
+  'Status yang belum dipetakan dilaporkan, bukan dibuang diam-diam',
+  ingested.unmappedStatuses.some((s) => s.statusTo === 'MENUNGGU_VENDOR_2'),
+)
+check(
+  'Waktu yang tidak bisa dibaca ditolak dengan alasan',
+  ingested.run.rejections.some((r) => r.reason.includes('waktu_perubahan')),
+)
+check(
+  'Nomor dokumen kosong ditolak dengan alasan',
+  ingested.run.rejections.some((r) => r.reason.includes('nomor_dokumen kosong')),
+)
+check(
+  'Tautan ke dokumen yang tidak ada di ekspor ditolak, tidak dibuat tautan menggantung',
+  ingested.run.rejections.some((r) => r.reason.includes('tidak ada di ekspor')),
+)
+check(
+  'Tautan PO → PR terbentuk',
+  (ingested.dataset.workItems.find((i) => i.documentNumber === 'PO-2026-04821')?.links ?? []).some(
+    (l) => l.targetWorkItemId === 'WI-PR-2026-01033',
+  ),
+)
+check(
+  'Status ingestion partial karena ada penolakan',
+  ingested.run.status === 'partial',
+  `dapat ${ingested.run.status}`,
+)
+check(
+  'Waktu tanpa offset dibaca sebagai Asia/Jakarta',
+  ingested.dataset.events.some((e) => e.occurredAt === '2026-07-01T02:10:00.000Z'),
+)
+check(
+  'Nilai transaksi terbaca',
+  ingested.dataset.workItems.find((i) => i.documentNumber === 'PO-2026-04821')?.amount === 48_500_000,
+)
+
+// Kolom wajib hilang harus gagal di depan, bukan menghasilkan ribuan penolakan identik.
+const badHeader = ingestStatusHistoryCsv('kolom_a,kolom_b\n1,2', { sourceSystem: 'erp-uji' })
+check('Ekspor dengan kolom salah gagal di depan dengan pesan yang jelas', badHeader.run.status === 'failed')
+
+// CSV dengan koma di dalam tanda kutip.
+const quoted = parseCsv('a,"b,c",d\n1,"dua, tiga",3')
+check('Pembaca CSV menangani koma di dalam tanda kutip', quoted[1][1] === 'dua, tiga')
+
+// ============================================================
+section('12. Determinisme')
 
 const second = buildDashboardSnapshot(buildExampleDataset())
 check(

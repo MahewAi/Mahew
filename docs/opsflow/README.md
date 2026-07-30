@@ -14,12 +14,15 @@ pertanyaan yang harus bisa dijawab kapan saja:
 | --- | --- |
 | Taksonomi alur 4 sektor + 35 stage sub-tim | Selesai — `src/opsflow/taxonomy.ts` |
 | Skema data event-sourced | Selesai — `src/opsflow/schema.ts` |
-| Mesin metrik & deteksi bottleneck | Selesai, 46/46 uji lolos — `src/opsflow/metrics.ts` |
+| Mesin metrik & deteksi bottleneck | Selesai — `src/opsflow/metrics.ts` |
 | Perhitungan jam kerja & kalender | Selesai — `src/opsflow/calendar.ts` |
 | Dataset contoh untuk uji & demo | Selesai — `src/opsflow/example.ts` |
 | Dashboard UI (4 halaman) | Selesai — buka `/opsflow` di app |
 | Peta perjalanan bergaya peta permainan | Selesai — 32 stasiun ber-ikon, jalur beranimasi |
 | Palet visualisasi tervalidasi | Selesai — lihat dokumen 07 |
+| Deteksi kesalahan otomatis (7 aturan) | Selesai — `src/opsflow/rules.ts`, lihat dokumen 08 |
+| Adapter ingestion CSV | Selesai — `src/opsflow/ingest.ts`, lihat dokumen 08 |
+| Seluruh uji mandiri | 76/76 lolos |
 | **Kebutuhan data dari perusahaan** | **Menunggu — lihat dokumen 05** |
 | Adapter ingestion dari sistem existing | Menunggu jawaban dokumen 05 bagian C |
 | Layar PIC + aplikasi capture 2-tap | Menunggu; digabung dengan Fase 2 |
@@ -27,7 +30,7 @@ pertanyaan yang harus bisa dijawab kapan saja:
 Jalankan verifikasi kapan saja:
 
 ```bash
-npm run opsflow:check    # 46 pemeriksaan mesin metrik
+npm run opsflow:check    # 76 pemeriksaan: metrik, 7 aturan deteksi, adapter ingestion
 npm run typecheck        # tipe
 npm run dev              # buka /opsflow di browser
 
@@ -37,7 +40,8 @@ npm run opsflow:visual
 ```
 
 `opsflow:check` menampilkan peringkat bottleneck yang ditemukan mesin dari data simulasi,
-termasuk bukti bahwa kemacetan yang sengaja ditanam di data memang terdeteksi.
+termasuk bukti bahwa kemacetan yang sengaja ditanam di data memang terdeteksi, dan bahwa
+ketujuh aturan deteksi kesalahan benar-benar menyala.
 `opsflow:visual` mengukur overflow horizontal, kartu yang tidak terlihat, dan label peta
 yang bertabrakan di enam kombinasi halaman × lebar layar.
 
@@ -52,6 +56,7 @@ yang bertabrakan di enam kombinasi halaman × lebar layar.
 | 05 | **[Data yang Dibutuhkan](./05-DATA-YANG-DIBUTUHKAN.md)** | **Anda — ini langkah berikutnya** |
 | 06 | [Roadmap Implementasi](./06-ROADMAP-IMPLEMENTASI.md) | Anda |
 | 07 | [Dashboard: Keputusan Desain & Verifikasi](./07-DASHBOARD-UI.md) | Anda + tim frontend |
+| 08 | [Deteksi Otomatis & Adapter Ingestion](./08-DETEKSI-OTOMATIS-DAN-INGESTION.md) | Tim IT + Anda |
 
 Template CSV siap isi ada di [`templates/`](./templates/).
 
@@ -111,6 +116,19 @@ Urutan yang saya sarankan: **perbaiki proses dulu selama 2–3 bulan, tampilkan 
 tingkat sub-tim.** Baru setelah kesalahan sistemik habis, sisa kesalahan yang tinggal
 memang atribusi individu — dan pada titik itu datanya sudah kuat untuk dipakai dalam
 pembicaraan kinerja.
+
+### 4. Kesalahan ditemukan sistem, bukan dilaporkan orang
+
+Tiga pengaman di poin 3 tidak akan cukup kalau sumber datanya tetap laporan
+sendiri. Karena itu ada tujuh aturan yang menemukan kesalahan dari jejak yang
+sudah ada: persetujuan di luar wewenang, tagihan dobel, gerbang QC yang dilewati,
+data yang diubah setelah disetujui, dan seterusnya. Pada data simulasi ketujuhnya
+menemukan **354 temuan**, dibanding 120 insiden yang "dilaporkan".
+
+Semua temuan itu keluar **tanpa atribusi**: mesin memastikan kejadiannya, bukan
+sebabnya. Penetapan siapa atau apa yang salah tetap keputusan manusia setelah
+penelusuran — dan setiap temuan membawa bukti yang bisa diperiksa dan dibantah.
+Rinciannya di [dokumen 08](./08-DETEKSI-OTOMATIS-DAN-INGESTION.md).
 
 ## Yang saya butuhkan dari Anda untuk melanjutkan
 

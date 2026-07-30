@@ -306,7 +306,9 @@ export function buildExampleDataset(options: ExampleOptions = {}): OpsDataset {
   ): void => {
     eventSeq += 1
     // Jeda pencatatan: sebagian besar cepat, sebagian tim lambat mencatat.
-    const lagHours = rng() < 0.75 ? rng() * 1.5 : 4 + rng() * 20
+    // Sebagian kecil dicatat sangat terlambat — pola nyata di tim yang mencatat
+    // borongan di akhir hari atau akhir pekan. Memicu aturan R4.
+    const lagHours = rng() < 0.72 ? rng() * 1.5 : rng() < 0.85 ? 4 + rng() * 18 : 26 + rng() * 60
     events.push({
       id: `E${String(eventSeq).padStart(6, '0')}`,
       workItemId,
@@ -354,7 +356,11 @@ export function buildExampleDataset(options: ExampleOptions = {}): OpsDataset {
       const waitHours = stage.slaWaitHours * delayFactor * (0.35 + rng() * 1.3)
       const startedMs = arrivedMs + waitHours * HOUR_MS
       if (startedMs > snapshotMs) return { closedMs: null, currentStage }
-      pushEvent(workItemId, stageCode, 'started', startedMs, actor)
+      // Sebagian kecil pekerjaan diselesaikan tanpa pernah tercatat siapa yang
+      // mengambilnya. Memicu aturan R7 — dan ini juga yang membuat waktu tunggu
+      // tidak bisa dipisahkan dari waktu kerja.
+      const recordStart = rng() >= 0.05
+      if (recordStart) pushEvent(workItemId, stageCode, 'started', startedMs, actor)
 
       // Sebagian stage menunggu pihak luar.
       let blockedExtraMs = 0
@@ -388,6 +394,25 @@ export function buildExampleDataset(options: ExampleOptions = {}): OpsDataset {
       const touchHours = stage.slaTouchHours * (0.4 + rng() * 1.4)
       const completedMs = startedMs + blockedExtraMs + touchHours * HOUR_MS
       if (completedMs > snapshotMs) return { closedMs: null, currentStage }
+
+      // Stage persetujuan menghasilkan event 'approved'. Sebagian sengaja
+      // disetujui oleh staf (level 1) meski nilainya menuntut lead (level 3) —
+      // pola yang memicu aturan R1, dan yang di perusahaan nyata baru ketahuan
+      // saat audit.
+      if (stage.kind === 'approval') {
+        const members = peopleByTeamId.get(teamIdByName.get(stage.team) ?? '') ?? []
+        const underAuthorised = members.find((m) => m.authorityLevel < 3)
+        const approver = rng() < 0.12 && underAuthorised ? underAuthorised.id : actor
+        pushEvent(workItemId, stageCode, 'approved', completedMs - 0.2 * HOUR_MS, approver)
+
+        // Sebagian kecil datanya diubah SETELAH disetujui — celah kontrol yang
+        // membuat persetujuan jadi tidak bermakna. Memicu aturan R6.
+        if (rng() < 0.08) {
+          pushEvent(workItemId, stageCode, 'field_changed', completedMs + 0.5 * HOUR_MS, actor, {
+            change: { field: 'qty', from: 100, to: 120 },
+          })
+        }
+      }
 
       pushEvent(workItemId, stageCode, 'completed', completedMs, actor, {
         toStageCode: path[index + 1],
@@ -479,6 +504,25 @@ export function buildExampleDataset(options: ExampleOptions = {}): OpsDataset {
         invoice.closedAt = new Date(finResult.closedMs).toISOString()
       }
       workItems.push(invoice)
+
+      // Tagihan dobel: vendor sama, nilai sama, berselang beberapa hari. Nomornya
+      // sedikit berbeda sehingga tidak tertangkap pemeriksaan nomor dokumen —
+      // persis pola yang bikin pembayaran dobel lolos sampai rekonsiliasi.
+      // Memicu aturan R2.
+      if (rng() < 0.07) {
+        const dupStart = invoiceStart + (2 + rng() * 6) * 24 * HOUR_MS
+        if (dupStart < snapshotMs) {
+          const dupId = `WI-INV-${chain + 1}-DUP`
+          const duplicate = makeWorkItem(dupId, 'payable_invoice', `INV-V-2026-${7000 + chain}A`, dupStart, {
+            amount,
+            refs: { supplierId: supplier.id, itemIds: [item.id] },
+            links: [{ targetWorkItemId: poId, relation: 'derived_from' }],
+          })
+          const dupResult = runPath(dupId, PAYABLE_PATH, dupStart, chain + 31, 2)
+          duplicate.currentStageCode = dupResult.currentStage
+          workItems.push(duplicate)
+        }
+      }
     }
   }
 
