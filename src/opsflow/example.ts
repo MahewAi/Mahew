@@ -231,6 +231,18 @@ export function buildExampleDataset(options: ExampleOptions = {}): OpsDataset {
       requiredAuthorityLevel: 3,
       requiresDualApproval: false,
     },
+    // Band teratas harus terbuka (maxAmount null). Kalau band tertinggi punya
+    // batas atas, nilai di atasnya tidak cocok dengan aturan mana pun dan
+    // gerbang wewenang lolos begitu saja — makin besar pembeliannya, makin
+    // sedikit kontrolnya. Persis kebalikan dari yang seharusnya.
+    {
+      id: 'AR-4',
+      stageCode: 'PROC-40',
+      minAmount: 100_000_000,
+      maxAmount: null,
+      requiredAuthorityLevel: 5,
+      requiresDualApproval: true,
+    },
   ]
 
   const slaTargets: SlaTarget[] = STAGES.map((stage) => ({

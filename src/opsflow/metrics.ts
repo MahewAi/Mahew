@@ -176,11 +176,25 @@ const EVENT_ORDER: Record<string, number> = {
 }
 
 function sortEvents(events: WorkEvent[]): WorkEvent[] {
-  return [...events].sort((a, b) => {
-    const timeDiff = Date.parse(a.occurredAt) - Date.parse(b.occurredAt)
-    if (timeDiff !== 0) return timeDiff
-    return (EVENT_ORDER[a.type] ?? 5) - (EVENT_ORDER[b.type] ?? 5)
-  })
+  // Urutan berdasarkan jenis event hanya dipakai untuk memecah seri DI DALAM
+  // stage yang sama. Ekspor status yang presisinya hanya sampai tanggal membuat
+  // beberapa perpindahan stage punya waktu identik; kalau jenis event dipakai
+  // sebagai pemecah seri lintas stage, semua 'arrived' akan berkumpul di depan
+  // dan urutan kunjungannya jadi teracak — hasilnya kunjungan tanpa waktu masuk
+  // dan kunjungan ganda. Di luar satu stage, urutan log yang dipertahankan lebih
+  // dekat ke kenyataan daripada urutan jenis event.
+  return events
+    .map((event, index) => ({ event, index }))
+    .sort((a, b) => {
+      const timeDiff = Date.parse(a.event.occurredAt) - Date.parse(b.event.occurredAt)
+      if (timeDiff !== 0) return timeDiff
+      if (a.event.stageCode === b.event.stageCode) {
+        const typeDiff = (EVENT_ORDER[a.event.type] ?? 5) - (EVENT_ORDER[b.event.type] ?? 5)
+        if (typeDiff !== 0) return typeDiff
+      }
+      return a.index - b.index
+    })
+    .map((entry) => entry.event)
 }
 
 function calendarForStage(

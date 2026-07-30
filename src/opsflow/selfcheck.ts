@@ -23,6 +23,8 @@ import { DEFAULT_CALENDAR, workingHoursBetween } from './calendar.ts'
 import { RULES, detectIncidents, withDetectedIncidents } from './rules.ts'
 import { ingestStatusHistoryCsv, parseCsv } from './ingest.ts'
 import { getStage, mainPath, mainPathSlaHours, STAGES, allTeams } from './taxonomy.ts'
+import { ACTIONS, actionsForItem, executeAction, validateAction, type ActionDef } from './workflow.ts'
+import type { OpsDataset, WorkItem } from './schema.ts'
 
 let failures = 0
 let checks = 0
@@ -398,6 +400,433 @@ const second = buildDashboardSnapshot(buildExampleDataset())
 check(
   'Dua kali jalan menghasilkan hasil identik',
   JSON.stringify(second.bottlenecks) === JSON.stringify(snapshot.bottlenecks),
+)
+
+// ============================================================
+// Bagian ini menguji lapisan transaksi, bukan lapisan pemantauan: apakah
+// gerbangnya benar-benar menahan, apakah yang tidak bisa dibuktikan hanya
+// memperingatkan, dan apakah setiap tindakan meninggalkan jejak. Gerbang yang
+// hanya diuji lewat browser tidak terbukti — UI bisa dilewati, mesinnya tidak
+// boleh bisa.
+section('13. Mesin alur kerja transaksional')
+
+const master = buildExampleDataset()
+
+function personOfTeam(teamName: string): string {
+  const team = master.teams.find((t) => t.name === teamName)
+  const person = team ? master.people.find((p) => p.teamId === team.id) : undefined
+  if (!person) throw new Error(`tidak ada personel untuk sub-tim ${teamName}`)
+  return person.id
+}
+
+// Jam uji berjalan maju setiap tindakan. Kalau semua event punya waktu identik,
+// yang diuji bukan alurnya melainkan cara pemecah seri bekerja — dan waktu
+// tunggu antar stage tidak pernah terbukti dihitung.
+let wfClockMs = Date.parse('2026-07-30T08:30:00+07:00')
+const stamp = (): string => new Date(wfClockMs).toISOString()
+const tick = (minutes = 25): string => {
+  wfClockMs += minutes * 60_000
+  return stamp()
+}
+
+let wfDataset: OpsDataset = { ...master, workItems: [], events: [], incidents: [] }
+let evSeq = 0
+let docSeq = 0
+
+function makeItem(partial: Partial<WorkItem> & { id: string; type: WorkItem['type']; currentStageCode: string }): WorkItem {
+  const item: WorkItem = {
+    documentNumber: partial.id,
+    externalId: partial.id,
+    sourceSystem: 'opsflow-uji',
+    status: 'open',
+    createdAt: stamp(),
+    closedAt: null,
+    priority: 'normal',
+    links: [],
+    refs: {},
+    extra: {},
+    ...partial,
+  }
+  // Dokumen nyata selalu lahir dengan event 'arrived' di stage awalnya — itu
+  // titik awal perhitungan waktu tunggu. Harness ini harus meniru itu, kalau
+  // tidak, yang diuji bukan sistemnya melainkan harness-nya.
+  wfDataset = {
+    ...wfDataset,
+    workItems: [...wfDataset.workItems, item],
+    events: [
+      ...wfDataset.events,
+      {
+        id: `EV-UJI-${(evSeq += 1)}`,
+        workItemId: item.id,
+        stageCode: item.currentStageCode,
+        type: 'arrived',
+        occurredAt: stamp(),
+        recordedAt: stamp(),
+        actorPersonId: null,
+        recordedBy: 'opsflow-uji',
+        recordingLagHours: 0,
+      },
+    ],
+  }
+  return item
+}
+
+function itemById(id: string): WorkItem {
+  const found = wfDataset.workItems.find((i) => i.id === id)
+  if (!found) throw new Error(`objek kerja ${id} tidak ada`)
+  return found
+}
+
+function contextFor(action: ActionDef, itemId: string, values: Record<string, string>, now = stamp()) {
+  return {
+    dataset: wfDataset,
+    item: itemById(itemId),
+    actorPersonId: personOfTeam(action.team),
+    values,
+    now,
+    nextEventId: () => `EV-UJI-${(evSeq += 1)}`,
+    nextDocumentNumber: (prefix: string) => `${prefix}-UJI-${(docSeq += 1)}`,
+    recordedBy: 'opsflow-uji',
+  }
+}
+
+function actionById(id: string): ActionDef {
+  const action = ACTIONS.find((a) => a.id === id)
+  if (!action) throw new Error(`aksi ${id} tidak ada di katalog`)
+  return action
+}
+
+/** Periksa gerbang tanpa menjalankan aksinya. */
+function probe(actionId: string, itemId: string, values: Record<string, string> = {}) {
+  const action = actionById(actionId)
+  return validateAction(action, contextFor(action, itemId, values))
+}
+
+/** Jalankan aksi dan tuliskan hasilnya ke dataset uji. Mengembalikan id dokumen aktif setelahnya. */
+function apply(actionId: string, itemId: string, values: Record<string, string> = {}): string {
+  const action = actionById(actionId)
+  const result = executeAction(action, contextFor(action, itemId, values, tick()))
+  if ('error' in result) {
+    const why = result.error.blockers.map((b) => b.guard).join(', ') || Object.keys(result.error.fieldErrors).join(', ')
+    throw new Error(`aksi ${actionId} ditolak: ${why}`)
+  }
+  const changedIds = new Set([...result.updatedItems, ...result.newItems].map((i) => i.id))
+  wfDataset = {
+    ...wfDataset,
+    workItems: [
+      ...wfDataset.workItems.filter((i) => !changedIds.has(i.id)),
+      ...result.updatedItems,
+      ...result.newItems,
+    ],
+    events: [...wfDataset.events, ...result.events],
+  }
+  return result.createdId ?? itemId
+}
+
+// ---- Konsistensi katalog aksi terhadap taksonomi ----
+check(
+  'Setiap aksi menunjuk stage yang ada di taksonomi',
+  ACTIONS.every((a) => getStage(a.stageCode) !== undefined),
+  ACTIONS.filter((a) => !getStage(a.stageCode)).map((a) => a.id).join(', '),
+)
+check(
+  'Stage tujuan setiap aksi ada di taksonomi',
+  ACTIONS.every((a) => !a.effect.nextStage || getStage(a.effect.nextStage) !== undefined),
+)
+check(
+  'Sub-tim pelaksana aksi = sub-tim pemilik stage-nya',
+  ACTIONS.every((a) => getStage(a.stageCode)?.team === a.team),
+  ACTIONS.filter((a) => getStage(a.stageCode)?.team !== a.team)
+    .map((a) => `${a.id}: ${a.team} ≠ ${getStage(a.stageCode)?.team}`)
+    .join('; '),
+)
+check(
+  'Setiap sub-tim yang punya aksi punya personel',
+  ACTIONS.every((a) => {
+    try {
+      personOfTeam(a.team)
+      return true
+    } catch {
+      return false
+    }
+  }),
+)
+check(
+  'Band wewenang teratas per stage selalu terbuka (tidak ada nilai di atas semua aturan)',
+  [...new Set(master.approvalRules.map((r) => r.stageCode))].every((code) =>
+    master.approvalRules.filter((r) => r.stageCode === code).some((r) => r.maxAmount === null),
+  ),
+  [...new Set(master.approvalRules.map((r) => r.stageCode))]
+    .filter((code) => !master.approvalRules.filter((r) => r.stageCode === code).some((r) => r.maxAmount === null))
+    .join(', '),
+)
+
+// ---- Rantai pengadaan berjalan lewat mesin, bukan lewat UI ----
+const pr = makeItem({
+  id: 'WI-PR-UJI-1',
+  type: 'purchase_request',
+  currentStageCode: 'PROC-10',
+  amount: 80_000_000,
+})
+
+check(
+  'Aksi yang tersedia terbatas pada stage & jenis dokumen',
+  actionsForItem(pr).map((a) => a.id).join(',') === 'pr-ajukan',
+  actionsForItem(pr).map((a) => a.id).join(','),
+)
+check(
+  'Field wajib yang kosong menahan aksi',
+  Object.keys(probe('pr-validasi', pr.id).fieldErrors).length > 0 ||
+    probe('pr-validasi', pr.id).blockers.length > 0,
+)
+
+apply('pr-ajukan', pr.id, { catatan: 'Material utama produksi Agustus.' })
+check('PR pindah ke PROC-20 setelah diajukan', itemById(pr.id).currentStageCode === 'PROC-20')
+apply('pr-validasi', pr.id, { kode_item_benar: 'ya' })
+apply('anggaran-cek', pr.id, { kode_akun: '5-1200-OPS' })
+check('PR pindah ke sourcing setelah anggaran dicek', itemById(pr.id).currentStageCode === 'PROC-30')
+apply('sourcing-selesai', pr.id, {
+  jumlah_penawaran: '3',
+  vendor_terpilih: 'PT Sumber Material',
+  nilai_penawaran: '80000000',
+})
+
+// PROC-40 aturan AR-3: 0–100 jt cukup level 3. Lead level 3 → SAH lolos.
+// Gerbang yang benar bukan gerbang yang menolak semua yang bernilai besar.
+check('Persetujuan 80 jt di PROC-40 lolos sesuai aturan (level 3)', probe('harga-setujui', pr.id).ok)
+const poId = apply('harga-setujui', pr.id, { catatan_persetujuan: 'Harga sesuai tiga pembanding.' })
+check('PO otomatis lahir dari persetujuan harga', poId !== pr.id && itemById(poId).type === 'purchase_order')
+check('PO mewarisi nilai transaksi dari PR', itemById(poId).amount === 80_000_000)
+check(
+  'PO tertaut ke PR asalnya',
+  itemById(poId).links.some((l) => l.targetWorkItemId === pr.id && l.relation === 'derived_from'),
+)
+
+apply('po-terbitkan', poId, {
+  qty: '500',
+  satuan: 'kg',
+  nilai_po: '80000000',
+  termin_bayar: '30',
+  tanggal_kirim_diminta: '2026-08-20',
+  alamat_kirim: 'Gudang Pusat',
+})
+apply('vendor-konfirmasi', poId, { tanggal_kirim_vendor: '2026-08-18' })
+const grnId = apply('grn-terima', poId, { qty_fisik: '500', kondisi: 'baik', no_surat_jalan_vendor: 'SJV-99120' })
+check('GRN otomatis lahir dari penerimaan barang', itemById(grnId).type === 'goods_receipt')
+check(
+  'QC masuk boleh jalan karena penerimaan barang PO-nya sudah tercatat',
+  probe('qc-masuk-lolos', grnId, { jumlah_sampel: '20', hasil: 'Sesuai spesifikasi.' }).ok,
+)
+apply('qc-masuk-lolos', grnId, { jumlah_sampel: '20', hasil: 'Sesuai spesifikasi.' })
+
+// ---- Gerbang pencocokan tiga arah ----
+const mismatch = probe('invoice-verifikasi', grnId, { no_invoice_vendor: 'INV-V-1', nilai_tagihan: '95000000' })
+check(
+  'Tagihan 95 jt atas PO 80 jt ditahan gerbang tiga arah',
+  mismatch.blockers.some((b) => b.guard === 'tiga-arah-cocok'),
+)
+check(
+  'Pesan gerbang menyebut selisihnya, bukan hanya "tidak diizinkan"',
+  mismatch.blockers.some((b) => /berbeda lebih dari 2%/.test(b.message)),
+)
+check(
+  'Tagihan sesuai PO lolos gerbang tiga arah',
+  probe('invoice-verifikasi', grnId, { no_invoice_vendor: 'INV-V-1', nilai_tagihan: '80000000' }).ok,
+)
+const invId = apply('invoice-verifikasi', grnId, { no_invoice_vendor: 'INV-V-1', nilai_tagihan: '80000000' })
+check('Tagihan otomatis lahir dari pencocokan', itemById(invId).type === 'payable_invoice')
+check('Nilai tagihan diambil dari isian, bukan diwarisi buta', itemById(invId).amount === 80_000_000)
+
+// ---- Gerbang wewenang di FIN-40 ----
+const gate = probe('bayar-setujui', invId)
+check(
+  'Persetujuan bayar 80 jt ditahan: butuh level 5, pelaku level 3',
+  gate.blockers.some((b) => b.guard === 'wewenang-cukup' && /level 5/.test(b.message)),
+  gate.blockers.map((b) => b.message).join(' | '),
+)
+check(
+  'Aksi yang tertahan benar-benar tidak bisa dieksekusi dari luar UI',
+  (() => {
+    const action = actionById('bayar-setujui')
+    const result = executeAction(action, contextFor(action, invId, {}))
+    return 'error' in result
+  })(),
+)
+const eventsBefore = wfDataset.events.length
+try {
+  apply('bayar-setujui', invId)
+} catch {
+  /* memang harus gagal */
+}
+check('Aksi yang ditolak tidak menambah satu pun event', wfDataset.events.length === eventsBefore)
+
+// Nilai kecil di stage yang sama harus lolos — kalau semua ditolak, itu bukan
+// gerbang, itu pintu yang dikunci.
+const smallInvoice = makeItem({
+  id: 'WI-INV-UJI-KECIL',
+  type: 'payable_invoice',
+  currentStageCode: 'FIN-40',
+  amount: 9_000_000,
+})
+check('Tagihan 9 jt di FIN-40 lolos (level 3 cukup)', probe('bayar-setujui', smallInvoice.id).ok)
+
+// Band teratas PROC-40 (AR-4) harus menahan nilai di atas 100 jt.
+const bigRequest = makeItem({
+  id: 'WI-PR-UJI-BESAR',
+  type: 'purchase_request',
+  currentStageCode: 'PROC-40',
+  amount: 150_000_000,
+})
+wfDataset = {
+  ...wfDataset,
+  events: [
+    ...wfDataset.events,
+    {
+      id: `EV-UJI-${(evSeq += 1)}`,
+      workItemId: bigRequest.id,
+      stageCode: 'FIN-10',
+      type: 'completed',
+      occurredAt: stamp(),
+      recordedAt: stamp(),
+      actorPersonId: null,
+      recordedBy: 'opsflow-uji',
+      recordingLagHours: 0,
+    },
+  ],
+}
+check(
+  'Permintaan 150 jt di PROC-40 ditahan band teratas (AR-4)',
+  probe('harga-setujui', bigRequest.id).blockers.some((b) => b.guard === 'wewenang-cukup'),
+)
+
+// ---- Gerbang tanpa anggaran ----
+const noBudget = makeItem({
+  id: 'WI-PR-UJI-TANPA-ANGGARAN',
+  type: 'purchase_request',
+  currentStageCode: 'PROC-40',
+  amount: 20_000_000,
+})
+const budgetGate = probe('harga-setujui', noBudget.id)
+check(
+  'Persetujuan harga ditahan kalau anggaran belum dicek',
+  budgetGate.blockers.some((b) => b.guard === 'anggaran-dicek'),
+)
+check(
+  'Pesan gerbang anggaran menyebut akibatnya, bukan hanya aturannya',
+  budgetGate.blockers.some((b) => /terpakai dua kali/.test(b.message)),
+)
+
+// ---- Peringatan yang tidak menahan ----
+const spk = makeItem({
+  id: 'WI-SPK-UJI-1',
+  type: 'production_order',
+  currentStageCode: 'PRD-30',
+})
+const warnCheck = probe('material-keluarkan', spk.id, { no_lot: 'LOT-77', qty_keluar: '300' })
+check('Syarat yang belum bisa dibuktikan hanya memperingatkan, tidak menahan', warnCheck.ok)
+check(
+  'Peringatannya muncul dan menyebut batas pembuktiannya',
+  warnCheck.warnings.some((w) => w.guard === 'qc-masuk-lolos' && /belum bisa memastikan/i.test(w.message)),
+  warnCheck.warnings.map((w) => w.message).join(' | '),
+)
+apply('material-keluarkan', spk.id, { no_lot: 'LOT-77', qty_keluar: '300' })
+check(
+  'Keputusan meneruskan meski ada peringatan ikut tercatat di jejak',
+  wfDataset.events.some(
+    (e) => e.workItemId === spk.id && e.type === 'note' && /Diteruskan meski ada peringatan/.test(e.reason ?? ''),
+  ),
+)
+
+// ---- Jejak audit ----
+const prEvents = wfDataset.events.filter((e) => e.workItemId === pr.id)
+check(
+  'Setiap tindakan meninggalkan pasangan started + completed di stage-nya',
+  ['PROC-10', 'PROC-20', 'FIN-10', 'PROC-30', 'PROC-40'].every((code) =>
+    prEvents.some((e) => e.stageCode === code && e.type === 'started') &&
+    prEvents.some((e) => e.stageCode === code && e.type === 'completed'),
+  ),
+)
+check('Setiap event punya pelaku atau ditandai sistem', prEvents.every((e) => e.actorPersonId !== undefined))
+check('Semua event lapisan transaksi ditandai sumbernya', prEvents.every((e) => e.recordedBy === 'opsflow-uji'))
+check('Isian form tersimpan di dokumen, tidak hilang antar stage', itemById(pr.id).extra?.kode_akun === '5-1200-OPS')
+// ---- Aksi lama tidak bisa dijalankan ulang pada dokumen yang sudah maju ----
+const stale = probe('po-terbitkan', poId, {
+  qty: '500',
+  satuan: 'kg',
+  nilai_po: '90000000',
+  termin_bayar: '30',
+  tanggal_kirim_diminta: '2026-08-20',
+  alamat_kirim: 'Gudang Pusat',
+})
+check(
+  'Menjalankan ulang aksi lama pada dokumen yang sudah maju ditolak',
+  stale.blockers.some((b) => b.guard === 'tahap-cocok'),
+  stale.blockers.map((b) => b.message).join(' | '),
+)
+check('PO ditutup setelah barangnya diterima, tidak menggantung di QC', itemById(poId).closedAt !== null)
+check(
+  'Dokumen penerimaan ditutup setelah tagihannya lahir, tidak ikut menunggu di FIN-40',
+  itemById(grnId).closedAt !== null,
+)
+check(
+  'Nilai tertahan tidak terhitung dua kali: hanya satu dokumen aktif di FIN-40',
+  wfDataset.workItems.filter((i) => i.currentStageCode === 'FIN-40' && i.closedAt === null && i.amount === 80_000_000)
+    .length === 1,
+)
+
+// ---- Pengembalian & pengajuan ulang: rework yang tercatat, bukan disembunyikan ----
+const pr2 = makeItem({
+  id: 'WI-PR-UJI-2',
+  type: 'purchase_request',
+  currentStageCode: 'PROC-10',
+  amount: 5_000_000,
+})
+apply('pr-ajukan', pr2.id, { catatan: 'Butuh 10 rim kertas.' })
+apply('pr-kembalikan', pr2.id, { alasan: 'Spesifikasi gramatur belum disebutkan.' })
+check('Permintaan yang dikembalikan kembali ke peminta', itemById(pr2.id).currentStageCode === 'PROC-10')
+const beforeResubmit = wfDataset.events.length
+apply('pr-ajukan', pr2.id, { catatan: 'Butuh 10 rim kertas HVS 80 gsm.' })
+check(
+  'Isian yang diubah saat pengajuan ulang terekam sebagai event tersendiri',
+  wfDataset.events.slice(beforeResubmit).some((e) => e.type === 'field_changed' && e.change?.field === 'catatan'),
+)
+check(
+  'Alasan pengembalian tersimpan di jejak, bukan hanya di kepala orang',
+  wfDataset.events.some((e) => e.workItemId === pr2.id && e.type === 'returned' && (e.reason ?? '') !== ''),
+)
+
+// Kunjungan stage bisa direkonstruksi dari event yang dihasilkan mesin ini —
+// artinya lapisan transaksi dan lapisan pemantauan memang satu sumber data.
+const wfVisits = buildStageVisits({ ...wfDataset, snapshotAt: stamp() })
+check(
+  `Kunjungan stage terekonstruksi dari aksi lewat sistem = ${wfVisits.length}`,
+  wfVisits.length >= 8,
+)
+// arrivedAt memang boleh null — itu cara sistem mengatakan "waktu masuknya
+// tidak diketahui" untuk data yang diimpor setengah lengkap, dan
+// assessDataQuality yang melaporkannya. Yang harus dijamin di sini lebih sempit:
+// dokumen yang DILAHIRKAN sistem ini tidak boleh pernah kehilangan waktu masuk,
+// karena waktu tunggunya dihitung dari situ.
+const bornHere = [pr.id, poId, grnId, invId]
+check(
+  'Waktu tunggu antar stage terhitung dari aksi yang dijalankan lewat sistem',
+  wfVisits.filter((v) => bornHere.includes(v.workItemId)).some((v) => (v.waitHours ?? 0) > 0),
+)
+check(
+  'Waktu kerja dan waktu tunggu terpisah, bukan satu angka gabungan',
+  wfVisits
+    .filter((v) => bornHere.includes(v.workItemId) && v.completedAt !== null)
+    .every((v) => v.waitHours !== null && v.touchHours !== null),
+)
+check(
+  'Dokumen yang lahir lewat sistem selalu punya waktu masuk di setiap kunjungannya',
+  wfVisits
+    .filter((v) => bornHere.includes(v.workItemId))
+    .every((v) => typeof v.arrivedAt === 'string' && v.arrivedAt !== ''),
+  wfVisits
+    .filter((v) => bornHere.includes(v.workItemId) && !v.arrivedAt)
+    .map((v) => `${v.workItemId}@${v.stageCode}`)
+    .join(', '),
 )
 
 // ============================================================

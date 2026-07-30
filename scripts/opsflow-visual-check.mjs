@@ -37,6 +37,11 @@ const TARGETS = [
   { name: 'sector-mobile', url: '/opsflow/sektor/FIN', width: 375, height: 812 },
   { name: 'stage-desktop', url: '/opsflow/stage/FIN-40', width: 1280, height: 900 },
   { name: 'stage-mobile', url: '/opsflow/stage/FIN-40', width: 375, height: 812 },
+  // Lapisan transaksi. Halaman inilah yang dipakai orang setiap hari — kalau
+  // formnya meluber di layar ponsel, sistemnya tidak akan dipakai di lantai
+  // produksi, dan pekerjaannya kembali ke WhatsApp.
+  { name: 'kerja-desktop', url: '/kerja', width: 1280, height: 900 },
+  { name: 'kerja-mobile', url: '/kerja', width: 375, height: 812 },
 ]
 
 let failures = 0

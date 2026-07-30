@@ -11,6 +11,8 @@ const OpsflowOverview = lazy(() => import('./pages/opsflow/OpsflowOverview'))
 const OpsflowSector = lazy(() => import('./pages/opsflow/OpsflowSector'))
 const OpsflowStage = lazy(() => import('./pages/opsflow/OpsflowStage'))
 const OpsflowTrace = lazy(() => import('./pages/opsflow/OpsflowTrace'))
+const OpsflowWork = lazy(() => import('./pages/opsflow/OpsflowWork'))
+const OpsflowDocument = lazy(() => import('./pages/opsflow/OpsflowDocument'))
 
 function OpsflowFallback() {
   return (
@@ -61,6 +63,23 @@ export default function AppRoutes() {
         element={
           <Suspense fallback={<OpsflowFallback />}>
             <OpsflowTrace />
+          </Suspense>
+        }
+      />
+      {/* Lapisan transaksi: tempat pekerjaan dikerjakan, bukan dipantau. */}
+      <Route
+        path="/kerja"
+        element={
+          <Suspense fallback={<OpsflowFallback />}>
+            <OpsflowWork />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/kerja/dokumen/:id"
+        element={
+          <Suspense fallback={<OpsflowFallback />}>
+            <OpsflowDocument />
           </Suspense>
         }
       />
