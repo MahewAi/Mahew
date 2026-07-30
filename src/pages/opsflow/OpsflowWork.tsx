@@ -13,20 +13,70 @@
 
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, Building2, Inbox, Plus, RotateCcw } from 'lucide-react'
-import { SECTORS, allTeams, getStage } from '@/opsflow/taxonomy'
+import {
+  AlertTriangle,
+  ArrowRight,
+  Building2,
+  CircleCheck,
+  Clock3,
+  Inbox,
+  Play,
+  Plus,
+  RotateCcw,
+  UserRound,
+  type LucideIcon,
+} from 'lucide-react'
+import { SECTORS, allTeams, getStage, type SectorId } from '@/opsflow/taxonomy'
 import { useWorkStore, inboxForTeam } from '@/opsflow/useWorkStore'
 import { ACTIONS, actionsForItem } from '@/opsflow/workflow'
 import { resetStore } from '@/opsflow/store'
 import { commit, nextDocumentNumber, nextEventId } from '@/opsflow/store'
-import { SECTOR_COLOR, WORK_ITEM_LABEL, formatIdr, formatWorkHours } from '@/opsflow/viz'
-import { iconForStage } from '@/opsflow/stageIcons'
+import { SECTOR_COLOR, SEVERITY_COLOR, WORK_ITEM_LABEL, formatIdr, formatWorkHours } from '@/opsflow/viz'
+import { iconForStage, iconForWorkItem } from '@/opsflow/stageIcons'
 import { MetricTile, SectionCard, SeverityBadge } from '@/components/opsflow/primitives'
 import { OpsflowShell } from './OpsflowShell'
 import { cn } from '@/lib/utils'
 
 /** Sub-tim yang punya aksi di katalog — hanya ini yang berguna dipilih sekarang. */
 const TEAMS_WITH_ACTIONS = [...new Set(ACTIONS.map((a) => a.team))]
+
+type InboxRow = ReturnType<typeof inboxForTeam>[number]
+
+interface InboxGroup {
+  id: string
+  label: string
+  icon: LucideIcon
+  color: string
+  rows: InboxRow[]
+}
+
+/**
+ * Kelompokkan kotak masuk menurut mendesaknya, bukan hanya diurutkan.
+ *
+ * Daftar panjang yang terurut tetap menuntut pembacanya membandingkan badge
+ * baris per baris untuk tahu mana yang genting. Dengan kepala kelompok, jawaban
+ * "mana yang harus saya kerjakan sekarang" ada sebelum baris pertama dibaca.
+ * Kelompok yang kosong tidak ditampilkan — kepala kelompok tanpa isi hanya
+ * menambah yang harus dilewati mata.
+ */
+function groupInbox(rows: InboxRow[]): InboxGroup[] {
+  const late: InboxRow[] = []
+  const soon: InboxRow[] = []
+  const calm: InboxRow[] = []
+
+  for (const row of rows) {
+    const stage = getStage(row.item.currentStageCode)
+    if (stage && row.ageHours > stage.escalateAfterHours) late.push(row)
+    else if (row.ageHours > 8) soon.push(row)
+    else calm.push(row)
+  }
+
+  return [
+    { id: 'telat', label: 'Lewat batas eskalasi', icon: AlertTriangle, color: SEVERITY_COLOR.critical, rows: late },
+    { id: 'segera', label: 'Perlu perhatian hari ini', icon: Clock3, color: SEVERITY_COLOR.warning, rows: soon },
+    { id: 'aman', label: 'Masih dalam batas', icon: CircleCheck, color: SEVERITY_COLOR.good, rows: calm },
+  ].filter((group) => group.rows.length > 0)
+}
 
 export default function OpsflowWork() {
   const navigate = useNavigate()
@@ -45,11 +95,45 @@ export default function OpsflowWork() {
   const [creating, setCreating] = useState<null | 'purchase_request' | 'sales_order'>(null)
 
   const teamMeta = allTeams().find((t) => t.team === teamName)
+  const [sector, setSector] = useState<SectorId>(teamMeta?.sector ?? 'PROC')
 
   const inbox = useMemo(
     () => inboxForTeam(dataset, visits, teamName, actionsForItem),
     [dataset, visits, teamName],
   )
+
+  /**
+   * Jumlah antrean tiap sub-tim, dihitung sekali untuk semua.
+   *
+   * Angkanya ditampilkan di pemilih peran, bukan disembunyikan sampai perannya
+   * dipilih. Tanpa itu orang harus mencoba satu per satu untuk menemukan
+   * pekerjaan yang menumpuk — dan tumpukan yang harus dicari dulu adalah
+   * tumpukan yang tidak akan ditemukan.
+   */
+  const countByTeam = useMemo(() => {
+    const counts: Record<string, { total: number; telat: number }> = {}
+    for (const name of TEAMS_WITH_ACTIONS) {
+      const rows = inboxForTeam(dataset, visits, name, actionsForItem)
+      counts[name] = {
+        total: rows.length,
+        telat: rows.filter((row) => {
+          const stage = getStage(row.item.currentStageCode)
+          return stage ? row.ageHours > stage.escalateAfterHours : false
+        }).length,
+      }
+    }
+    return counts
+  }, [dataset, visits])
+
+  const teamsBySector = useMemo(() => {
+    const map = new Map<SectorId, string[]>()
+    for (const name of TEAMS_WITH_ACTIONS) {
+      const meta = allTeams().find((t) => t.team === name)
+      if (!meta) continue
+      map.set(meta.sector, [...(map.get(meta.sector) ?? []), name])
+    }
+    return map
+  }, [])
 
   const overdue = inbox.filter((row) => {
     const stage = getStage(row.item.currentStageCode)
@@ -122,41 +206,113 @@ export default function OpsflowWork() {
       accentColor={teamMeta ? SECTOR_COLOR[teamMeta.sector] : undefined}
       toolbar={
         <div className="flex w-full min-w-0 flex-wrap items-center gap-2">
-          {/*
-            Lebar <select> ditentukan oleh pilihan terpanjang — di sini nama
-            sub-tim plus nama sektor, yang meluber di layar ponsel. Jadi lebarnya
-            dibatasi eksplisit dan dibiarkan turun baris, bukan dibiarkan
-            mendorong seluruh halaman ke samping.
-          */}
-          <label className="flex w-full min-w-0 flex-wrap items-center gap-x-2 gap-y-1 sm:w-auto">
-            <span className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-text-muted">
-              Saya bekerja sebagai
-            </span>
-            <select
-              value={teamName}
-              onChange={(event) => setTeamName(event.target.value)}
-              className={cn(
-                'min-h-touch w-full min-w-0 max-w-full cursor-pointer truncate rounded-pill bg-bg-elevated px-3 text-[12px] font-bold text-text-primary',
-                'shadow-soft ring-1 ring-inset ring-border-med',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
-                'sm:w-auto sm:max-w-[300px]',
-              )}
-            >
-              {TEAMS_WITH_ACTIONS.map((name) => {
-                const meta = allTeams().find((t) => t.team === name)
-                return (
-                  <option key={name} value={name}>
-                    {name}
-                    {meta ? ` — ${SECTORS[meta.sector].name}` : ''}
-                  </option>
-                )
-              })}
-            </select>
-          </label>
+          {/* Peran yang sedang dipakai, sebagai penanda konteks — pemilihnya ada di kartu pertama. */}
+          <span
+            className="inline-flex min-h-touch items-center gap-2 rounded-pill px-3 text-[12px] font-bold text-text-primary shadow-soft ring-1 ring-inset ring-border-med"
+            style={{ backgroundColor: teamMeta ? `${SECTOR_COLOR[teamMeta.sector]}14` : undefined }}
+          >
+            <UserRound
+              aria-hidden="true"
+              className="size-3.5"
+              style={{ color: teamMeta ? SECTOR_COLOR[teamMeta.sector] : undefined }}
+            />
+            {teamName}
+          </span>
         </div>
       }
     >
       <div className="space-y-3">
+        {/*
+          Pemilih peran. Dulu ini satu <select> berisi 32 nama — untuk tahu di
+          mana pekerjaan menumpuk, orang harus membuka satu per satu. Sekarang
+          jumlah antreannya terlihat di mukanya, dikelompokkan per sektor, jadi
+          tumpukan menemukan orangnya, bukan sebaliknya.
+        */}
+        <SectionCard
+          index={0}
+          title="Saya bekerja sebagai"
+          hint="Di sistem sungguhan peran datang dari login. Di sini bisa diganti-ganti supaya satu orang bisa menelusuri alurnya dari ujung ke ujung."
+        >
+          <div className="flex flex-wrap gap-1.5">
+            {(Object.keys(SECTORS) as SectorId[]).map((id) => {
+              const teams = teamsBySector.get(id) ?? []
+              const total = teams.reduce((sum, name) => sum + (countByTeam[name]?.total ?? 0), 0)
+              const active = sector === id
+              const SectorIcon = iconForStage(`${id}-10`)
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setSector(id)}
+                  aria-pressed={active}
+                  className={cn(
+                    'inline-flex min-h-touch cursor-pointer items-center gap-2 rounded-pill px-3 text-[12px] font-bold',
+                    'transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
+                    active ? 'text-white shadow-soft' : 'text-text-secondary ring-1 ring-inset ring-border-med hover:bg-bg-surface',
+                  )}
+                  style={active ? { backgroundColor: SECTOR_COLOR[id] } : undefined}
+                >
+                  <SectorIcon aria-hidden="true" className="size-3.5" />
+                  {SECTORS[id].name}
+                  <span
+                    className={cn(
+                      'rounded-pill px-1.5 py-0.5 text-[10px] tabular-nums',
+                      active ? 'bg-white/20 text-white' : 'bg-bg-soft text-text-muted',
+                    )}
+                  >
+                    {total}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-1.5 border-t border-border-soft pt-3">
+            {(teamsBySector.get(sector) ?? []).map((name) => {
+              const count = countByTeam[name] ?? { total: 0, telat: 0 }
+              const active = teamName === name
+              const empty = count.total === 0
+              return (
+                <button
+                  key={name}
+                  type="button"
+                  onClick={() => setTeamName(name)}
+                  aria-pressed={active}
+                  className={cn(
+                    'inline-flex min-h-touch cursor-pointer items-center gap-2 rounded-md px-3 text-[12px]',
+                    'transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
+                    active
+                      ? 'bg-text-primary font-bold text-white shadow-soft'
+                      : empty
+                        ? 'text-text-faint ring-1 ring-inset ring-border-soft hover:bg-bg-surface'
+                        : 'font-semibold text-text-primary ring-1 ring-inset ring-border-med hover:bg-bg-surface',
+                  )}
+                >
+                  {name}
+                  {count.total > 0 && (
+                    <span
+                      className={cn(
+                        'inline-flex items-center gap-1 rounded-pill px-1.5 py-0.5 text-[10px] font-bold tabular-nums',
+                        active ? 'bg-white/20 text-white' : 'bg-bg-soft text-text-secondary',
+                      )}
+                    >
+                      {/* Telat ditandai ikon + angka, bukan sekadar diwarnai merah. */}
+                      {count.telat > 0 && (
+                        <AlertTriangle
+                          aria-hidden="true"
+                          className="size-2.5"
+                          style={{ color: active ? undefined : SEVERITY_COLOR.critical }}
+                        />
+                      )}
+                      {count.total}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </SectionCard>
+
         <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
           <MetricTile
             index={1}
@@ -244,62 +400,93 @@ export default function OpsflowWork() {
               </p>
             </div>
           ) : (
-            <ul className="divide-y divide-border-soft">
-              {inbox.map((row) => {
-                const stage = getStage(row.item.currentStageCode)
-                const Icon = iconForStage(row.item.currentStageCode)
-                const late = stage ? row.ageHours > stage.escalateAfterHours : false
-                const mine = row.actions.filter((a) => a.team === teamName)
+            groupInbox(inbox).map((group) => (
+              <section key={group.id} className="mb-1 last:mb-0">
+                {/*
+                  Kepala kelompok: ikon + kata + jumlah. Tiga penanda yang saling
+                  menguatkan, jadi urutan prioritasnya terbaca dalam sekali lihat
+                  tanpa harus membandingkan warna badge baris per baris.
+                */}
+                <p className="flex items-center gap-1.5 pb-1 pt-3 text-[10px] font-extrabold uppercase tracking-[0.08em] first:pt-0">
+                  <group.icon aria-hidden="true" className="size-3" style={{ color: group.color }} />
+                  <span style={{ color: group.color }}>{group.label}</span>
+                  <span className="tabular-nums text-text-faint">· {group.rows.length}</span>
+                </p>
+                <ul className="divide-y divide-border-soft">
+                  {group.rows.map((row) => {
+                    const stage = getStage(row.item.currentStageCode)
+                    const Icon = iconForStage(row.item.currentStageCode)
+                    const TypeIcon = iconForWorkItem(row.item.type)
+                    const late = stage ? row.ageHours > stage.escalateAfterHours : false
+                    const mine = row.actions.filter((a) => a.team === teamName)
 
-                return (
-                  <li key={row.item.id}>
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/kerja/dokumen/${row.item.id}`)}
-                      className="group flex w-full items-center gap-3 rounded-md px-1.5 py-3 text-left transition-colors duration-fast hover:bg-bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
-                    >
-                      <span
-                        aria-hidden="true"
-                        className="flex size-9 shrink-0 items-center justify-center rounded-full bg-bg-elevated"
-                        style={{
-                          boxShadow: `0 0 0 2px ${stage ? SECTOR_COLOR[stage.sector] : '#ccc'}`,
-                        }}
-                      >
-                        <Icon className="size-4" style={{ color: stage ? SECTOR_COLOR[stage.sector] : undefined }} />
-                      </span>
-
-                      <span className="min-w-0 flex-1">
-                        <span className="flex flex-wrap items-baseline gap-x-2">
-                          <span className="text-[13px] font-bold text-text-primary">{row.item.documentNumber}</span>
-                          <span className="text-[11px] text-text-muted">
-                            {WORK_ITEM_LABEL[row.item.type] ?? row.item.type}
-                          </span>
-                          {row.item.amount ? (
-                            <span className="text-[11px] font-bold tabular-nums text-text-secondary">
-                              {formatIdr(row.item.amount)}
+                    return (
+                      <li key={row.item.id}>
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/kerja/dokumen/${row.item.id}`)}
+                          className="group flex w-full items-center gap-3 rounded-md px-1.5 py-3 text-left transition-colors duration-fast hover:bg-bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
+                        >
+                          {/*
+                            Dua ikon dengan tugas berbeda: cincin besar = stage
+                            tempat dokumen berdiri sekarang, lencana kecil = jenis
+                            dokumennya. Keduanya terbaca sebelum nomornya dieja.
+                          */}
+                          <span aria-hidden="true" className="relative shrink-0">
+                            <span
+                              className="flex size-10 items-center justify-center rounded-full bg-bg-elevated"
+                              style={{ boxShadow: `0 0 0 2px ${stage ? SECTOR_COLOR[stage.sector] : '#ccc'}` }}
+                            >
+                              <Icon
+                                className="size-[18px]"
+                                style={{ color: stage ? SECTOR_COLOR[stage.sector] : undefined }}
+                              />
                             </span>
-                          ) : null}
-                        </span>
-                        <span className="mt-0.5 block text-[11px] text-text-secondary">
-                          {stage ? `${stage.code} ${stage.name}` : row.item.currentStageCode} ·{' '}
-                          <span className="font-semibold text-text-primary">{mine[0]?.label ?? 'menunggu'}</span>
-                        </span>
-                      </span>
+                            <span className="absolute -bottom-0.5 -right-0.5 flex size-[17px] items-center justify-center rounded-full bg-bg-elevated ring-1 ring-border-med">
+                              <TypeIcon className="size-2.5 text-text-muted" />
+                            </span>
+                          </span>
 
-                      <span className="flex shrink-0 items-center gap-2">
-                        <SeverityBadge level={late ? 'critical' : row.ageHours > 8 ? 'warning' : 'good'}>
-                          {formatWorkHours(row.ageHours)}
-                        </SeverityBadge>
-                        <ArrowRight
-                          aria-hidden="true"
-                          className="size-3.5 text-text-faint transition-transform duration-fast group-hover:translate-x-0.5"
-                        />
-                      </span>
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
+                          <span className="min-w-0 flex-1">
+                            <span className="flex flex-wrap items-baseline gap-x-2">
+                              <span className="text-[13px] font-bold text-text-primary">
+                                {row.item.documentNumber}
+                              </span>
+                              <span className="text-[11px] text-text-muted">
+                                {WORK_ITEM_LABEL[row.item.type] ?? row.item.type}
+                              </span>
+                              {row.item.amount ? (
+                                <span className="text-[11px] font-bold tabular-nums text-text-secondary">
+                                  {formatIdr(row.item.amount)}
+                                </span>
+                              ) : null}
+                            </span>
+                            <span className="mt-0.5 block text-[11px] leading-[16px] text-text-secondary">
+                              {stage ? `${stage.code} ${stage.name}` : row.item.currentStageCode}
+                            </span>
+                            {/* Aksi yang menanti ditulis sebagai ajakan, bukan sebagai status. */}
+                            <span className="mt-1 inline-flex items-center gap-1 rounded-pill bg-bg-soft px-2 py-0.5 text-[10px] font-bold text-text-primary">
+                              <Play aria-hidden="true" className="size-2.5 text-text-muted" />
+                              {mine[0]?.label ?? 'menunggu tindakan'}
+                            </span>
+                          </span>
+
+                          <span className="flex shrink-0 items-center gap-2">
+                            <SeverityBadge level={late ? 'critical' : row.ageHours > 8 ? 'warning' : 'good'}>
+                              {formatWorkHours(row.ageHours)}
+                            </SeverityBadge>
+                            <ArrowRight
+                              aria-hidden="true"
+                              className="size-3.5 text-text-faint transition-transform duration-fast group-hover:translate-x-0.5"
+                            />
+                          </span>
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </section>
+            ))
           )}
         </SectionCard>
 

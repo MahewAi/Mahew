@@ -13,7 +13,7 @@
 
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { AlertTriangle, CheckCircle2, Link2, Lock, ShieldAlert } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Lock, ShieldAlert } from 'lucide-react'
 import { getStage } from '@/opsflow/taxonomy'
 import { useWorkStore } from '@/opsflow/useWorkStore'
 import { actionsForItem, type ActionDef } from '@/opsflow/workflow'
@@ -22,11 +22,11 @@ import {
   SEVERITY_COLOR,
   WORK_ITEM_LABEL,
   formatDateTime,
-  formatIdr,
   formatWorkHours,
 } from '@/opsflow/viz'
-import { iconForStage } from '@/opsflow/stageIcons'
+import { iconForEvent, iconForStage, iconForWorkItem } from '@/opsflow/stageIcons'
 import { SectionCard, SeverityBadge } from '@/components/opsflow/primitives'
+import { DocumentJourney, buildJourney } from '@/components/opsflow/DocumentJourney'
 import { OpsflowShell } from './OpsflowShell'
 import { Field } from './OpsflowWork'
 import { cn } from '@/lib/utils'
@@ -84,6 +84,23 @@ export default function OpsflowDocument() {
     .slice()
     .sort((a, b) => Date.parse(b.occurredAt) - Date.parse(a.occurredAt))
   const currentVisit = visits.find((v) => v.workItemId === item.id && v.isOpen)
+
+  // Perjalanan dokumen disusun dari kunjungan stage yang benar-benar terjadi,
+  // bukan dari jalur teoretis di taksonomi — dokumen yang pernah dikembalikan
+  // atau di-rework harus terlihat apa adanya.
+  const myVisits = visits
+    .filter((v) => v.workItemId === item.id)
+    .slice()
+    .sort((a, b) => Date.parse(a.arrivedAt ?? a.completedAt ?? '') - Date.parse(b.arrivedAt ?? b.completedAt ?? ''))
+  const hoursByStage: Record<string, number | null> = {}
+  for (const visit of myVisits) {
+    hoursByStage[visit.stageCode] = (visit.waitHours ?? 0) + (visit.touchHours ?? 0)
+  }
+  const journey = buildJourney(
+    myVisits.map((v) => v.stageCode),
+    item.currentStageCode,
+    hoursByStage,
+  )
   const linked = item.links
     .map((l) => dataset.workItems.find((i) => i.id === l.targetWorkItemId))
     .filter((i): i is NonNullable<typeof i> => i !== undefined)
@@ -143,8 +160,23 @@ export default function OpsflowDocument() {
               <p className="text-[15px] font-extrabold text-text-primary">
                 {stage ? stage.name : item.currentStageCode}
               </p>
+              {/*
+                Dokumen yang sudah ditutup tidak menunggu siapa-siapa. Kalimat
+                "menunggu tindakan X" pada dokumen selesai membuat orang mengejar
+                pekerjaan yang tidak ada — dan itu persis jenis salah paham yang
+                sistem ini dibuat untuk menghilangkan.
+              */}
               <p className="mt-0.5 text-[12px] text-text-secondary">
-                Menunggu tindakan <span className="font-bold text-text-primary">{stage?.team ?? '—'}</span>
+                {item.closedAt ? (
+                  <>
+                    Selesai di <span className="font-bold text-text-primary">{stage?.team ?? '—'}</span> — tidak ada
+                    yang perlu menindaklanjuti
+                  </>
+                ) : (
+                  <>
+                    Menunggu tindakan <span className="font-bold text-text-primary">{stage?.team ?? '—'}</span>
+                  </>
+                )}
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {item.closedAt ? (
@@ -163,8 +195,9 @@ export default function OpsflowDocument() {
                   </SeverityBadge>
                 ) : null}
                 {item.amount ? (
+                  // Nilai penuh, bukan ringkas: ini nilai dokumennya sendiri.
                   <span className="inline-flex items-center rounded-md bg-bg-surface px-2 py-0.5 text-[11px] font-bold tabular-nums text-text-primary ring-1 ring-inset ring-border-soft">
-                    {formatIdr(item.amount)}
+                    Rp {item.amount.toLocaleString('id-ID')}
                   </span>
                 ) : null}
                 {item.priority !== 'normal' && (
@@ -176,18 +209,31 @@ export default function OpsflowDocument() {
             </div>
           </div>
 
+          {/* Perjalanan dokumen: sudah lewat mana, sekarang di mana, berikutnya siapa. */}
+          <div className="mt-4 border-t border-border-soft pt-3">
+            <p className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.06em] text-text-muted">
+              Perjalanan dokumen ini
+            </p>
+            <DocumentJourney stops={journey} closed={item.closedAt !== null} />
+          </div>
+
           {/* Isi dokumen yang sudah diisi di sepanjang alur */}
           {item.extra && Object.keys(item.extra).length > 0 && (
-            <dl className="mt-4 grid grid-cols-1 gap-x-4 gap-y-2 border-t border-border-soft pt-3 sm:grid-cols-2">
+            <dl className="mt-4 grid grid-cols-1 gap-x-5 gap-y-2.5 border-t border-border-soft pt-3 sm:grid-cols-2">
               {Object.entries(item.extra)
                 .filter(([, value]) => value !== '' && value !== null)
                 .map(([key, value]) => (
-                  <div key={key} className="grid grid-cols-[130px_1fr] gap-2">
-                    <dt className="text-[10px] font-extrabold uppercase tracking-[0.06em] text-text-muted">
+                  <div key={key} className="grid grid-cols-[132px_1fr] items-baseline gap-2">
+                    <dt className="text-[10px] font-extrabold uppercase leading-[15px] tracking-[0.06em] text-text-muted">
                       {key.replace(/_/g, ' ')}
                     </dt>
-                    <dd className="text-[12px] text-text-secondary">
-                      {typeof value === 'number' ? value.toLocaleString('id-ID') : String(value)}
+                    <dd
+                      className={cn(
+                        'text-[12px] leading-[17px] text-text-secondary',
+                        typeof value === 'number' && 'font-bold tabular-nums text-text-primary',
+                      )}
+                    >
+                      {formatFieldValue(key, value)}
                     </dd>
                   </div>
                 ))}
@@ -421,24 +467,37 @@ export default function OpsflowDocument() {
             hint="Tautan terbentuk otomatis saat dokumen lahir dari tindakan pada dokumen lain — bukan diisi manual."
           >
             <ul className="flex flex-wrap gap-2">
-              {[...linked, ...children].map((related) => (
-                <li key={related.id}>
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/kerja/dokumen/${related.id}`)}
-                    className="inline-flex min-h-touch cursor-pointer flex-col items-start justify-center rounded-md bg-bg-surface px-3 py-1.5 text-left ring-1 ring-inset ring-border-med transition-colors hover:bg-bg-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                  >
-                    <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-text-primary">
-                      <Link2 aria-hidden="true" className="size-3 text-text-muted" />
-                      {related.documentNumber}
-                    </span>
-                    <span className="text-[10px] text-text-muted">
-                      {WORK_ITEM_LABEL[related.type] ?? related.type}
-                      {related.closedAt ? ' · selesai' : ''}
-                    </span>
-                  </button>
-                </li>
-              ))}
+              {[...linked, ...children].map((related) => {
+                const RelatedIcon = iconForWorkItem(related.type)
+                const relatedStage = getStage(related.currentStageCode)
+                const relatedColor = relatedStage ? SECTOR_COLOR[relatedStage.sector] : '#999'
+                return (
+                  <li key={related.id}>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/kerja/dokumen/${related.id}`)}
+                      className="inline-flex min-h-touch cursor-pointer items-center gap-2.5 rounded-md bg-bg-surface py-1.5 pl-2.5 pr-3 text-left ring-1 ring-inset ring-border-med transition-colors hover:bg-bg-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="flex size-7 shrink-0 items-center justify-center rounded-full"
+                        style={{ backgroundColor: `${relatedColor}18` }}
+                      >
+                        <RelatedIcon className="size-3.5" style={{ color: relatedColor }} />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-[11px] font-bold text-text-primary">
+                          {related.documentNumber}
+                        </span>
+                        <span className="block text-[10px] text-text-muted">
+                          {WORK_ITEM_LABEL[related.type] ?? related.type}
+                          {related.closedAt ? ' · selesai' : ''}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                )
+              })}
             </ul>
           </SectionCard>
         )}
@@ -462,13 +521,31 @@ export default function OpsflowDocument() {
                 // jejak audit yang salah lebih buruk daripada tidak ada jejak.
                 <li key={`${event.id}-${index}`} className="relative flex gap-3 pb-3.5">
                   {index < timeline.length - 1 && (
-                    <span aria-hidden="true" className="absolute left-[5px] top-4 h-full w-px bg-border-med" />
+                    <span aria-hidden="true" className="absolute left-[13px] top-7 h-full w-px bg-border-med" />
                   )}
+                  {/*
+                    Ikon per jenis event, bukan titik berwarna. Dengan titik,
+                    "Disetujui" dan "Ditolak" hanya berbeda warnanya — dan warna
+                    sendirian gugur di mata yang lelah, layar redup, atau
+                    penglihatan warna yang berbeda. Bentuk tidak punya syarat itu.
+                  */}
                   <span
                     aria-hidden="true"
-                    className="relative z-10 mt-1.5 size-2.5 shrink-0 rounded-full ring-2 ring-bg-elevated"
-                    style={{ backgroundColor: eventStage ? SECTOR_COLOR[eventStage.sector] : '#ccc' }}
-                  />
+                    className="relative z-10 mt-0.5 flex size-[26px] shrink-0 items-center justify-center rounded-full bg-bg-elevated"
+                    style={{
+                      boxShadow: `inset 0 0 0 1.5px ${eventStage ? SECTOR_COLOR[eventStage.sector] : '#ccc'}40`,
+                    }}
+                  >
+                    {(() => {
+                      const EventIcon = iconForEvent(event.type)
+                      return (
+                        <EventIcon
+                          className="size-3.5"
+                          style={{ color: eventStage ? SECTOR_COLOR[eventStage.sector] : undefined }}
+                        />
+                      )
+                    })()}
+                  </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-baseline justify-between gap-x-2">
                       <span className="text-[12px] font-bold text-text-primary">
@@ -505,3 +582,40 @@ export default function OpsflowDocument() {
 
 const inputClass =
   'w-full min-h-touch rounded-md bg-bg-elevated px-3 text-[13px] text-text-primary ring-1 ring-inset ring-border-med focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent'
+
+/**
+ * Nilai isian ditampilkan sesuai artinya, bukan seadanya.
+ *
+ * Angka rupiah dengan pemisah ribuan, tanggal dalam bentuk yang dibaca orang,
+ * dan pilihan berkode (`lolos-catatan`) dikembalikan jadi kalimat. Kolom yang
+ * isinya "2026-08-20" atau "sebagian-rusak" memaksa pembacanya menerjemahkan
+ * sendiri — dan itu pekerjaan yang seharusnya dikerjakan sistem.
+ */
+function formatFieldValue(key: string, value: string | number | boolean | null): string {
+  if (value === null) return '—'
+  if (typeof value === 'boolean') return value ? 'Ya' : 'Tidak'
+  if (typeof value === 'number') {
+    // Nilai di badan dokumen ditulis penuh, bukan diringkas jadi "Rp 80,0 jt".
+    // Ringkasan itu tepat untuk dashboard, tapi di dokumen yang jadi dasar
+    // pembayaran, angka yang dibulatkan adalah angka yang salah.
+    const isMoney = /nilai|harga|anggaran|tagihan|sisa/.test(key)
+    return isMoney ? `Rp ${value.toLocaleString('id-ID')}` : value.toLocaleString('id-ID')
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return new Date(`${value}T00:00:00+07:00`).toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    })
+  }
+  // Nilai pilihan disimpan berkode supaya stabil di data; yang dibaca orang
+  // tetap harus berupa kata. Berlaku juga untuk kode satu kata seperti "baik"
+  // atau "ya" — kalimat bebas tidak ikut tersentuh karena selalu punya spasi.
+  // Harus diawali huruf: "2026-07" (masa pajak) dan kode berangka lain bukan
+  // pilihan berkode, dan mengubahnya jadi "2026 07" merusak artinya.
+  if (/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/.test(value)) {
+    const words = value.replace(/-/g, ' ')
+    return words.charAt(0).toUpperCase() + words.slice(1)
+  }
+  return value
+}

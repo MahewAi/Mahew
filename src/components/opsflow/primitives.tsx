@@ -142,9 +142,14 @@ export function MetricTile({
       )}
     >
       <p className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-text-muted">{label}</p>
-      <div className="mt-2 flex items-baseline gap-1">
-        {/* Angka besar pakai figur proporsional — tabular-nums hanya untuk kolom tabel. */}
-        <span className="text-[30px] font-bold leading-[32px] tracking-[-0.02em] text-text-primary">
+      <div className="mt-2 flex flex-wrap items-baseline gap-x-1">
+        {/*
+          Angka besar pakai figur proporsional — tabular-nums hanya untuk kolom
+          tabel. `whitespace-nowrap` supaya "Rp 384,6 jt" tidak patah di tengah
+          angka pada layar sempit; angka yang terbelah dua baris terbaca sebagai
+          dua angka.
+        */}
+        <span className="whitespace-nowrap text-[26px] font-bold leading-[32px] tracking-[-0.02em] text-text-primary sm:text-[30px]">
           {animate ? <AnimatedNumber value={animate.value} format={animate.format} /> : value}
         </span>
         {unit && <span className="text-[12px] font-semibold text-text-muted">{unit}</span>}

@@ -13,9 +13,20 @@
  */
 
 import {
+  Ban,
   Banknote,
   Boxes,
   CalendarCheck,
+  CheckCircle2,
+  LogIn,
+  MessageSquareText,
+  PauseCircle,
+  PencilLine,
+  PlayCircle,
+  TriangleAlert,
+  Undo2,
+  UserRoundCog,
+  XCircle,
   CalendarClock,
   CalendarRange,
   ClipboardCheck,
@@ -94,4 +105,55 @@ export const STAGE_ICON: Record<string, LucideIcon> = {
 
 export function iconForStage(code: string): LucideIcon {
   return STAGE_ICON[code] ?? ClipboardList
+}
+
+/**
+ * Ikon per jenis dokumen. Dipakai di kotak masuk dan daftar dokumen terkait:
+ * bentuknya dikenali lebih dulu daripada nomornya dibaca, jadi mata tidak perlu
+ * mengeja "PO-2026-0001" untuk tahu itu purchase order.
+ */
+export const WORK_ITEM_ICON: Record<string, LucideIcon> = {
+  purchase_request: ClipboardList,
+  purchase_order: FileCheck2,
+  goods_receipt: PackageCheck,
+  payable_invoice: Receipt,
+  payment: Banknote,
+  sales_order: ShoppingCart,
+  production_order: Factory,
+  qc_record: Microscope,
+  delivery_order: Truck,
+  return_claim: PackageOpen,
+  receivable_invoice: HandCoins,
+}
+
+export function iconForWorkItem(type: string): LucideIcon {
+  return WORK_ITEM_ICON[type] ?? ClipboardList
+}
+
+/**
+ * Ikon per jenis event di jejak audit.
+ *
+ * Bukan hiasan: sebelumnya jejak audit hanya dibedakan lewat titik berwarna,
+ * dan warna sendirian bukan penanda yang bisa diandalkan — pengguna dengan buta
+ * warna, layar redup, atau sekadar mata lelah akan kehilangan bedanya. Bentuk
+ * ikon bekerja tanpa syarat itu.
+ */
+export const EVENT_ICON: Record<string, LucideIcon> = {
+  arrived: LogIn,
+  started: PlayCircle,
+  completed: CheckCircle2,
+  approved: ShieldCheck,
+  rejected: XCircle,
+  returned: Undo2,
+  blocked: PauseCircle,
+  unblocked: PlayCircle,
+  reassigned: UserRoundCog,
+  field_changed: PencilLine,
+  cancelled: Ban,
+  incident_logged: TriangleAlert,
+  note: MessageSquareText,
+}
+
+export function iconForEvent(type: string): LucideIcon {
+  return EVENT_ICON[type] ?? MessageSquareText
 }
