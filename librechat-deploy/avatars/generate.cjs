@@ -5,7 +5,11 @@
 const fs = require('fs')
 const path = require('path')
 
-const TOKEN = 'decbcce50261ac5200cca67f66089074422504e204049cc52c5a0eb4243bf26c'
+const TOKEN = process.env.GERAI_BEARER_TOKEN
+if (!TOKEN) {
+  console.error('GERAI_BEARER_TOKEN belum di-set. Contoh: node --env-file=librechat-deploy/.env librechat-deploy/avatars/generate.cjs')
+  process.exit(1)
+}
 const URL = 'https://gerai.mahewwork.com/api/openai/image'
 const DIR = __dirname
 
